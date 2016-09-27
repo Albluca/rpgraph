@@ -7,3 +7,15 @@ Maintainer: Luca Albergante <luca.albergante@gmail.com>
 Description: Interface R to the java library VDAOEngine (https://github.com/auranic/VDAOEngine) via rJava to construct different types of principal graphs. This is an alpha release, expect problems.
 License: Apache License 2.0
 LazyData: TRUE
+Import:
+  igraph,
+  rgl,
+  plotly
+  rJava
+  tictoc,
+  flashpcaR,
+  bigpca,
+  irlba,
+  nsprcomp
+
+
