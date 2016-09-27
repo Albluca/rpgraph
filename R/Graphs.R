@@ -1,5 +1,3 @@
-
-
 # Check directionality --------------------------------------------
 
 
@@ -107,7 +105,6 @@ CompareNet <- function(G1, G2, RemNodes = 2, Tries = 10000, DoIso = FALSE) {
       return(0)
     }
   }
-
 
   pb <- txtProgressBar(min = 1, max = Tries, initial = 1, style = 3)
 

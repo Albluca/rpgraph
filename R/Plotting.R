@@ -3,6 +3,8 @@
 
 plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 
+  print("test")
+
   attach(PrintGraph$Report)
 
   plot(STEP, MSEP, type = 'b', col='blue', ylim = c(0, max(c(MSEP, ENERGY))),
