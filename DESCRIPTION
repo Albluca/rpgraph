@@ -1,0 +1,9 @@
+Package: RPrinCurve
+Type: Package
+Title: r interface to VDAOEngine to build elastic principal graphs
+Version: 0.1.0
+Author: Luca Albergante <luca.albergante@gmail.com>
+Maintainer: Luca Albergante <luca.albergante@gmail.com>
+Description: Interface R to the java library VDAOEngine (https://github.com/auranic/VDAOEngine) via rJava to construct different types of principal graphs. This is an alpha release, expect problems.
+License: Apache License 2.0
+LazyData: TRUE
