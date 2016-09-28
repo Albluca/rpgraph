@@ -14,7 +14,7 @@ This vignette present a few simple examples describing the usage of the package 
 ## Pircipal elastic circles
 
 ```{r}
-library(RPrinCurve)
+library(rpcurve)
 
 Data <- simple_circle
 
