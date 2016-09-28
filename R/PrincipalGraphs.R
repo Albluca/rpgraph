@@ -1,7 +1,21 @@
+# File description --------------------------------------------
+#
+# This fine contains functions designed to interaqct with VDAOEngine.jar
+#
+# Only the main function will be exported and made available to the user
+#
+#
+
+
 
 
 # Configuration Functions --------------------------------------------
 
+
+#' Define the grammar to produde a circular principal graph
+#'
+#' @return A parameter set that can be used to construct a circular principal graph
+#'
 CircleConfiguration <- function(){
 
   params <- NULL
@@ -32,6 +46,10 @@ CircleConfiguration <- function(){
   return(params)
 }
 
+#' Define the grammar to produde a tree principal graph
+#'
+#' @return A parameter set that can be used to construct a tree principal graph
+#'
 DefaultPrincipalTreeConfiguration <- function(){
 
   params <- NULL
@@ -64,6 +82,10 @@ DefaultPrincipalTreeConfiguration <- function(){
 
 }
 
+#' Define the grammar to produde a curve (a path) principal graph
+#'
+#' @return A parameter set that can be used to construct a curve (a path) principal graph
+#'
 CurveConfiguration <- function(){
 
   params <- NULL
@@ -94,6 +116,10 @@ CurveConfiguration <- function(){
   return(params)
 }
 
+#' Define the grammar to produde a robust tree principal graph
+#'
+#' @return A parameter set that can be used to construct a robust tree principal graph
+#'
 RobustPrincipalTreeConfiguration <- function(){
 
   params <- NULL
@@ -128,6 +154,12 @@ RobustPrincipalTreeConfiguration <- function(){
   return(params)
 }
 
+#' Define the grammar to produde a tree principal graph using a two stage approach.
+#'
+#' This function is still experimental and not is not working yet
+#'
+#' @return A parameter set that can be used to construct a robust tree principal graph
+#'
 TwoStagesRobustPrincipalTreeConfiguration <- function(){
 
   params <- list()
@@ -210,6 +242,14 @@ TwoStagesRobustPrincipalTreeConfiguration <- function(){
 # Data extraction Functions --------------------------------------------
 
 
+#' Produce a graph structure from the coputed elastic principal graph details
+#'
+#' The function depends on a working JVM with the VDAOEngine.jar library in the libpath
+#'
+#' @param PrintGraph An elastic principal graph structure as returned from \code{link{computeElasticPrincipalGraph}}
+#'
+#' @return A graph structure
+#'
 makeGraph <- function(PrintGraph){
 
   Graph = .jnew('vdaoengine/analysis/grammars/Graph')
@@ -230,6 +270,17 @@ makeGraph <- function(PrintGraph){
 
 }
 
+#' Project a set of datapoints onto the nodes of principal graph
+#'
+#' The function depends on a working JVM with the VDAOEngine.jar library in the libpath
+#'
+#' @param PrintGraph An elastic principal graph structure as returned from \code{link{computeElasticPrincipalGraph}}
+#' @param Data A matrix containing a set of points with the correct number of dimensions. Each row represent a point
+#'
+#' @return A list. Each elements of the list represent the vertex of the principal graph and contains a vector reporting
+#' the cells (as row number) that are associted with that particular vertex. The vector equal to NA indicates that no
+#' cells are associated with that vertex;
+#'
 getTaxonMap <- function(Graph, Data){
 
   NumberOfNodes <- Graph$Nodes$size()
