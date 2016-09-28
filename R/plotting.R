@@ -18,9 +18,13 @@ plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 }
 
 accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
-                                   Cex.Text = .8, Mode = 'LocMin', Xlims = c(0, 1)){
+                                   Cex.Text = .8, Mode = 'LocMin', Xlims = NULL){
 
   attach(PrintGraph$Report)
+  
+  if(is.null(Xlims)){
+    Xlims <- range(FVEP)
+  }
 
   plot(FVEP, URN2, type = 'b', col='green',
        xlab = "Fraction of Explained Variance",
