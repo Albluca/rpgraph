@@ -47,8 +47,30 @@ accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Xlims = 
 
 
 ```{r, fig.show='hold'}
-plotData2D(simple_circle, PCAData = NULL, Results)
+plotData2D(Data = simple_circle, PrintGraph = Results,
+           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
+
+
+```{r, fig.show='hold'}
+plotData2D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
+           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+```
+
+
+```{r, fig.show='hold'}
+plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
+           GroupsLab = rep(1, nrow(simple_circle)))
+```
+
+```{r, fig.show='hold'}
+library("rgl")
+open3d()
+plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
+           GroupsLab = rep(1, nrow(simple_circle)))
+```
+
+
 
 
 ```{r, fig.show='hold'}
@@ -58,8 +80,6 @@ TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)
 InfoData <- plotPieNet(Results = Results, Data = simple_circle, Categories = rep(1, nrow(simple_circle)),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
-
-
 
 
 ## Styles

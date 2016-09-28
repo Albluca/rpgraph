@@ -81,80 +81,77 @@ accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
 
 # Plotting Functions (2D plots) --------------------------------------------
 
-plotData2D <- function(Data, PrintGraph, PCAData=NULL, ScaleFunction = sqrt, NodeSizeMult=1, Col=NULL,
-                       CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
-                       Xlab = "", Ylab = ""){
 
+plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
+                       NodeSizeMult=1, Col=NULL, CirCol="black", ColLabels = NULL,
+                       LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
+                       Xlab = "PC1", Ylab = "PC2", Plot.ly = FALSE){
+  
   Data <- data.matrix(Data)
-
-  if(is.null(PCAData)){
-    print("Computing PCA in order to project data on 2 dimensions")
-    if(ncol(Data) > 5){
-      PCAData <- SelectComputePCA(DataMatrix = Data, Components = 2, Method = 'irlba-Lanczos', center=TRUE, scale.=TRUE)
-    } else {
-      PCAData <- SelectComputePCA(DataMatrix = Data, Components = 2, Method = 'base-svd', center=TRUE, scale.=TRUE)
-    }
-
-    # centering data
-    TransfData <- Data - PCAData$centers
-
-    # Scaling data
-    TransfData <- TransfData/PCAData$scale
-
-    # Rotating data
-    TransfData <- TransfData %*% PCAData$Comp
-
-    if(Xlab == ""){
-      Xlab = paste("PC1 (", signif(100*PCAData$ExpVar[1], 4), "%)", sep='')
-    }
-
-    if(Ylab == ""){
-      Ylab = paste("PC2 (", signif(100*PCAData$ExpVar[2], 4), "%)", sep='')
-    }
-
-  } else {
-
-    # centering data
-    TransfData <- Data - PCAData$centers
-
-    # Scaling data
-    TransfData <- TransfData/PCAData$scale
-
-    # Rotating data
-    TransfData <- TransfData %*% PCAData$Comp
-
-    if(Xlab == ""){
-      Xlab = paste("PC1 (", signif(100*PCAData$ExpVar[1], 4), "%)", sep='')
-    }
-
-    if(Ylab == ""){
-      Ylab = paste("PC2 (", signif(100*PCAData$ExpVar[2], 4), "%)", sep='')
-    }
-
+  
+  if(is.null(ColLabels)){
+    ColLabels <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
   }
-
+  
+  
   if(is.null(Col)){
-    Col <- rep("gray", nrow(Data))
+    Col <- rep("black", ncol(Data))
   }
-
-  plot(Data[,1], Data[,2], col = Col, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab)
-
-  points(PrintGraph$Nodes[,1:2], col = CirCol, cex = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)))
-
+  
   if(min(PrintGraph$Edges)==0){
     PrintGraph$Edges <- PrintGraph$Edges + 1
   }
+  
+  if(Plot.ly){
+    
+    PlotData1 <- Data[,1:2]
+    PlotData2 <- PrintGraph$Nodes[,1:2]
+    rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
+    PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
+    
+    PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3)
+    
+    colnames(PlotData) <- c("x", "y", "color")
+    PlotData <- data.frame(PlotData)
+    PlotData$x <- as.numeric(as.character(PlotData$x))
+    PlotData$y <- as.numeric(as.character(PlotData$y))
+    
+    p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y,
+                 type = "scatter", mode = "markers", text = rownames(PlotData),
+                 color = PlotData$color,
+                 colors = c(unique(ColLabels), "black"),
+                 size = 1, sizes = c(1, 10), hoverinfo = 'text')
+    p <- p %>% plotly::layout(xaxis = list(title = Xlab), yaxis = list(title = Ylab), title=Main)
 
-  for(i in 1:nrow(PrintGraph$Edges)){
-
-    arrows(x0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],1], y0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],2],
-           x1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],1], y1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],2],
-           length = 0, col = LineCol)
-
+    
+    for(i in 1:nrow(PrintGraph$Edges)){
+      
+      p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
+                           y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
+                           color = "Graph", text = '', size = 0.2, mode="lines",
+                           showlegend = FALSE)
+    }
+    
+    print(p) 
+    
+  } else {
+    
+    plot(Data[,1], Data[,2], col = Col, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab)
+    
+    points(PrintGraph$Nodes[,1:2], col = CirCol, cex = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)))
+    
+    for(i in 1:nrow(PrintGraph$Edges)){
+      
+      arrows(x0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],1], y0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],2],
+             x1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],1], y1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],2],
+             length = 0, col = LineCol)
+      
+    }
+    
+    text(PrintGraph$Nodes[,1:2], labels = 1:nrow(PrintGraph$Nodes), col = IdCol, pos = 2)
+    
   }
-
-  text(PrintGraph$Nodes[,1:2], labels = 1:nrow(PrintGraph$Nodes), col = IdCol, pos = 2)
-
+  
 
 }
 
@@ -354,7 +351,189 @@ Initialize3d <- function(){
 
 
 
-plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, Col=NULL,
+
+
+plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSizeMult=1,
+                       Col=NULL, ColLabels=NULL,
+                       CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
+                       PlotProjections = FALSE, ProjectionLines = NULL, TaxonList = NULL,
+                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL,
+                       Thr = 0.05, Plot.ly = FALSE){
+  
+  Data <- data.matrix(Data)
+  
+  if(is.null(ColLabels)){
+    ColLabels <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
+  }
+  
+  if(is.null(Col)){
+    Col <- rep("grey", ncol(Data))
+  }
+  
+  if(min(PrintGraph$Edges)==0){
+    PrintGraph$Edges = PrintGraph$Edges + 1
+  }
+  
+  if(Plot.ly){
+    
+    PlotData1 <- Data[,1:3]
+    PlotData2 <- PrintGraph$Nodes[,1:3]
+    rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
+    PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
+    
+    PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3)
+    
+    colnames(PlotData) <- c("x", "y", "z", "color")
+    PlotData <- data.frame(PlotData)
+    PlotData$x <- as.numeric(as.character(PlotData$x))
+    PlotData$y <- as.numeric(as.character(PlotData$y))
+    PlotData$z <- as.numeric(as.character(PlotData$z))
+    
+    
+    p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
+                 type = "scatter3d", mode = "markers", text = rownames(PlotData),
+                 color = c(as.character(GroupsLab), rep("Graph", nrow(PlotData2))),
+                 colors = c(unique(ColLabels), "black"),
+                 size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
+      plotly::layout(title = "All genes",
+             scene = list(
+               xaxis = list(title = Xlab), 
+               yaxis = list(title = Ylab), 
+               zaxis = list(title = Zlab)))
+    
+    
+    for(i in 1:nrow(PrintGraph$Edges)){
+      
+      p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
+                           y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
+                           z = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],3],
+                           color = "Graph", text = '', size = 1,
+                           sizes = c(1, 10), mode="lines",
+                           showlegend = FALSE)
+    }
+    
+    
+    if(PlotProjections){
+      
+      if(is.null(TaxonList)){
+        print("TaxonList will be computed. Consider do that separetedly")
+        TaxonList <- getTaxonMap(Graph = makeGraph(PrintGraph), Data = Data)
+      }
+      
+      for(i in 1:length(TaxonList)){
+        
+        if(!is.na(TaxonList[[i]][1])){
+          for(j in 1:length(TaxonList[[i]])){
+            
+            PCoords <- rbind(PrintGraph$Nodes[i,1:3],
+                             data[TaxonList[[i]][j],1:3])
+            
+            p <- p %>% plotly::add_trace(x = PCoords[,1],
+                                 y = PCoords[,2],
+                                 z = PCoords[,3],
+                                 color = GroupsLab[TaxonList[[i]][j]], text = '', size = 1,
+                                 sizes = c(1, 10), mode="lines",
+                                 showlegend = FALSE, opacity = 0.5)
+          }
+        }
+        
+      }
+      
+    }
+    
+    print(p) 
+    
+    
+  } else {
+    
+    rgl::plot3d(Data[,1], Data[,2], Data[,3], col=ColLabels,
+           size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE) 
+    
+    rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
+    
+    rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
+           add = TRUE, alpha=0.3)
+    
+    
+    if(is.null(DirectionMat)){
+      for(i in 1:nrow(PrintGraph$Edges)){
+        
+        PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
+                         PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
+        
+        rgl::plot3d(PCoords, type = 'l', add = TRUE)
+        
+      }
+    } else {
+      
+      for(i in 1:nrow(DirectionMat)){
+        
+        SourceID <- as.integer(strsplit(DirectionMat[i, ]$Source, split = "V_")[[1]][2])
+        TargetID <- as.integer(strsplit(DirectionMat[i, ]$Target, split = "V_")[[1]][2])
+        Dir <- DirectionMat[i, ]$Direction
+        P.val <- as.numeric(DirectionMat[i, ]$P.val)
+        
+        if(is.na(P.val)){
+          next()
+        }
+        
+        if(P.val > Thr | Dir == 0){
+          PCoords <- rbind(PrintGraph$Nodes[SourceID,1:3],
+                           PrintGraph$Nodes[TargetID,1:3])
+          rgl::plot3d(PCoords, type = 'l', add = TRUE)
+          next()
+        }
+        
+        if(Dir == 1){
+          rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          next()
+        }
+        
+        if(Dir == 2){
+          rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          next()
+        }
+        
+      }
+      
+    }
+    
+    
+    
+    if(PlotProjections){
+      
+      if(is.null(TaxonList)){
+        print("TaxonList will be computed. Consider do that separetedly")
+        TaxonList <- getTaxonMap(Graph = makeGraph(PrintGraph), Data = Data)
+      }
+      
+      for(i in 1:length(TaxonList)){
+        
+        if(!is.na(TaxonList[[i]][1])){
+          for(j in 1:length(TaxonList[[i]])){
+            PCoords <- rbind(PrintGraph$Nodes[i,1:3],
+                             data[TaxonList[[i]][j],1:3])
+            plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
+          }
+        }
+        
+      }
+      
+    }
+    
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+plotData3D.old <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, Col=NULL,
                        CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
                        PlotProjections = FALSE, ProjectionLines = NULL,
                        Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL, Thr = 0.05,
