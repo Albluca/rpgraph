@@ -357,8 +357,9 @@ Initialize3d <- function(){
 plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, Col=NULL,
                        CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
                        PlotProjections = FALSE, ProjectionLines = NULL,
-                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL, Thr = 0.05, Plot.ly = FALSE){
-
+                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL, Thr = 0.05,
+                       Plot.ly = FALSE){
+  
   # Initialize3d()
 
   if(is.null(Col)){
@@ -406,22 +407,23 @@ plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, C
     p <- plot_ly(data = PlotData, x = PlotData$x, y = PlotData$y, z = PlotData$z, type = "scatter3d",
                  color = DayLabels.Factor[-ToRem], colors = unique(ColLabels), mode = "markers",
                  size = rep(1, nrow(PlotData))) %>% layout(xaxis = x, yaxis = y)
-    p
-
+    print(p)
 
     plotly_POST(p, filename = "Test3d", sharing = "public")
 
 
-  } else {
+  }
+  
+  if(!Plot.ly){
 
-    open3d()
+    # open3d()
 
-    plot3d(TransfData[-ToRem,1], TransfData[-ToRem,2], TransfData[-ToRem,3], col=ColLabels[-ToRem],
+    rgl::plot3d(TransfData[-ToRem,1], TransfData[-ToRem,2], TransfData[-ToRem,3], col=ColLabels[-ToRem],
            size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE)
 
-    text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(data), col = IdCol)
+    rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(data), col = IdCol)
 
-    plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
+    rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
            add = TRUE, alpha=0.3)
 
     if(min(PrintGraph$Edges)==0){
@@ -434,7 +436,7 @@ plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, C
         PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
                          PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
 
-        plot3d(PCoords, type = 'l', add = TRUE)
+        rgl::plot3d(PCoords, type = 'l', add = TRUE)
 
       }
     } else {
@@ -453,17 +455,17 @@ plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, C
         if(P.val > Thr | Dir == 0){
           PCoords <- rbind(PrintGraph$Nodes[SourceID,1:3],
                            PrintGraph$Nodes[TargetID,1:3])
-          plot3d(PCoords, type = 'l', add = TRUE)
+          rgl::plot3d(PCoords, type = 'l', add = TRUE)
           next()
         }
 
         if(Dir == 1){
-          arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
           next()
         }
 
         if(Dir == 2){
-          arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
           next()
         }
 
@@ -483,7 +485,7 @@ plotData3D <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, C
           for(j in 1:length(TaxonList[[i]])){
             PCoords <- rbind(PrintGraph$Nodes[i,1:3],
                              data[TaxonList[[i]][j],1:3])
-            plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
+            rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
           }
         }
 

@@ -176,7 +176,7 @@ CheckDirectionality <- function(Data, Results, OrderClass, Depth = NULL){
 
 GetDirectionalityIndex <- function(InfoData) {
 
-  VertDist <- distances(InfoData$Net, mode = 'out')
+  VertDist <- igraph::distances(InfoData$Net, mode = 'out')
   Dists <- cbind(which(lower.tri(VertDist), arr.ind = TRUE), VertDist[lower.tri(VertDist)], t(VertDist)[lower.tri(t(VertDist))])
   Dists <- cbind(V(InfoData$Net)$name[Dists[,1]], V(InfoData$Net)$name[Dists[,2]], Dists[,3:4])
   colnames(Dists) <- c("V1", "V2", "V1->V2", "V2->V1")
