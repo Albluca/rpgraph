@@ -45,6 +45,15 @@ plotData2D(simple_circle, PCAData = NULL, Results)
 ```
 
 
+```{r, fig.show='hold'}
+Net <- ConstructGraph(Results = Results, DirectionMat = NULL, Thr = 0.05)
+TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)
+
+InfoData <- plotPieNet(Results = Results, Data = simple_circle, Categories = rep(1, nrow(simple_circle)),
+           Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
+```
+
+
 
 
 ## Styles

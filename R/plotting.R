@@ -277,7 +277,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
     IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
     Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
     if(length(Iso)>0){
-      VerOrder <- V(Net)[Iso[[1]]]
+      VerOrder <- igraph::V(Net)[Iso[[1]]]
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
       LayOutDONE <- TRUE
     } else {
@@ -289,7 +289,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
     IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
     Iso <- igraph::graph.get.isomorphisms.vf2(aigraph::s.undirected(Net, mode = 'collapse'), IsoGaph)
     if(length(Iso) > 0){
-      VerOrder <- V(Net)[Iso[[1]]]
+      VerOrder <- igraph::V(Net)[Iso[[1]]]
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
       LayOutDONE <- TRUE
     } else {
@@ -308,9 +308,9 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
     return(NULL)
   }
 
-  Indexes <- as.integer(factor(V(Net)$name, levels = paste("V_", 1:OrgNetSize, sep='')))
+  Indexes <- as.integer(factor(igraph::V(Net)$name, levels = paste("V_", 1:OrgNetSize, sep='')))
 
-  igraph::plot(Net, layout = RestrNodes[,1:2], main = Main,
+  igraph::plot.igraph(Net, layout = RestrNodes[,1:2], main = Main,
        vertex.shape="pie", vertex.pie.color = PieColList[Indexes],
        vertex.pie=TaxonCat[Indexes], vertex.pie.border = NA,
        vertex.size=NodeSizeMult*do.call(what = ScaleFunction, list(unlist(lapply(TaxonCatNoNone[Indexes], sum)))),

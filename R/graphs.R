@@ -11,7 +11,7 @@ ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
   if(is.null(DirectionMat)){
 
     Net <- igraph::graph.empty(n = length(unique(as.vector(Results$Edges))), directed = FALSE)
-    V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
+    igraph::V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
 
     for (i in 1:nrow(Results$Edges)) {
       Net <- igraph::add.edges(graph = Net, paste("V_", Results$Edges[i,], sep = ''))
@@ -20,7 +20,7 @@ ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
   } else {
 
     Net <- igraph::graph.empty(n = length(unique(as.vector(Results$Edges))), directed = TRUE)
-    V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
+    igraph::V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
 
     for (i in 1:nrow(Results$Edges)) {
 
