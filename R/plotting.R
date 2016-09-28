@@ -233,12 +233,9 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
   if(is.null(Graph)){
     print("A graph will be constructed. Consider do that separatedly")
-  } else {
-
-    # Generate An Igraph net
-
     Net <- ConstructGraph(Results = Results, DirectionMat = DirectionMat, Thr = Thr)
-
+  } else {
+    Net <- Graph
   }
 
 
@@ -281,7 +278,12 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
       LayOutDONE <- TRUE
     } else {
-      LayOut = 'nicely'
+      Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
+      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = TRUE)
+      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
+      VerOrder <- igraph::V(Net1)[Iso[[1]]]
+      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+      LayOutDONE <- TRUE
     }
   }
 
@@ -293,7 +295,12 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
       LayOutDONE <- TRUE
     } else {
-      LayOut = 'nicely'
+      Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
+      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = FALSE)
+      Iso <- igraph::graph.get.isomorphisms.vf2(aigraph::s.undirected(Net1, mode = 'collapse'), IsoGaph)
+      VerOrder <- igraph::V(Net1)[Iso[[1]]]
+      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+      LayOutDONE <- TRUE
     }
 
   }

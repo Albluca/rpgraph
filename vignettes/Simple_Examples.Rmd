@@ -13,6 +13,12 @@ This vignette present a few simple examples describing the usage of the package 
 
 ## Pircipal elastic circles
 
+This may be necessary for Mac systems:
+
+```{r}
+dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
+```
+
 ```{r}
 library(rpcurve)
 

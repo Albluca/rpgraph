@@ -111,30 +111,30 @@ CheckDirectionality <- function(Data, Results, OrderClass, Depth = NULL){
     Results$Edges <- Results$Edges + 1
   }
 
-  Net <- graph.empty(n = length(unique(as.vector(Results$Edges))), directed = FALSE)
-  V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
+  Net <- igraph::graph.empty(n = length(unique(as.vector(Results$Edges))), directed = FALSE)
+  igraph::V(Net)$name <- paste("V_", unique(as.vector(Results$Edges)), sep = '')
 
   for (i in 1:nrow(Results$Edges)) {
-    Net <- add.edges(graph = Net, paste("V_", Results$Edges[i,], sep = ''))
+    Net <- igraph::add.edges(graph = Net, paste("V_", Results$Edges[i,], sep = ''))
   }
 
   EdgDir <- NULL
 
   if(is.null(Depth)){
-    Depth <- vcount(Net)
+    Depth <- igraph::vcount(Net)
   }
 
-  for (Edg in E(Net)) {
+  for (Edg in igraph::E(Net)) {
 
-    tNet <- delete_edges(Net, Edg)
+    tNet <- igraph::delete_edges(Net, Edg)
 
-    Verts <- V(Net)$name[get.edges(Net, Edg)]
+    Verts <- igraph::V(Net)$name[igraph::get.edges(Net, Edg)]
 
-    Nei <- neighborhood(graph = tNet, order = Depth, nodes = Verts)
-    VertSeq1 <- unlist(strsplit(V(tNet)$name[Nei[[1]]], split = "V_"))
+    Nei <- igraph::neighborhood(graph = tNet, order = Depth, nodes = Verts)
+    VertSeq1 <- unlist(strsplit(igraph::V(tNet)$name[Nei[[1]]], split = "V_"))
     VertSeq1 <- as.numeric(VertSeq1[-seq(from = 1, by = 2, along.with = VertSeq1)])
 
-    VertSeq2 <- unlist(strsplit(V(tNet)$name[Nei[[2]]], split = "V_"))
+    VertSeq2 <- unlist(strsplit(igraph::V(tNet)$name[Nei[[2]]], split = "V_"))
     VertSeq2 <- as.numeric(VertSeq2[-seq(from = 1, by = 2, along.with = VertSeq2)])
 
     Clean_Levels <- unlist(TaxonList[VertSeq1])
