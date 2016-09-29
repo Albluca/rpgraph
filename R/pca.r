@@ -518,3 +518,19 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
   return(NULL)
 
 }
+
+
+
+
+
+
+ApplytoData <- function(Data, PCAData) {
+  
+ return(data.matrix(CleanData) %*% AllGenesPCA$Comp)
+  
+}
+
+
+
+
+
