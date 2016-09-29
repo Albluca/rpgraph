@@ -176,7 +176,6 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
                  size = 1, sizes = c(1, 10), hoverinfo = 'text')
     p <- p %>% plotly::layout(xaxis = list(title = Xlab), yaxis = list(title = Ylab), title=Main)
 
-    
     for(i in 1:nrow(PrintGraph$Edges)){
       
       p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
@@ -184,8 +183,8 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
                            color = "Graph", text = '', size = 0.2, mode="lines",
                            showlegend = FALSE)
     }
-    
-    print(p) 
+
+    p
     
   } else {
     
@@ -526,7 +525,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
             p <- p %>% plotly::add_trace(x = PCoords[,1],
                                  y = PCoords[,2],
                                  z = PCoords[,3],
-                                 color = as.character(GroupsLab)[TaxonList[[i]][j]], text = '', size = 1,
+                                 color = as.character(GroupsLab)[TaxonList[[i]][j]], text = '', size = .5,
                                  sizes = c(1, 10), mode="lines",
                                  showlegend = FALSE, opacity = 0.5)
           }
@@ -536,7 +535,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
       
     }
     
-    print(p) 
+    p
     
     
   } else {
