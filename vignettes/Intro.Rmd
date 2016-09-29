@@ -9,15 +9,37 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette present a few simple examples describing the usage of the package RPrinGraph. For a more deailed description of the package and for various instruction on installation refer to a different vignette.
-
+This vignette is intended to provide a very quick tutorial to use the rpgraph package.
 
 ## An essential overview of Pircipal elastic circles
 
 
-## rpgraph prerequisite and instakllation
+## rpgraph prerequisite and installation
 
-dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
+The package is currently under development and oly available on GitHub. It relises on the Java code written by Andrei Zynoviev available in the java library VDAOEngine (https://github.com/auranic/VDAOEngine). Therefore, a functional Java Virtual machine for your system is necessary. \bold{Before} installing the package, it is advisable to install rJava from sources by using
+
+```{r, eval=FALSE}
+install.packages(pkgs = "rJava", repos="http://rforge.net", type = 'source')
+```
+
+The installation of the package requires the \verbatim{devtools} package, which is available from CRAN.
+
+The \verbatim{rpgraph} package can be installed using
+
+```{r, eval=FALSE}
+library(devtools)
+install_github("Albluca/rpgraph")
+```
+
+
+Compiling from source requires the appropriate development tools. To take advantage of all the feature of the package, it is advisable to also install (not necessary from source in this case) bigpca, flashpcaR, irlba, nsprcomp, and plotly. 
+
+
+
+install.packages("rJava",,"http://rforge.net")
+
+
+
 
 
 
@@ -27,7 +49,7 @@ This may be necessary for Mac systems:
 
 ## Workaround for common problems
 
-
+dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
 
 
 ## Example 1 - Circle

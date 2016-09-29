@@ -1,4 +1,4 @@
-Package: rpcurve
+Package: rpgraph
 Type: Package
 Title: r interface to VDAOEngine to build elastic principal graphs
 Version: 0.0.0.9000
