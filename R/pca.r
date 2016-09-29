@@ -12,7 +12,7 @@
 #' @return A list composed five elements rotation
 #' @return Comp the rotation matrix
 #' @return Center A vector containing the velue used to center the original matrix
-#'
+#' @export
 #'
 #' @examples
 #' add(1, 1)
@@ -522,8 +522,15 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
 
 
 
-
-
+#' Title
+#'
+#' @param Data 
+#' @param PCAData 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 ApplytoData <- function(Data, PCAData) {
   
  return(data.matrix(CleanData) %*% AllGenesPCA$Comp)

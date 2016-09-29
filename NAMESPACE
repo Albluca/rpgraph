@@ -2,6 +2,7 @@
 
 export(CheckDirectionality)
 export(ConstructGraph)
+export(SelectComputePCA)
 export(accuracyComplexityPlot)
 export(computeElasticPrincipalGraph)
 export(getTaxonMap)
