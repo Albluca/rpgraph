@@ -1,5 +1,15 @@
 
 
+#' Title
+#'
+#' @param Results 
+#' @param DirectionMat 
+#' @param Thr 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
 
   # Generate An Igraph net
@@ -103,6 +113,17 @@ ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
 # Check directionality --------------------------------------------
 
 
+#' Title
+#'
+#' @param Data 
+#' @param Results 
+#' @param OrderClass 
+#' @param Depth 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 CheckDirectionality <- function(Data, Results, OrderClass, Depth = NULL){
 
   TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)

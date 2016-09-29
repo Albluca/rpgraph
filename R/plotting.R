@@ -1,6 +1,16 @@
 
 # Plotting Functions (Diagnostic) --------------------------------------------
 
+#' Title
+#'
+#' @param PrintGraph 
+#' @param Main 
+#' @param Cex.Main 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 
   attach(PrintGraph$Report)
@@ -17,6 +27,25 @@ plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 
 }
 
+
+
+
+
+
+
+#' Title
+#'
+#' @param PrintGraph 
+#' @param Main 
+#' @param Cex.Main 
+#' @param Cex.Text = .8
+#' @param Mode = 'LocMin'
+#' @param Xlims = NULL
+#'
+#' @return
+#' @export
+#'
+#' @examples
 accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
                                    Cex.Text = .8, Mode = 'LocMin', Xlims = NULL){
 
@@ -82,6 +111,30 @@ accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
 # Plotting Functions (2D plots) --------------------------------------------
 
 
+#' Title
+#'
+#'
+#' @importFrom plotly %>%
+#' @param Data 
+#' @param PrintGraph 
+#' @param GroupsLab 
+#' @param ScaleFunction 
+#' @param NodeSizeMult 
+#' @param Col 
+#' @param CirCol 
+#' @param ColLabels 
+#' @param LineCol 
+#' @param IdCol 
+#' @param Main 
+#' @param Cex.Main 
+#' @param Xlab 
+#' @param Ylab 
+#' @param Plot.ly 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
                        NodeSizeMult=1, Col=NULL, CirCol="black", ColLabels = NULL,
                        LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
@@ -89,13 +142,8 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
   
   Data <- data.matrix(Data)
   
-  if(is.null(ColLabels)){
-    ColLabels <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
-  }
-  
-  
   if(is.null(Col)){
-    Col <- rep("black", ncol(Data))
+    Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
   }
   
   if(min(PrintGraph$Edges)==0){
@@ -105,8 +153,13 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
   if(Plot.ly){
     
     PlotData1 <- Data[,1:2]
+    
+    if(is.null(rownames(PlotData1))){
+      rownames(PlotData1) <- paste("R_", 1:nrow(PlotData1), sep= '')
+    }
+    
     PlotData2 <- PrintGraph$Nodes[,1:2]
-    rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
+    rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2), sep='')
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
     
     PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3)
@@ -119,7 +172,7 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y,
                  type = "scatter", mode = "markers", text = rownames(PlotData),
                  color = PlotData$color,
-                 colors = c(unique(ColLabels), "black"),
+                 colors = c(unique(Col), "black"),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text')
     p <- p %>% plotly::layout(xaxis = list(title = Xlab), yaxis = list(title = Ylab), title=Main)
 
@@ -196,6 +249,27 @@ computeMetroMapLayout <- function(PrintGraph){
 
 
 
+#' Title
+#'
+#' @param Results 
+#' @param Data 
+#' @param Categories 
+#' @param Graph 
+#' @param TaxonList 
+#' @param LayOut 
+#' @param Main 
+#' @param ScaleFunction 
+#' @param NodeSizeMult 
+#' @param ColCat 
+#' @param DirectionMat 
+#' @param Thr 
+#' @param Arrow.size 
+#' @param BiggestComponents 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL, LayOut = 'nicely', Main="",
                        ScaleFunction = sqrt, NodeSizeMult = 1, ColCat = NULL,
                        DirectionMat = NULL, Thr = 0.05, Arrow.size = .5, BiggestComponents = FALSE) {
@@ -344,17 +418,37 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 # Plotting Functions (3D plots) --------------------------------------------
 
 
-Initialize3d <- function(){
-  open3d()
-}
 
-
-
-
-
-
+#' Title
+#'
+#' @importFrom plotly %>%
+#' @param Data 
+#' @param PrintGraph 
+#' @param GroupsLab 
+#' @param ScaleFunction 
+#' @param NodeSizeMult 
+#' @param Col 
+#' @param CirCol 
+#' @param LineCol 
+#' @param IdCol 
+#' @param Main 
+#' @param Cex.Main 
+#' @param PlotProjections 
+#' @param ProjectionLines 
+#' @param TaxonList 
+#' @param Xlab 
+#' @param Ylab 
+#' @param Zlab 
+#' @param DirectionMat 
+#' @param Thr 
+#' @param Plot.ly 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSizeMult=1,
-                       Col=NULL, ColLabels=NULL,
+                       Col=NULL,
                        CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
                        PlotProjections = FALSE, ProjectionLines = NULL, TaxonList = NULL,
                        Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL,
@@ -362,12 +456,8 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
   
   Data <- data.matrix(Data)
   
-  if(is.null(ColLabels)){
-    ColLabels <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
-  }
-  
   if(is.null(Col)){
-    Col <- rep("grey", ncol(Data))
+    Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
   }
   
   if(min(PrintGraph$Edges)==0){
@@ -377,6 +467,11 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
   if(Plot.ly){
     
     PlotData1 <- Data[,1:3]
+    
+    if(is.null(rownames(PlotData1))){
+      rownames(PlotData1) <- paste("R_", 1:nrow(PlotData1), sep= '')
+    }
+    
     PlotData2 <- PrintGraph$Nodes[,1:3]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
@@ -393,7 +488,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
                  type = "scatter3d", mode = "markers", text = rownames(PlotData),
                  color = c(as.character(GroupsLab), rep("Graph", nrow(PlotData2))),
-                 colors = c(unique(ColLabels), "black"),
+                 colors = c(unique(Col), "black"),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
       plotly::layout(title = "All genes",
              scene = list(
@@ -431,7 +526,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
             p <- p %>% plotly::add_trace(x = PCoords[,1],
                                  y = PCoords[,2],
                                  z = PCoords[,3],
-                                 color = GroupsLab[TaxonList[[i]][j]], text = '', size = 1,
+                                 color = as.character(GroupsLab)[TaxonList[[i]][j]], text = '', size = 1,
                                  sizes = c(1, 10), mode="lines",
                                  showlegend = FALSE, opacity = 0.5)
           }
@@ -446,7 +541,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     
   } else {
     
-    rgl::plot3d(Data[,1], Data[,2], Data[,3], col=ColLabels,
+    rgl::plot3d(Data[,1], Data[,2], Data[,3], col=Col,
            size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE) 
     
     rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
@@ -524,156 +619,4 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
   }
   
 }
-
-
-
-
-
-
-
-
-
-plotData3D.old <- function(data, PrintGraph, ScaleFunction = sqrt, NodeSizeMult=1, Col=NULL,
-                       CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
-                       PlotProjections = FALSE, ProjectionLines = NULL,
-                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL, Thr = 0.05,
-                       Plot.ly = FALSE){
-  
-  # Initialize3d()
-
-  if(is.null(Col)){
-    Col <- rep("black", ncol(data))
-  }
-
-  if(is.null(Col)){
-    Col <- rep("grey", ncol(data))
-  }
-
-
-  if(Plot.ly){
-
-    PlotData <- TransfData[-ToRem,1:3]
-    colnames(PlotData) <- c("x", "y", "z")
-    PlotData <- data.frame(PlotData)
-    PlotData$x <- as.numeric(as.character(PlotData$x))
-    PlotData$y <- as.numeric(as.character(PlotData$y))
-    PlotData$z <- as.numeric(as.character(PlotData$z))
-
-    f <- list(
-      family = "Courier New, monospace",
-      size = 18,
-      color = "#7f7f7f"
-    )
-    x <- list(
-      title = Xlab,
-      titlefont = f
-    )
-    y <- list(
-      title = Ylab,
-      titlefont = f
-    )
-    z <- list(
-      title = Zlab,
-      titlefont = f
-    )
-
-
-    p <- plot_ly(x = rnorm(10), y = rnorm(10), mode = "markers") %>%
-      layout(xaxis = x, yaxis = y)
-    p
-
-
-    p <- plot_ly(data = PlotData, x = PlotData$x, y = PlotData$y, z = PlotData$z, type = "scatter3d",
-                 color = DayLabels.Factor[-ToRem], colors = unique(ColLabels), mode = "markers",
-                 size = rep(1, nrow(PlotData))) %>% layout(xaxis = x, yaxis = y)
-    print(p)
-
-    plotly_POST(p, filename = "Test3d", sharing = "public")
-
-
-  }
-  
-  if(!Plot.ly){
-
-    # open3d()
-
-    rgl::plot3d(TransfData[-ToRem,1], TransfData[-ToRem,2], TransfData[-ToRem,3], col=ColLabels[-ToRem],
-           size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE)
-
-    rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(data), col = IdCol)
-
-    rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
-           add = TRUE, alpha=0.3)
-
-    if(min(PrintGraph$Edges)==0){
-      PrintGraph$Edges = PrintGraph$Edges + 1
-    }
-
-    if(is.null(DirectionMat)){
-      for(i in 1:nrow(PrintGraph$Edges)){
-
-        PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
-                         PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
-
-        rgl::plot3d(PCoords, type = 'l', add = TRUE)
-
-      }
-    } else {
-
-      for(i in 1:nrow(DirectionMat)){
-
-        SourceID <- as.integer(strsplit(DirectionMat[i, ]$Source, split = "V_")[[1]][2])
-        TargetID <- as.integer(strsplit(DirectionMat[i, ]$Target, split = "V_")[[1]][2])
-        Dir <- DirectionMat[i, ]$Direction
-        P.val <- as.numeric(DirectionMat[i, ]$P.val)
-
-        if(is.na(P.val)){
-          next()
-        }
-
-        if(P.val > Thr | Dir == 0){
-          PCoords <- rbind(PrintGraph$Nodes[SourceID,1:3],
-                           PrintGraph$Nodes[TargetID,1:3])
-          rgl::plot3d(PCoords, type = 'l', add = TRUE)
-          next()
-        }
-
-        if(Dir == 1){
-          rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
-          next()
-        }
-
-        if(Dir == 2){
-          rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
-          next()
-        }
-
-      }
-
-    }
-
-
-
-    if(PlotProjections){
-
-      TaxonList <- getTaxonMap(Graph = makeGraph(PrintGraph), Data = data)
-
-      for(i in 1:length(TaxonList)){
-
-        if(!is.na(TaxonList[[i]][1])){
-          for(j in 1:length(TaxonList[[i]])){
-            PCoords <- rbind(PrintGraph$Nodes[i,1:3],
-                             data[TaxonList[[i]][j],1:3])
-            rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
-          }
-        }
-
-      }
-
-    }
-
-  }
-
-}
-
 

@@ -276,7 +276,6 @@ makeGraph <- function(PrintGraph){
 #' Project a set of datapoints onto the nodes of principal graph
 #'
 #' The function depends on a working JVM with the VDAOEngine.jar library in the libpath.
-#' This is an internal function and should not be accessed directly by the user.
 #'
 #' @param PrintGraph An elastic principal graph structure as returned from \code{link{computeElasticPrincipalGraph}}
 #' @param Data A matrix containing a set of points with the correct number of dimensions. Each row represent a point
@@ -284,8 +283,11 @@ makeGraph <- function(PrintGraph){
 #' @return A list. Each elements of the list represent the vertex of the principal graph and contains a vector reporting
 #' the cells (as row number) that are associted with that particular vertex. The vector equal to NA indicates that no
 #' cells are associated with that vertex;
-getTaxonMap <- function(Graph, Data){
+#' @export
+getTaxonMap <- function(Results, Data){
 
+  Graph <- makeGraph(Results)
+  
   NumberOfNodes <- Graph$Nodes$size()
 
   numpoints <- as.integer(nrow(Data))

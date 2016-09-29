@@ -3,14 +3,19 @@ Type: Package
 Title: r interface to VDAOEngine to build elastic principal graphs
 Version: 0.0.0.9000
 Authors@R: person("Luca", "Albergante", email = "luca.albergante@gmail.com", role = c("aut", "cre"))
-Description: Interface R to the java library VDAOEngine (https://github.com/auranic/VDAOEngine) via rJava to construct different types of principal graphs. This is an alpha release, expect problems.
+Description: Interface R to the java library VDAOEngine (https://github.com/
+    auranic/VDAOEngine) via rJava to construct different types of principal graphs.
+    This is an alpha release, expect problems.
 License: Apache License 2.0
 LazyData: TRUE
-Depends: rJava
-Imports: igraph,
+Depends:
+    rJava
+Imports:
+    igraph,
     rgl,
     tictoc
-Suggests: bigpca,
+Suggests:
+    bigpca,
     devtools,
     downloader,
     flashpcaR,
@@ -22,3 +27,4 @@ Suggests: bigpca,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+RoxygenNote: 5.0.1

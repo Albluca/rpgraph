@@ -11,13 +11,20 @@ vignette: >
 
 This vignette present a few simple examples describing the usage of the package RPrinGraph. For a more deailed description of the package and for various instruction on installation refer to a different vignette.
 
+
+
+
+dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
+
+
+
 ## Pircipal elastic circles
 
 This may be necessary for Mac systems:
 
-```{r}
-dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
-```
+
+
+
 
 ```{r}
 library(rpcurve)
@@ -67,7 +74,7 @@ plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
 library("rgl")
 open3d()
 plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
-           GroupsLab = rep(1, nrow(simple_circle)))
+           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05)
 ```
 
 
@@ -75,7 +82,7 @@ plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
 
 ```{r, fig.show='hold'}
 Net <- ConstructGraph(Results = Results, DirectionMat = NULL, Thr = 0.05)
-TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)
+TaxonList <- getTaxonMap(Results = Results, Data = Data)
 
 InfoData <- plotPieNet(Results = Results, Data = simple_circle, Categories = rep(1, nrow(simple_circle)),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
