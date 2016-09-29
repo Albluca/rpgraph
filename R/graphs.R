@@ -124,9 +124,13 @@ ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
 #' @export
 #'
 #' @examples
-CheckDirectionality <- function(Data, Results, OrderClass, Depth = NULL){
+CheckDirectionality <- function(Data, Results, OrderClass, TaxonList = NULL, Depth = NULL){
 
-  TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)
+  if(is.null(TaxonList)){
+    print("TaxonList will be calculated. Consider doing that separetedly")
+    TaxonList <- getTaxonMap(Results = Results, Data = Data)
+  }
+
 
   if(min(Results$Edges) == 0){
     Results$Edges <- Results$Edges + 1
@@ -195,6 +199,14 @@ CheckDirectionality <- function(Data, Results, OrderClass, Depth = NULL){
 }
 
 
+#' Title
+#'
+#' @param InfoData 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 GetDirectionalityIndex <- function(InfoData) {
 
   VertDist <- igraph::distances(InfoData$Net, mode = 'out')

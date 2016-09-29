@@ -282,8 +282,8 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
   }
 
   if(is.null(TaxonList)){
-    print("TaxonList will be computed. Consider do that separetedly")
-    TaxonList <- getTaxonMap(Graph = makeGraph(Results), Data = Data)
+    print("TaxonList will be computed. Consider doing that separetedly")
+    TaxonList <- getTaxonMap(Results = Results, Data = Data)
   }
 
   TaxonCatNoNone <- list()
@@ -363,7 +363,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
   if(LayOut == 'circle_line'){
     IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
-    Iso <- igraph::graph.get.isomorphisms.vf2(aigraph::s.undirected(Net, mode = 'collapse'), IsoGaph)
+    Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
     if(length(Iso) > 0){
       VerOrder <- igraph::V(Net)[Iso[[1]]]
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)

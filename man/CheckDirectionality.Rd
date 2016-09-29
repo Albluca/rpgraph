@@ -4,7 +4,8 @@
 \alias{CheckDirectionality}
 \title{Title}
 \usage{
-CheckDirectionality(Data, Results, OrderClass, Depth = NULL)
+CheckDirectionality(Data, Results, OrderClass, TaxonList = NULL,
+  Depth = NULL)
 }
 \arguments{
 \item{Data}{}
