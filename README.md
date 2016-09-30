@@ -84,6 +84,8 @@ It it also possible to zoom into a specific area of the accuracy/complexity plot
 accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
 ```
 
+![](images/circle/AccCompCirc1.png)
+
 Data can be plotted in 2D using the R built-in functions
 
 ```{r, fig.height=5, fig.width=5}
@@ -91,12 +93,16 @@ plotData2D(Data = simple_circle, PrintGraph = Results,
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
+![](images/circle/Plot2D.png)
+
 or plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
 
 ```{r, fig.height=5, fig.width=5}
 plotData2D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
+
+![](images/circle/Plot2D_plotly.html)
 
 This commands will produce a list of warnings. Unfortunately there is not an easy way to fix it ...
 
