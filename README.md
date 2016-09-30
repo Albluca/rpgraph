@@ -137,7 +137,7 @@ plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
            Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
 ```
 
-The result of this command can be seen [here](https://plot.ly/~Alblucac/9/dimension-2-vs-dimension-1/)
+The result of this command can be seen [here](https://plot.ly/~Alblucac/11/_1-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-/)
 
 Similarly to 2D, it is possible to export the plot to a web resource.
 
