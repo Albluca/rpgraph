@@ -99,12 +99,10 @@ or plotly, which produces an interactive plot. Using plotly interactivelly requi
 
 ```{r, fig.height=5, fig.width=5}
 plotData2D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
-           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+           GroupsLab = rep(1, nrow(simple_circle)))
 ```
 
-![](images/circle/Plot2D_plotly.html)
-
-This commands will produce a list of warnings. Unfortunately there is not an easy way to fix it ...
+The result of this command can be seen [here](https://plot.ly/~Alblucac/9/dimension-2-vs-dimension-1/). The commands will produce a list of warnings. Unfortunately there is not an easy way to fix it ...
 
 The plotly graph can be exported on the web, for example on [plot.ly](http://plot.ly) using the instruction provided [here](http://plot.ly/r/getting-started/).
 
@@ -114,10 +112,13 @@ Data can also be plotted in 3D using the functionalities provided by the `rgl` p
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE}
 plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
-           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05)
+           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05,
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
 ```
 
-The code is not executed in the html version of the vignette. This can be fixed (in priciple) at a later stage of development.
+
+
+
 
 For `rgl` to work correctly on MacOS, a proper X11 environment need to be installed. The most common solution is the installation of [XQuartz](http://www.xquartz.org/). If the code crashes R, try using
 
