@@ -32,7 +32,7 @@ The other packages can be found on CRAN.
 
 ## Workaround for common problems
 
-The installation and loading of `rJava` is known to be problematics under certain circumstances on MacOS. A number of workaround can be found on the [internet](http://conjugateprior.org/2014/12/r-java8-osx/). Possible solutions include recompiling the package, setting environment variables manually~, and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information.
+The installation and loading of `rJava` is known to be problematic under certain circumstances on MacOS. A number of workaround can be found on the [internet](http://conjugateprior.org/2014/12/r-java8-osx/). Possible solutions include recompiling the package, setting environment variables manually~, and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information.
 
 If `rJava` fails to load try typing
 
@@ -45,7 +45,7 @@ before loading the library. These lines may need to get adjusted depending on th
 
 ## A Few examples
 
-The package contains a few ezample datasets that can be used to test its functionalities.
+The package contains a few example datasets that can be used to test its functionalities.
 
 ## Example 1 - Circle
 
@@ -63,11 +63,20 @@ Now `Results` contain the processed principal graph. Diagnostic information can 
 plotMSDEnergyPlot(Results, Main = "Pincipal Circle", Cex.Main = 1)
 ```
 
+to produce
+
+![](images/circle/MSDCirc.png)
+
 and
 
 ```{r, fig.height=5, fig.width=5}
 accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Mode = 5)
 ```
+
+to produce
+
+![](images/circle/AccCompCirc.png)
+
 
 It it also possible to zoom into a specific area of the accuracy/complexity plot by using the Xlims parameter.
 
