@@ -116,9 +116,9 @@ plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
            Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
 ```
 
+which will produce an interactive 3d plot. A snapshot of this plot is displayed for reference
 
-
-
+![](images/circle/Plot3D.png)
 
 For `rgl` to work correctly on MacOS, a proper X11 environment need to be installed. The most common solution is the installation of [XQuartz](http://www.xquartz.org/). If the code crashes R, try using
 
