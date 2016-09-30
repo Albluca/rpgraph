@@ -63,6 +63,10 @@ Now `Results` contain the processed principal graph. Diagnostic information can 
 plotMSDEnergyPlot(Results, Main = "Pincipal Circle", Cex.Main = 1)
 ```
 
+to produce
+
+![]({{site.baseurl}}/https://github.com/Albluca/rpgraph/blob/master/images/circle/AccComCirc.png)
+
 and
 
 ```{r, fig.height=5, fig.width=5}
