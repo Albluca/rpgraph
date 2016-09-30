@@ -6,20 +6,22 @@
 
 ## rpgraph prerequisite and installation
 
-The package is currently under development and only available on GitHub. It relises on the Java code written by Andrei Zynoviev available in the java library VDAOEngine (https://github.com/auranic/VDAOEngine). The Therefore, a functional Java virtual machine for your system is necessary. **Before** installing the package, it is advisable to install `rJava` from sources by using
+The package is currently under development and only available on GitHub. It relises on the Java code written by Andrei Zynoviev available in the java library [VDAOEngine](https://github.com/auranic/VDAOEngine). The R code interfaces with the java library via the [`rJava` package](https://www.rforge.net/rJava/). 
+
+A functional java virtual machine is necessary for the package to work correctly. It is advisable to install `rJava` from sources, **before** installing `rpgraph`. This can be done by typing
 
 ```{r, eval=FALSE}
 install.packages(pkgs = "rJava", repos="http://rforge.net", type = 'source')
 ```
 
-Compiling from source requires the appropriate development tools, e.g., C/C++ compiler. The installation of the package requires the `devtools ` package, which is available from CRAN. The `rpgraph` package can be installed using
+in the R console. Compiling from source requires the appropriate development tools, e.g., the C/C++ compiler. The installation of the package requires the `devtools` package, which is available from CRAN. The `rpgraph` package can be installed by typing
 
 ```{r, eval=FALSE}
 library(devtools)
 install_github("Albluca/rpgraph")
 ```
 
-To take advantage of all the feature of the package, it is advisable to also install (not necessary from source in this case) `bigpca`, `flashpcaR`, `irlba`, `nsprcomp`, and `plotly`. `flashpcaR` is available from GitHub
+in the R console. To take advantage of all the feature of the package, it is advisable to also install (not necessary from source) the R packages `bigpca`, `flashpcaR`, `irlba`, `nsprcomp`, and `plotly`. `flashpcaR` is only available from GitHub and need to be installed using `devtools`:
 
 ```{r, eval=FALSE}
 library(devtools)
@@ -30,7 +32,7 @@ The other packages can be found on CRAN.
 
 ## Workaround for common problems
 
-The installation and loading of `rJava` is known to be problematics under certain circumstances on MacOS. A number of workaround can be found on the internet, possible solutions include recompiling the package, setting certain environment variables manually, ~ and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information in the global environment.
+The installation and loading of `rJava` is known to be problematics under certain circumstances on MacOS. A number of workaround can be found on the [internet](http://conjugateprior.org/2014/12/r-java8-osx/); possible solutions include recompiling the package, setting environment variables manually~, and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information.
 
 If `rJava` fails to load try typing
 
@@ -39,11 +41,11 @@ options("java.home"="/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/
 dyn.load('/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
 ```
 
-before loading the library. These lines may need to get adjusted depending on the version of the virtual machine that the user intendt to use.
+before loading the library. These lines may need to get adjusted depending on the version of the virtual machine that the user intend to use.
 
 ## A Few examples
 
-The package contains a few ezample datasets thqt can be udes to test its functionalities.
+The package contains a few ezample datasets that can be used to test its functionalities.
 
 ## Example 1 - Circle
 
@@ -51,11 +53,8 @@ This section describes how to produce a circular principal graph.
 
 ```{r}
 library(rpgraph)
-
 Data <- simple_circle
-
 Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 40, Method = 'CircleConfiguration')
-
 ```
 
 Now `Results` contain the processed principal graph. Diagnostic information can be obtained using
