@@ -65,16 +65,18 @@ plotMSDEnergyPlot(Results, Main = "Pincipal Circle", Cex.Main = 1)
 
 to produce
 
-[[images/circle/AccCompCirc.png|alt=Accuracy Complexity plot]]
-
-![](images/circle/AccCompCirc.png)
-
+![](images/circle/MSDCirc.png)
 
 and
 
 ```{r, fig.height=5, fig.width=5}
 accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Mode = 5)
 ```
+
+to produce
+
+![](images/circle/AccCompCirc.png)
+
 
 It it also possible to zoom into a specific area of the accuracy/complexity plot by using the Xlims parameter.
 
