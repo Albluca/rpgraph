@@ -84,6 +84,8 @@ It it also possible to zoom into a specific area of the accuracy/complexity plot
 accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
 ```
 
+![](images/circle/AccCompCirc1.png)
+
 Data can be plotted in 2D using the R built-in functions
 
 ```{r, fig.height=5, fig.width=5}
