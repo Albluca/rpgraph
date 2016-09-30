@@ -118,7 +118,8 @@ Data can also be plotted in 3D using the functionalities provided by the `rgl` p
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE}
 plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
-           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05)
+           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05,
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
 The code is not executed in the html version of the vignette. This can be fixed (in priciple) at a later stage of development.
@@ -136,7 +137,8 @@ It is also possible to produce 3D plots using plot.ly.
 
 ```{r, fig.height=5, fig.width=5}
 plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
-           GroupsLab = rep(1, nrow(simple_circle)))
+           GroupsLab = rep(1, nrow(simple_circle)),
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
 Similarly to 2D, it is possible to export the plot to a web resource.

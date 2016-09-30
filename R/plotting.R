@@ -489,7 +489,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
                  color = c(as.character(GroupsLab), rep("Graph", nrow(PlotData2))),
                  colors = c(unique(Col), "black"),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
-      plotly::layout(title = "All genes",
+      plotly::layout(title = Main,
              scene = list(
                xaxis = list(title = Xlab), 
                yaxis = list(title = Ylab), 
