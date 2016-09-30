@@ -32,7 +32,7 @@ The other packages can be found on CRAN.
 
 ## Workaround for common problems
 
-The installation and loading of `rJava` is known to be problematics under certain circumstances on MacOS. A number of workaround can be found on the [internet](http://conjugateprior.org/2014/12/r-java8-osx/); possible solutions include recompiling the package, setting environment variables manually~, and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information.
+The installation and loading of `rJava` is known to be problematics under certain circumstances on MacOS. A number of workaround can be found on the [internet](http://conjugateprior.org/2014/12/r-java8-osx/). Possible solutions include recompiling the package, setting environment variables manually~, and changing the operating system~. Most of the times the problem is connected with the package struggling to find the appropriate information.
 
 If `rJava` fails to load try typing
 
