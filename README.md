@@ -133,8 +133,11 @@ It is also possible to produce 3D plots using plot.ly.
 
 ```{r, fig.height=5, fig.width=5}
 plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
-           GroupsLab = rep(1, nrow(simple_circle)))
+           GroupsLab = rep(1, nrow(simple_circle)),
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
 ```
+
+The result of this command can be seen [here](https://plot.ly/~Alblucac/9/dimension-2-vs-dimension-1/)
 
 Similarly to 2D, it is possible to export the plot to a web resource.
 
