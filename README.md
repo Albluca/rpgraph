@@ -151,7 +151,9 @@ InfoData <- plotPieNet(Results = Results, Data = simple_circle, NodeSizeMult = 4
                        Categories = sample(1:3, nrow(simple_circle), replace = TRUE),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
+resulting into
 
+![](images/circle/PieChr.png)
 
 ## Example 2 - Curve
 
