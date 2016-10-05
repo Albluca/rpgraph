@@ -431,7 +431,13 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
         P1Pos <- PCARet$x["C1","PC1"]
         P2Pos <- PCARet$x["C2","PC1"]
         
-        PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
+        if(length(SelPoints)>1){
+          PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
+        } else {
+          PointPosFull <- t(RestDataMap - PCARet$center) %*% PCARet$rotation
+        }
+        
+        
         
         PointPos <- PointPosFull[,"PC1"]
         PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])) + PCARet$center)
@@ -472,6 +478,10 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
       # points(Results$Nodes[,1:2], col="black")
       
       for (i in 1:length(DistsLists)) {
+        
+        if(is.null(DistsLists[[i]])){
+          next()
+        }
         
         SegLen <- c(SegLen, DistsLists[[i]]$SegmentDist)
         
