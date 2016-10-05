@@ -279,13 +279,39 @@ makeGraph <- function(PrintGraph){
 #'
 #' @param PrintGraph An elastic principal graph structure as returned from \code{link{computeElasticPrincipalGraph}}
 #' @param Data A matrix containing a set of points with the correct number of dimensions. Each row represent a point
+#' @param UseR A bolean indicating the use of R (TRUE) of the Java library to perform the projections 
 #'
 #' @return A list. Each elements of the list represent the vertex of the principal graph and contains a vector reporting
 #' the cells (as row number) that are associted with that particular vertex. The vector equal to NA indicates that no
 #' cells are associated with that vertex;
 #' @export
-getTaxonMap <- function(Results, Data){
+getTaxonMap <- function(Results, Data, UseR = FALSE){
 
+  if(UseR){
+    
+    CurvePoints <- Results$Nodes
+    # rownames(CurvePoints) <- paste("V_", 1:nrow(CurvePoints), sep='')
+    
+    AllPoints <- rbind(Data, CurvePoints)
+    DistPoints <- as.matrix(dist(AllPoints))
+    IntDist <- DistPoints[1:nrow(Data),(nrow(Data)+1):(nrow(CurvePoints)+nrow(Data))]
+    PointsNodesProjections <- apply(IntDist, 1, which.min)
+
+    TaxonMap <- list()
+    
+    for (i in 1:nrow(Results$Nodes)) {
+      Idxs <- which(PointsNodesProjections == i)
+      if(length(Idxs)>0){
+        TaxonMap[[i]] <- Idxs
+      } else {
+        TaxonMap[[i]] <- NA
+      }
+    }
+
+    return(TaxonMap)
+    
+  }
+  
   Graph <- makeGraph(Results)
   
   NumberOfNodes <- Graph$Nodes$size()
