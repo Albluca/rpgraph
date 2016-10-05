@@ -374,8 +374,12 @@ getTaxonMap <- function(Results, Data, UseR = FALSE){
 #' @export
 #'
 #' @examples
-projectPoints <- function(Results, Data, TaxonList=NULL,
-                          UseR = TRUE, method = 'Dist'){
+projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = 'Dist', Dims = NULL){
+  
+  if(is.null(Dims)){
+    Dims <- ncol(Data)
+  }
+  
   
   if(is.null(TaxonList)){
     print("TaxonList will be computed. Consider doing that separetedly")
@@ -396,13 +400,17 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
         
         Nd <- Results$Edges[i, ]
         
-        C1 <- Results$Nodes[Nd[1],]
-        C2 <- Results$Nodes[Nd[2],]
+        C1 <- Results$Nodes[Nd[1],1:Dims]
+        C2 <- Results$Nodes[Nd[2],1:Dims]
         
         # Select Only points associated with C1 or C2
         
         SelPoints <- c(TaxonList[[Nd[1]]], TaxonList[[Nd[2]]])
-        RestDataMap <- Data[SelPoints,]
+        SelPoints <- SelPoints[!is.na(SelPoints)]
+        if(length(SelPoints)<1){
+          next()
+        }
+        RestDataMap <- Data[SelPoints,1:Dims]
         
         # plot(RestDataMap[,1:2])
         # points(C1[1], C1[2], pch=20)
@@ -457,7 +465,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
         
       }
       
-      PosVector <- matrix(rep(NA, nrow(Data)*(ncol(Data)+1)), nrow = nrow(Data))
+      PosVector <- matrix(rep(NA, nrow(Data)*(Dims+1)), nrow = nrow(Data))
       RelPosVector <- matrix(rep(NA, nrow(Data)*3), nrow = nrow(Data))
       SegLen <- NULL
       # plot(Data[,1:2], col="gray", ylim = c(-50, 50))
@@ -486,10 +494,10 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
               c(DistsLists[[i]]$PointsProjections[j], DistsLists[[i]]$Nodes)
             
             if(DistsLists[[i]]$PointsProjections[j] == 0){
-              PosVector[DistsLists[[i]]$PointsIndices[j], ] <- c(0, Results$Nodes[DistsLists[[i]]$Nodes[1],])
+              PosVector[DistsLists[[i]]$PointsIndices[j], ] <- c(0, Results$Nodes[DistsLists[[i]]$Nodes[1],1:Dims])
             }
             if(DistsLists[[i]]$PointsProjections[j] == 1){
-              PosVector[DistsLists[[i]]$PointsIndices[j], ] <- c(0, Results$Nodes[DistsLists[[i]]$Nodes[2],])
+              PosVector[DistsLists[[i]]$PointsIndices[j], ] <- c(0, Results$Nodes[DistsLists[[i]]$Nodes[2],1:Dims])
             }
             next()
           }
@@ -508,7 +516,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
     
     if(method == 'Dist'){
       
-      FullMat <- rbind(Results$Nodes, Data)
+      FullMat <- rbind(Results$Nodes[,1:Dims], Data[,1:Dims])
       DistMat <- as.matrix(dist(FullMat))
       
       RedDistMat <- DistMat[1:nrow(Results$Nodes), -c(1:nrow(Results$Nodes))]
@@ -518,7 +526,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
         Results$Edges <- Results$Edges + 1
       }
       
-      PosVector <- matrix(rep(NA, nrow(Data)*(ncol(Data)+1)), nrow = nrow(Data))
+      PosVector <- matrix(rep(NA, nrow(Data)*(Dims+1)), nrow = nrow(Data))
       RelPosVector <- matrix(rep(NA, nrow(Data)*3), nrow = nrow(Data))
       SegLen <- NULL
       
@@ -534,13 +542,13 @@ projectPoints <- function(Results, Data, TaxonList=NULL,
         if(Results$Edges[EdgeId, 1] == BaseNode){
           PointDists <- SortedNodes[[i]]$x[c(1, SecondaryNodeIdx)]
           RelPosVector[i,] <- c(PointDists[1]/sum(PointDists), BaseNode, SecondaryNode)
-          PosVector[i, ] <- c(1, RelPosVector[i,1]*Results$Nodes[BaseNode,] +
-                                (1-RelPosVector[i,1])*Results$Nodes[SecondaryNode,])
+          PosVector[i, ] <- c(1, RelPosVector[i,1]*Results$Nodes[BaseNode,1:Dims] +
+                                (1-RelPosVector[i,1])*Results$Nodes[SecondaryNode,1:Dims])
         } else {
           PointDists <- SortedNodes[[i]]$x[c(1, SecondaryNodeIdx)]
           RelPosVector[i,] <- c(PointDists[2]/sum(PointDists), SecondaryNode, BaseNode)
-          PosVector[i, ] <- c(1, RelPosVector[i,1]*Results$Nodes[SecondaryNode,] +
-                                (1-RelPosVector[i,1])*Results$Nodes[BaseNode,])
+          PosVector[i, ] <- c(1, RelPosVector[i,1]*Results$Nodes[SecondaryNode,1:Dims] +
+                                (1-RelPosVector[i,1])*Results$Nodes[BaseNode,1:Dims])
         }
         
         SegLen <- c(SegLen, NodeDistMat[BaseNode, SecondaryNode])
