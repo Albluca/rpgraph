@@ -4,10 +4,12 @@
 \alias{getTaxonMap}
 \title{Project a set of datapoints onto the nodes of principal graph}
 \usage{
-getTaxonMap(Results, Data)
+getTaxonMap(Results, Data, UseR = FALSE)
 }
 \arguments{
 \item{Data}{A matrix containing a set of points with the correct number of dimensions. Each row represent a point}
+
+\item{UseR}{A bolean indicating the use of R (TRUE) of the Java library to perform the projections}
 
 \item{PrintGraph}{An elastic principal graph structure as returned from \code{link{computeElasticPrincipalGraph}}}
 }
