@@ -168,19 +168,22 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
     PlotData <- data.frame(PlotData)
     PlotData$x <- as.numeric(as.character(PlotData$x))
     PlotData$y <- as.numeric(as.character(PlotData$y))
+    PlotData$color <- factor(PlotData$color, levels = c(unique(GroupsLab), "Graph"))
+    
     
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y,
                  type = "scatter", mode = "markers", text = rownames(PlotData),
                  color = PlotData$color,
                  colors = c(unique(Col), "black"),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text')
+    
     p <- p %>% plotly::layout(xaxis = list(title = Xlab), yaxis = list(title = Ylab), title=Main)
 
     for(i in 1:nrow(PrintGraph$Edges)){
       
       p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
                            y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
-                           color = "Graph", text = '', size = 0.2, mode="lines",
+                           color = PlotData$color[length(PlotData$color)], text = '', size = 0.2, mode="lines",
                            showlegend = FALSE)
     }
 
@@ -418,31 +421,30 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
 
 
-#' Title
+#' Plot dqta in 3 dimensions
 #'
 #' @importFrom plotly %>%
-#' @param Data 
-#' @param PrintGraph 
-#' @param GroupsLab 
-#' @param ScaleFunction 
-#' @param NodeSizeMult 
-#' @param Col 
-#' @param CirCol 
-#' @param LineCol 
-#' @param IdCol 
-#' @param Main 
-#' @param Cex.Main 
-#' @param PlotProjections 
-#' @param ProjectionLines 
-#' @param TaxonList 
-#' @param Xlab 
-#' @param Ylab 
-#' @param Zlab 
-#' @param DirectionMat 
-#' @param Thr 
-#' @param Plot.ly 
+#' @param Data The Data to be plotted. Each column represents a dimension and each row represents a point
+#' @param PrintGraph A princial graph structure obtained by \link{computeElasticPrincipalGraph}
+#' @param GroupsLab A vector of labels to indicate which group each point belongs to 
+#' @param ScaleFunction A scaling function to decide the size of the spheres that represent the nodes of the principal graph
+#' @param NodeSizeMult A scaling vector to decide the size of the spheres that represent the nodes of the principal graph
+#' @param Col A vector of colors for the points. If NULL the cplors will be computed automatically
+#' @param CirCol The color of the Spheres (it will be partially transparent)
+#' @param LineCol The colors of the edtges of the graph
+#' @param IdCol The color of the labels of the nodes of the graph
+#' @param Main The title of the plot
+#' @param Cex.Main The multiplier associated with the title of the plot
+#' @param PlotProjections Should the line projecting points on the nodes to be plotted?
+#' @param ProjectionLines A vector of colors for the projection lines (used only if Plot.ly = FALSE)
+#' @param TaxonList A list of associations between points and nodes produced by \link{getTaxonMap}
+#' @param Xlab The label of the x axis
+#' @param Ylab The label of the y axis
+#' @param Zlab The label of the z axis
+#' @param DirectionMat A directionality structure produced by \link{CheckDirectionality}
+#' @param Thr A threshold to be used for directionality reconstruction
+#' @param Plot.ly A boolen indicating if Plot.ly (TRUE) or rgl (FALSE) should be used
 #'
-#' @return
 #' @export
 #'
 #' @examples
@@ -487,7 +489,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
                  type = "scatter3d", mode = "markers", text = rownames(PlotData),
                  color = c(as.character(GroupsLab), rep("Graph", nrow(PlotData2))),
-                 colors = c(unique(Col), "black"),
+                 colors = c(unique(Col), col=CirCol),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
       plotly::layout(title = Main,
              scene = list(
@@ -546,7 +548,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
     
     rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
-           add = TRUE, alpha=0.3)
+           add = TRUE, alpha=0.3, col=CirCol)
     
     
     if(is.null(DirectionMat)){
@@ -555,7 +557,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
         PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
                          PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
         
-        rgl::plot3d(PCoords, type = 'l', add = TRUE)
+        rgl::plot3d(PCoords, type = 'l', add = TRUE, col=LineCol)
         
       }
     } else {
@@ -574,17 +576,17 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
         if(P.val > Thr | Dir == 0){
           PCoords <- rbind(PrintGraph$Nodes[SourceID,1:3],
                            PrintGraph$Nodes[TargetID,1:3])
-          rgl::plot3d(PCoords, type = 'l', add = TRUE)
+          rgl::plot3d(PCoords, type = 'l', add = TRUE, col=LineCol)
           next()
         }
         
         if(Dir == 1){
-          rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5, col=LineCol)
           next()
         }
         
         if(Dir == 2){
-          rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5)
+          rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5, col=LineCol)
           next()
         }
         
