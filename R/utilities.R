@@ -95,3 +95,78 @@ PlotAll <- function(PCAData, CleanData, Adjust = 0, NumNodes, Method, Lab, LayOu
 
 
 
+
+#' Title
+#'
+#' @param SETVM 
+#'
+#' @return
+#'
+#' @examples
+SelectVM <- function(SETVM = NULL) {
+  
+  # Check operating Systems and set variable if necessary
+  
+  BaseJavaDir <- "/Library/Java/JavaVirtualMachines/"
+  
+  if(grep("apple", R.version$platform)){
+    # R has been compiled for Mac
+    print("Mac OS detected. Setting up Java environmental variables.")
+    
+    # Get environmental variables
+    
+    if(Sys.getenv("JAVA_HOME") == ""){
+      
+      AvailableVMS <- list.dirs(BaseJavaDir, recursive = FALSE, full.names = FALSE)
+      AvailableVMS <- AvailableVMS[grep("jdk", AvailableVMS)]
+      
+      print(paste(length(AvailableVMS), "JVMs found"))
+      
+      JVMVersionNumb <- NULL
+      for(i in 1:length(AvailableVMS)){
+        JVMVersionNumb <- c(JVMVersionNumb,
+                            regmatches(AvailableVMS[i],
+                                       regexpr("[0-9]+[.]+[0-9]+[.]+[0-9]+[_]*[0-9]*", AvailableVMS[i])
+                            )
+        )
+      }
+      
+      JVM_VersionNumbType <- as.numeric_version(sub("_", ".", JVMVersionNumb, fixed = TRUE))
+      
+      if(!is.null(SETVM)){
+        
+        SelectedVMs <- AvailableVMS[grep(SETVM, AvailableVMS)]
+        
+        if(length(SelectedVMs)==1){
+          print(paste("Using", SelectedVMs))
+          
+          options("java.home"=paste(BaseJavaDir, SelectedVMs, "/Contents/Home/jre", sep=""))
+          dyn.load(paste(BaseJavaDir, SelectedVMs, "/Contents/Home/jre/lib/server/libjvm.dylib", sep=""))
+        } else {
+          VersionToUse <- max(JVM_VersionNumbType[grep(SETVM, AvailableVMS)])
+          DirToUse <- AvailableVMS[which(JVM_VersionNumbType == VersionToUse)]
+          
+          print(paste("Using", DirToUse))
+          
+          options("java.home"=paste(BaseJavaDir, DirToUse, "/Contents/Home/jre", sep=""))
+          dyn.load(paste(BaseJavaDir, DirToUse, "/Contents/Home/jre/lib/server/libjvm.dylib", sep=""))
+        }
+        
+      } else {
+        
+        VersionToUse <- max(JVM_VersionNumbType)
+        DirToUse <- AvailableVMS[which(JVM_VersionNumbType == VersionToUse)]
+        
+        print(paste("Using", DirToUse))
+        
+        options("java.home"=paste(BaseJavaDir, DirToUse, "/Contents/Home/jre", sep=""))
+        dyn.load(paste(BaseJavaDir, DirToUse, "/Contents/Home/jre/lib/server/libjvm.dylib", sep=""))
+      }
+    }
+  }
+  
+}
+
+
+
+

@@ -4,7 +4,8 @@
 \alias{projectPoints}
 \title{Project Points on the edges of the graph}
 \usage{
-projectPoints(Results, Data, TaxonList = NULL, UseR = TRUE)
+projectPoints(Results, Data, TaxonList = NULL, UseR = TRUE,
+  method = "Dist", Dims = NULL)
 }
 \arguments{
 \item{Results}{}
@@ -14,6 +15,8 @@ projectPoints(Results, Data, TaxonList = NULL, UseR = TRUE)
 \item{TaxonList}{}
 
 \item{UseR}{}
+
+\item{method}{}
 }
 \description{
 Project Points on the edges of the graph

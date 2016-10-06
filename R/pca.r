@@ -55,7 +55,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
   if(Method == 'base-cov'){
     # Using svd decomposition
     print("Using base R covariance PCA")
-    warning("Columns will be centered and scaled (by SD)")
+    warning("Columns will be centered and scaled (by SD)\n")
     print("Working")
 
     # get function arguments
@@ -94,11 +94,11 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
     CheckOK <- TRUE
 
     if(Components == min(dim(DataMatrix))){
-      warnings("All the components will be computed using flashPCA ... it may be better to simply use base-svd")
+      warnings("All the components will be computed using flashPCA ... it may be better to simply use base-svd\n")
     }
 
     if(!requireNamespace("flashpcaR", quietly = TRUE)){
-      warnings("flashpcaR package not available, using base-svd")
+      warnings("flashpcaR package not available, using base-svd\n")
       Method <- 'base-svd'
       CheckOK <- FALSE
     }
@@ -177,7 +177,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
         # If bigpca::estimate.eig.vpcs is not available, the expalined variance will be computed using only
         # the eigenvalue computed. This resuls in an overestimations.
 
-        warnings("bigpca package not available, using explained variance will not be estimated.")
+        warnings("bigpca package not available, using explained variance will not be estimated.\n")
         RetVal$ExpVar <- (PCA$value)/sum(PCA$value)
 
       } else {
@@ -204,11 +204,11 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
     CheckOK <- TRUE
 
     if(Components == min(dim(DataMatrix))){
-      warnings("All the components will be computed using flashPCA ... it may be better to simply use base-svd")
+      warnings("All the components will be computed using flashPCA ... it may be better to simply use base-svd\n")
     }
 
     if(!requireNamespace("flashpcaR", quietly = TRUE)){
-      warnings("flashpcaR package not available, using base-svd")
+      warnings("flashpcaR package not available, using base-svd\n")
       Method <- 'base-svd'
       CheckOK <- FALSE
     }
@@ -256,7 +256,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
       # Unless it has been specified by the user, the algorithm will center and normalize (by sd) the data
 
       if(!any(names(FunArg)=="stand")){
-        warning("Columns will be centered and scaled (by SD)")
+        warning("Columns will be centered and scaled (by SD)\n")
         FunArg <- append(FunArg, list(stand="sd"))
       }
 
@@ -281,7 +281,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
         # If bigpca::estimate.eig.vpcs is not available, the expalined variance will be computed using only
         # the eigenvalue computed. This resuls in an overestimations.
 
-        warnings("bigpca package not available, using explained variance will not be estimated.")
+        warnings("bigpca package not available, using explained variance will not be estimated.\n")
         RetVal$ExpVar <- (PCA$value)/sum(PCA$value)
 
       } else {
@@ -304,13 +304,13 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
     CheckOK <- TRUE
 
     if(Components == min(dim(DataMatrix))){
-      warnings("All the components will be computed using base-svd")
+      warnings("All the components will be computed using base-svd\n")
       Method <- 'base-svd'
       CheckOK <- FALSE
     }
 
     if(!requireNamespace("irlba", quietly = TRUE)){
-      warnings("irlba package not available, using base-svd")
+      warnings("irlba package not available, using base-svd\n")
       Method <- 'base-svd'
       CheckOK <- FALSE
     }
@@ -341,14 +341,14 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
       # Unless it has been specified by the user, the algorithm will center the data
 
       if(!any(names(FunArg)=="center")){
-        warning("Columns will be centered")
+        warning("Columns will be centered\n")
         FunArg <- append(FunArg, list(center=TRUE))
       }
 
       # Unless it has been specified by the user, the algorithm will scale the data
 
       if(!any(names(FunArg)=="scale.")){
-        warning("Columns will be scaled (by SD)")
+        warning("Columns will be scaled (by SD)\n")
         FunArg <- append(FunArg, list(scale.=TRUE))
       }
 
@@ -366,7 +366,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
         # If bigpca::estimate.eig.vpcs is not available, the expalined variance will be computed using only
         # the eigenvalue computed. This resuls in an overestimations.
 
-        warnings("bigpca package not available, using explained variance will not be estimated.")
+        warnings("bigpca package not available, using explained variance will not be estimated.\n")
         RetVal$ExpVar <- (PCA$sdev^2)/sum(PCA$sdev^2)
 
       } else {
@@ -391,11 +391,11 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
     CheckOK <- TRUE
 
     if(Components == min(dim(DataMatrix))){
-      warnings("All the components will be computed using nsprcomp. This may take a very long time ...")
+      warnings("All the components will be computed using nsprcomp. This may take a very long time ...\n")
     }
 
     if(!requireNamespace("nsprcomp", quietly = TRUE)){
-      warnings("nsprcomp package not available, using base-svd")
+      warnings("nsprcomp package not available, using base-svd\n")
       Method <- 'base-svd'
       CheckOK <- FALSE
     }
@@ -426,14 +426,14 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
       # Unless it has been specified by the user, the algorithm will center the data
 
       if(!any(names(FunArg)=="center")){
-        warning("Columns will be centered")
+        warning("Columns will be centered\n")
         FunArg <- append(FunArg, list(center=TRUE))
       }
 
       # Unless it has been specified by the user, the algorithm will scale the data
 
       if(!any(names(FunArg)=="scale.")){
-        warning("Columns will be scaled (by SD)")
+        warning("Columns will be scaled (by SD)\n")
         FunArg <- append(FunArg, list(scale.=TRUE))
       }
 
@@ -451,7 +451,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
         # If bigpca::estimate.eig.vpcs is not available, the expalined variance will be computed using only
         # the eigenvalue computed. This resuls in an overestimations.
 
-        warnings("bigpca package not available, using explained variance will not be estimated.")
+        warnings("bigpca package not available, using explained variance will not be estimated.\n")
         RetVal$ExpVar <- (PCA$sdev^2)/sum(PCA$sdev^2)
 
       } else {
@@ -488,14 +488,14 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
     # Unless it has been specified by the user, the algorithm will center the data
 
     if(!any(names(FunArg)=="center")){
-      warning("Columns will be centered")
+      warning("Columns will be centered\n")
       FunArg <- append(FunArg, list(center=TRUE))
     }
 
     # Unless it has been specified by the user, the algorithm will scale the data
 
     if(!any(names(FunArg)=="scale.")){
-      warning("Columns will be scaled (by SD)")
+      warning("Columns will be scaled (by SD)\n")
       FunArg <- append(FunArg, list(scale.=TRUE))
     }
 
@@ -514,7 +514,7 @@ SelectComputePCA <- function(DataMatrix, Components = NULL, Method = 'base-svd',
   }
 
 
-  warning("Unknown methods. Please check.")
+  warning("Unknown methods. Please check.\n")
   return(NULL)
 
 }
