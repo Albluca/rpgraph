@@ -266,6 +266,14 @@ CompareNet <- function(G1, G2, RemNodes = 2, Tries = 10000, DoIso = FALSE) {
 
 # Extract a subpath from the graph ----------------------------------------
 
+#' Title
+#'
+#' @param Net 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 GetCiclePath <- function(Net) {
   
   RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
