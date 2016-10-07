@@ -480,22 +480,23 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     PlotData2 <- PrintGraph$Nodes[,1:3]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
+    PlotData4 <- c(rep(.6, length(GroupsLab)), rep(1, nrow(PlotData2)))
     
-    PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3)
+    PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3, PlotData4)
     
-    colnames(PlotData) <- c("x", "y", "z", "color")
+    colnames(PlotData) <- c("x", "y", "z", "color", "size")
     PlotData <- data.frame(PlotData)
     PlotData$x <- as.numeric(as.character(PlotData$x))
     PlotData$y <- as.numeric(as.character(PlotData$y))
     PlotData$z <- as.numeric(as.character(PlotData$z))
     PlotData$color <- factor(PlotData$color, levels = c(unique(GroupsLab), "Graph"))
-    
+    PlotData$size <- as.numeric(as.character(PlotData$size))
     
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
                  type = "scatter3d", mode = "markers", text = rownames(PlotData),
                  color = PlotData$color,
                  colors = c(unique(Col), CirCol),
-                 size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
+                 size = PlotData$size, sizes = c(1, 10), hoverinfo = 'text') %>%
       plotly::layout(title = Main,
              scene = list(
                xaxis = list(title = Xlab), 
@@ -698,15 +699,17 @@ PlotOnPath <- function(PathProjection, GroupsLab){
   df$NormPos <- as.numeric(as.character(df$NormPos))
   df$DistFromPath <- as.numeric(as.character(df$DistFromPath))
   
-  p <- ggplot2::ggplot(df, aes(y = DistFromPath, x = NormPos, color=GroupsLab))
+  levels(GroupsLab) <- c(levels(GroupsLab), "Min", "Mean", "Max")
   
-  MinY <- min(df$DistFromPath) - (max(df$DistFromPath) -min(df$DistFromPath))/10
+  p <- ggplot2::ggplot(df, ggplot2::aes(y = DistFromPath, x = NormPos, color = GroupsLab))
+  
+  MinY <- min(df$DistFromPath)/2
   
   p <- p + ggplot2::geom_point() +
     ggplot2::scale_y_log10(limits = c(MinY, max(df$DistFromPath))) +
-    ggplot2::geom_hline(yintercept = max(df$DistFromPath), color = "red", linetype = "dashed") +
-    ggplot2::geom_hline(yintercept = min(df$DistFromPath), color = "green", linetype = "dashed") +
-    ggplot2::geom_hline(yintercept = mean(df$DistFromPath), color = "black", linetype = "dashed") +
+    ggplot2::geom_hline(ggplot2::eas(color = "Max"), yintercept = max(df$DistFromPath), color="red", linetype = "dashed") +
+    ggplot2::geom_hline(ggplot2::eas(color = "Min"), yintercept = min(df$DistFromPath), color="green", linetype = "dashed") +
+    ggplot2::geom_hline(ggplot2::eas(color = "Mean"), yintercept = mean(df$DistFromPath), color="black", linetype = "dashed") +
     ggplot2::coord_polar() + ggplot2::xlab("") + ggplot2::ylab("")
   
   p <- p + ggplot2::geom_vline(xintercept= cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen), color = "blue", size = .1)
@@ -723,3 +726,4 @@ PlotOnPath <- function(PathProjection, GroupsLab){
   print(p)
   
 }
+
