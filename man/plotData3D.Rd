@@ -2,56 +2,57 @@
 % Please edit documentation in R/plotting.R
 \name{plotData3D}
 \alias{plotData3D}
-\title{Title}
+\title{Plot dqta in 3 dimensions}
 \usage{
 plotData3D(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
   NodeSizeMult = 1, Col = NULL, CirCol = "black", LineCol = "black",
   IdCol = "blue", Main = "", Cex.Main = 0.7, PlotProjections = FALSE,
-  ProjectionLines = NULL, TaxonList = NULL, Xlab = "PC1", Ylab = "PC2",
-  Zlab = "PC3", DirectionMat = NULL, Thr = 0.05, Plot.ly = FALSE)
+  ProjectionLines = NULL, TaxonList = NULL, OnEdgeProjections = NULL,
+  Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL,
+  Thr = 0.05, Plot.ly = FALSE)
 }
 \arguments{
-\item{Data}{}
+\item{Data}{The Data to be plotted. Each column represents a dimension and each row represents a point}
 
-\item{PrintGraph}{}
+\item{PrintGraph}{A princial graph structure obtained by \link{computeElasticPrincipalGraph}}
 
-\item{GroupsLab}{}
+\item{GroupsLab}{A vector of labels to indicate which group each point belongs to}
 
-\item{ScaleFunction}{}
+\item{ScaleFunction}{A scaling function to decide the size of the spheres that represent the nodes of the principal graph}
 
-\item{NodeSizeMult}{}
+\item{NodeSizeMult}{A scaling vector to decide the size of the spheres that represent the nodes of the principal graph}
 
-\item{Col}{}
+\item{Col}{A vector of colors for the points. If NULL the cplors will be computed automatically}
 
-\item{CirCol}{}
+\item{CirCol}{The color of the Spheres (it will be partially transparent)}
 
-\item{LineCol}{}
+\item{LineCol}{The colors of the edtges of the graph}
 
-\item{IdCol}{}
+\item{IdCol}{The color of the labels of the nodes of the graph}
 
-\item{Main}{}
+\item{Main}{The title of the plot}
 
-\item{Cex.Main}{}
+\item{Cex.Main}{The multiplier associated with the title of the plot}
 
-\item{PlotProjections}{}
+\item{PlotProjections}{Should the line projecting points on the nodes to be plotted?}
 
-\item{ProjectionLines}{}
+\item{ProjectionLines}{A vector of colors for the projection lines (used only if Plot.ly = FALSE)}
 
-\item{TaxonList}{}
+\item{TaxonList}{A list of associations between points and nodes produced by \link{getTaxonMap}}
 
-\item{Xlab}{}
+\item{Xlab}{The label of the x axis}
 
-\item{Ylab}{}
+\item{Ylab}{The label of the y axis}
 
-\item{Zlab}{}
+\item{Zlab}{The label of the z axis}
 
-\item{DirectionMat}{}
+\item{DirectionMat}{A directionality structure produced by \link{CheckDirectionality}}
 
-\item{Thr}{}
+\item{Thr}{A threshold to be used for directionality reconstruction}
 
-\item{Plot.ly}{}
+\item{Plot.ly}{A boolen indicating if Plot.ly (TRUE) or rgl (FALSE) should be used}
 }
 \description{
-Title
+Plot dqta in 3 dimensions
 }
 

@@ -169,7 +169,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
               RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
                 c(DistsLists[[i]]$PointsProjections[j],
                   DistsLists[[i]]$Nodes,
-                  sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j], ])^2)),
+                  sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
                   SegLen[length(SegLen)])
             } else {
               # 2) It has not been assigned to a segment with a smaller distance
@@ -180,14 +180,14 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
                 RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
                   c(DistsLists[[i]]$PointsProjections[j],
                     DistsLists[[i]]$Nodes,
-                    sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j], ])^2)),
+                    sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
                     SegLen[length(SegLen)])
               } else {
                 # 2b) it's on a segment. I need to compare distances
                 NewDist <- sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] -
-                                       Data[DistsLists[[i]]$PointsIndices[j], ])^2))
+                                       Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2))
                 OldDist <- sqrt(sum((PosVector[DistsLists[[i]]$PointsIndices[j], ] -
-                                       Data[DistsLists[[i]]$PointsIndices[j], ])^2))
+                                       Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2))
                 if(NewDist<OldDist){
                   print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
                   PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
@@ -213,7 +213,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
             RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
               c(DistsLists[[i]]$PointsProjections[j],
                 DistsLists[[i]]$Nodes,
-                sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j], ])^2)),
+                sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
                 SegLen[length(SegLen)])
             
             if(DistsLists[[i]]$PointsProjections[j] == 0){
@@ -306,6 +306,16 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
 
 # Order points on a path -----------------------------------------------
 
+#' Title
+#'
+#' @param PrinGraph 
+#' @param Path 
+#' @param PointProjections 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 OrderOnPath <- function(PrinGraph, Path, PointProjections){
   
   # Check that the path is conencted in the principal graph
@@ -325,19 +335,32 @@ OrderOnPath <- function(PrinGraph, Path, PointProjections){
   
   for(i in 2:length(Path)){
     
-    if(max(unlist(lapply(apply(PrinGraph$Edges, 1, intersect, Path[c(i-1, i)]), length))) != 2){
+    EdgId <- which(unlist(lapply(apply(PrinGraph$Edges, 1, intersect, Path[c(i-1, i)]), length)) == 2)
+    
+    if(length(EdgId) != 1){
       stop("Path not found in the graph")
     }
     
     IdPtOnEdge <- which(unlist(lapply(apply(PointProjections$PointsOnEdgesDist[,2:3], 1, intersect, Path[c(i-1, i)]), length))==2)
     
-    SubInfo <- PointProjections$PointsOnEdgesDist[IdPtOnEdge,]
-    SortData <- sort(SubInfo[,1]*SubInfo[,5], index.return=TRUE)
+    print(paste(length(IdPtOnEdge), "points found on edge"))
     
-    PointPos[IdPtOnEdge[SortData$ix]] <- SortData$x + sum(Basedist)
-    PointDist[IdPtOnEdge[SortData$ix]] <- SubInfo[SortData$ix,4]
+    if(length(IdPtOnEdge)>1){
+      SubInfo <- PointProjections$PointsOnEdgesDist[IdPtOnEdge,]
+      SortData <- sort(SubInfo[,1]*SubInfo[,5], index.return=TRUE)
+      
+      PointPos[IdPtOnEdge[SortData$ix]] <- SortData$x + sum(Basedist)
+      PointDist[IdPtOnEdge[SortData$ix]] <- SubInfo[SortData$ix,4]
+    }
     
-    Basedist <- c(Basedist, SubInfo[1,5])
+    if(length(IdPtOnEdge)==1){
+      SubInfo <- PointProjections$PointsOnEdgesDist[IdPtOnEdge,]
+      
+      PointPos[IdPtOnEdge] <- SubInfo[1]*SubInfo[5] + sum(Basedist)
+      PointDist[IdPtOnEdge] <- SubInfo[4]
+    }
+
+    Basedist <- c(Basedist, PointProjections$EdgeLength[EdgId])
     
   }
   

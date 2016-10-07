@@ -679,6 +679,15 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
 
 # Plot on path ------------------------------------------------------------
 
+#' Title
+#'
+#' @param PathProjection 
+#' @param GroupsLab 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 PlotOnPath <- function(PathProjection, GroupsLab){
   
   NormPos <- PathProjection$PositionOnPath/sum(PathProjection$PathLen)
@@ -691,8 +700,10 @@ PlotOnPath <- function(PathProjection, GroupsLab){
   
   p <- ggplot2::ggplot(df, aes(y = DistFromPath, x = NormPos, color=GroupsLab))
   
+  MinY <- min(df$DistFromPath) - (max(df$DistFromPath) -min(df$DistFromPath))/10
+  
   p <- p + ggplot2::geom_point() +
-    ggplot2::scale_y_log10(limits = c(min(df$DistFromPath)/10, max(df$DistFromPath))) +
+    ggplot2::scale_y_log10(limits = c(MinY, max(df$DistFromPath))) +
     ggplot2::geom_hline(yintercept = max(df$DistFromPath), color = "red", linetype = "dashed") +
     ggplot2::geom_hline(yintercept = min(df$DistFromPath), color = "green", linetype = "dashed") +
     ggplot2::geom_hline(yintercept = mean(df$DistFromPath), color = "black", linetype = "dashed") +

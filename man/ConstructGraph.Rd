@@ -4,7 +4,7 @@
 \alias{ConstructGraph}
 \title{Title}
 \usage{
-ConstructGraph(Results, DirectionMat = NULL, Thr)
+ConstructGraph(Results, DirectionMat = NULL, Thr = 0.05)
 }
 \arguments{
 \item{Results}{}
