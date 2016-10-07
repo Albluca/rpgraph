@@ -19,6 +19,7 @@ Suggests:
     devtools,
     downloader,
     flashpcaR,
+    ggplot2,
     irlba,
     nsprcomp,
     plotly,

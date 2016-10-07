@@ -25,10 +25,10 @@ in the R console. To take advantage of all the feature of the package, it is adv
 
 ```{r, eval=FALSE}
 library(devtools)
-install_github("gabraham/flashpca")
+install_github("gabraham/flashpca", dependencies=TRUE
 ```
 
-The other packages can be found on CRAN.
+The other packages can be found on CRAN. Radial plots are produced using `ggplot2`.
 
 ## Workaround for common problems
 

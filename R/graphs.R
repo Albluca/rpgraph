@@ -1,4 +1,4 @@
-
+# Generate an igraph from the pringicical graph ---------------------------
 
 #' Title
 #'
@@ -10,7 +10,7 @@
 #' @export
 #'
 #' @examples
-ConstructGraph <- function(Results, DirectionMat = NULL, Thr) {
+ConstructGraph <- function(Results, DirectionMat = NULL, Thr = 0.05) {
 
   # Generate An Igraph net
 
@@ -264,3 +264,35 @@ CompareNet <- function(G1, G2, RemNodes = 2, Tries = 10000, DoIso = FALSE) {
 
 
 
+# Extract a subpath from the graph ----------------------------------------
+
+GetCiclePath <- function(Net) {
+  
+  RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
+  
+  SubIsoProjList <- igraph::graph.get.subisomorphisms.vf2(Net, RefNet)
+  
+  PathsList <- list()
+  
+  for(i in 1:length(SubIsoProjList)){
+    
+    BasePath <- SubIsoProjList[[i]]$name
+    BasePath <- c(BasePath, BasePath[1])
+    
+    PathsList[[i]] <- BasePath
+    
+  }
+  
+  return(PathsList)
+  
+}
+
+
+GetLinearPath <- function(Net) {
+  
+}
+
+
+SampleLinearPath <- function(Net) {
+  
+}

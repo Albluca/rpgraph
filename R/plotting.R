@@ -449,16 +449,20 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 #'
 #' @examples
 plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSizeMult=1,
-                       Col=NULL,
-                       CirCol="black", LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
-                       PlotProjections = FALSE, ProjectionLines = NULL, TaxonList = NULL,
-                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3", DirectionMat = NULL,
-                       Thr = 0.05, Plot.ly = FALSE){
+                       Col=NULL, CirCol="black", LineCol="black", IdCol="blue", Main = '',
+                       Cex.Main = .7, PlotProjections = FALSE, ProjectionLines = NULL,
+                       TaxonList = NULL, OnEdgeProjections = NULL,
+                       Xlab = "PC1", Ylab = "PC2", Zlab = "PC3",
+                       DirectionMat = NULL, Thr = 0.05, Plot.ly = FALSE){
   
   Data <- data.matrix(Data)
   
   if(is.null(Col)){
     Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
+  }
+  
+  if(is.null(ProjectionLines)){
+    ProjectionLines <- Col
   }
   
   if(min(PrintGraph$Edges)==0){
@@ -484,12 +488,13 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     PlotData$x <- as.numeric(as.character(PlotData$x))
     PlotData$y <- as.numeric(as.character(PlotData$y))
     PlotData$z <- as.numeric(as.character(PlotData$z))
+    PlotData$color <- factor(PlotData$color, levels = c(unique(GroupsLab), "Graph"))
     
     
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
                  type = "scatter3d", mode = "markers", text = rownames(PlotData),
-                 color = c(as.character(GroupsLab), rep("Graph", nrow(PlotData2))),
-                 colors = c(unique(Col), col=CirCol),
+                 color = PlotData$color,
+                 colors = c(unique(Col), CirCol),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text') %>%
       plotly::layout(title = Main,
              scene = list(
@@ -503,13 +508,14 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
       p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
                            y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
                            z = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],3],
-                           color = "Graph", text = '', size = 1,
+                           color = PlotData$color[length(PlotData$color)], text = '', size = 1,
                            sizes = c(1, 10), mode="lines",
                            showlegend = FALSE)
+      
     }
     
     
-    if(PlotProjections){
+    if(PlotProjections == "onNodes"){
       
       if(is.null(TaxonList)){
         print("TaxonList will be computed. Consider do that separetedly")
@@ -533,6 +539,31 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
           }
         }
         
+      }
+      
+    }
+    
+    if(PlotProjections == "onEdges"){
+      
+      if(is.null(OnEdgeProjections)){
+        print("Edge Projections will be computed. Consider do that separetedly")
+        OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
+                                           UseR = TRUE, method = "PCALin")
+      }
+      
+      
+      for(i in 1:length(OnEdgeProjections$OnEdge)){
+        
+        PCoords <- rbind(OnEdgeProjections$PointsOnEdgesCoords[i,1:3],
+                         Data[i,1:3])
+        
+        p <- p %>% plotly::add_trace(x = PCoords[,1],
+                                     y = PCoords[,2],
+                                     z = PCoords[,3],
+                                     color = PlotData$color[i], text = '', size = .5,
+                                     mode="lines", sizes = c(1, 10),
+                                     showlegend = FALSE, opacity = 0.5)
+      
       }
       
     }
@@ -596,7 +627,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     
     
     
-    if(PlotProjections){
+    if(PlotProjections == "onNodes"){
       
       if(is.null(TaxonList)){
         print("TaxonList will be computed. Consider do that separetedly")
@@ -609,9 +640,30 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
           for(j in 1:length(TaxonList[[i]])){
             PCoords <- rbind(PrintGraph$Nodes[i,1:3],
                              data[TaxonList[[i]][j],1:3])
-            plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
+            rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
           }
         }
+        
+      }
+      
+    }
+    
+    if(PlotProjections == "onEdges"){
+      
+      if(is.null(OnEdgeProjections)){
+        print("Edge Projections will be computed. Consider do that separetedly")
+        OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
+                                           UseR = TRUE, method = "PCALin")
+      }
+
+      
+      for(i in 1:length(OnEdgeProjections$OnEdge)){
+        
+        PCoords <- rbind(OnEdgeProjections$PointsOnEdgesCoords[i,1:3],
+                         Data[i,1:3])
+        
+        rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[i])
+        
         
       }
       
@@ -621,3 +673,42 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
   
 }
 
+
+
+
+
+# Plot on path ------------------------------------------------------------
+
+PlotOnPath <- function(PathProjection, GroupsLab){
+  
+  NormPos <- PathProjection$PositionOnPath/sum(PathProjection$PathLen)
+  DataToPlot <- cbind(NormPos, PathProjection$DistanceFromPath)
+  
+  df <- data.frame(DataToPlot, stringsAsFactors = FALSE)
+  colnames(df) <- c("NormPos", "DistFromPath")
+  df$NormPos <- as.numeric(as.character(df$NormPos))
+  df$DistFromPath <- as.numeric(as.character(df$DistFromPath))
+  
+  p <- ggplot2::ggplot(df, aes(y = DistFromPath, x = NormPos, color=GroupsLab))
+  
+  p <- p + ggplot2::geom_point() +
+    ggplot2::scale_y_log10(limits = c(min(df$DistFromPath)/10, max(df$DistFromPath))) +
+    ggplot2::geom_hline(yintercept = max(df$DistFromPath), color = "red", linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = min(df$DistFromPath), color = "green", linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = mean(df$DistFromPath), color = "black", linetype = "dashed") +
+    ggplot2::coord_polar() + ggplot2::xlab("") + ggplot2::ylab("")
+  
+  p <- p + ggplot2::geom_vline(xintercept= cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen), color = "blue", size = .1)
+
+  XPos <- cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen)
+  XPos <- XPos[-length(XPos)]
+    
+  # if(!is.null(NodeLabels)){
+  #   for(i in 1:length(NodeLabels)){
+  #     p <- p + geom_text(x = XPos[i], y = max(df$DistFromPath), label = NodeLabels[i])
+  #   }
+  # }
+  
+  print(p)
+  
+}
