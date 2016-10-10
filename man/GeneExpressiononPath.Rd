@@ -6,7 +6,7 @@
 \usage{
 GeneExpressiononPath(ExpressionData, TransfData, CellClass = NULL, PrinGraph,
   Projections, Genes, Path = "ask", Net = NULL, PathType = "Long.Linear",
-  Circular = FALSE)
+  Circular = FALSE, Plot = TRUE, Return.Smoother = FALSE)
 }
 \arguments{
 \item{ExpressionData}{}

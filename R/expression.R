@@ -351,6 +351,4 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
   }
   
-  
-  
 }

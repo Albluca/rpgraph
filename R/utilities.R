@@ -169,4 +169,48 @@ SelectVM <- function(SETVM = NULL) {
 
 
 
+#' Sample correlation with partial order
+#'
+#' @param OrdVect 
+#' @param Vect1 
+#' @param Vect2 
+#' @param Round 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+Rand.POrd.Cor <- function(OrdVect, Vect1, Vect2, Round) {
+  
+  OrdVect <- factor(OrdVect)
+    
+  Vals <- unique(OrdVect)
+  Multiplicity <- table(OrdVect)
+  
+  if(max(Multiplicity)==1){
+    return(cor(Vect1, Vect2))
+  }
+  
+  CorVect <- NULL
+  
+  for(i in 1:Round){
+    
+    SplitV1 <- split(Vect1, OrdVect)
+    SplitV2 <- split(Vect2, OrdVect)
+    
+    Sampled1 <- lapply(SplitV1[lapply(SplitV1, length) > 1], sample)
+    SplitV1[names(Sampled1)] <- Sampled1
+    
+    Sampled2 <- lapply(SplitV2[lapply(SplitV2, length) > 1], sample)
+    SplitV2[names(Sampled2)] <- Sampled1
+    
+    CorVect <- c(CorVect, cor(unlist(SampledV1), unlist(SampledV2)))
+    
+  }
+  
+  return(CorVect)
+  
+}
+
+
 
