@@ -12,7 +12,8 @@
 #'
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
-                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE, Plot = TRUE) {
+                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
+                                 Plot = TRUE, Return.Smoother = FALSE) {
   
   # Check if cells have a categorization
   
@@ -308,38 +309,48 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat <- ggMat[, -5]
   }
   
-  Smoothed_x <- NULL
-  Smoothed_y <- NULL
-  
-  print("Preparing output")
-  
-  tictoc::tic()
-  
-  pb <- txtProgressBar(min = 0, max = length(unique(ggMat$Gene)), style = 3)
-  
-  idx <- 0
-  for (gID in unique(ggMat$Gene)){
-    idx <- idx + 1
-    setTxtProgressBar(pb, idx)
+  if(Return.Smoother){
     
-    Smoothed <- lowess(ggMat$Log.Gene.Exp[ggMat$Gene==gID] ~ ggMat$Pseudo.Time[ggMat$Gene==gID])
+    Smoothed_x <- NULL
+    Smoothed_y <- NULL
     
-    if(idx == 1){
-      Smoothed_x <- Smoothed$x
-      Smoothed_y <- Smoothed$y
-    } else {
-      Smoothed_y <- rbind(Smoothed_y, Smoothed$y)
+    print("Preparing output")
+    
+    tictoc::tic()
+    
+    pb <- txtProgressBar(min = 0, max = length(unique(ggMat$Gene)), style = 3)
+    
+    idx <- 0
+    for (gID in unique(ggMat$Gene)){
+      idx <- idx + 1
+      setTxtProgressBar(pb, idx)
+      
+      Smoothed <- lowess(ggMat$Log.Gene.Exp[ggMat$Gene==gID] ~ ggMat$Pseudo.Time[ggMat$Gene==gID])
+      
+      if(idx == 1){
+        Smoothed_x <- Smoothed$x
+        Smoothed_y <- Smoothed$y
+      } else {
+        Smoothed_y <- rbind(Smoothed_y, Smoothed$y)
+      }
+      
     }
     
+    if(length(unique(ggMat$Gene))> 1){
+      rownames(Smoothed_y) <- unique(ggMat$Gene)
+    }
+    
+    print("")
+    tictoc::toc()
+    
+    return(list(XC = Smoothed_x, YC = Smoothed_y))
+    
+  } else {
+    
+    return(NULL)
+    
   }
   
-  if(length(unique(ggMat$Gene))> 1){
-    rownames(Smoothed_y) <- unique(ggMat$Gene)
-  }
   
-  print("")
-  tictoc::toc()
-  
-  return(list(XC = Smoothed_x, YC = Smoothed_y))
   
 }
