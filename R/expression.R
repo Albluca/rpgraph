@@ -150,10 +150,20 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     TaxonList <- getTaxonMap(Results, TransfData, UseR = TRUE)
     
+    SelLayOut = 'nicely'
+    
+    if(PathType == 'Long.Linear'){
+      SelLayOut = 'circle_line'
+    }
+    
+    if(PathType == 'Circular'){
+      SelLayOut = 'circle'
+    }
+    
     InfoData <- plotPieNet(Results = PrinGraph, Graph = Net,
                            Data = TransfData, Categories = CellClass,
                            TaxonList = TaxonList,
-                           NodeSizeMult = 7, ColCat = NULL, LayOut = 'circle',
+                           NodeSizeMult = 2, ColCat = NULL, LayOut = SelLayOut,
                            DirectionMat = NULL)
     
     legend(x = "center", fill=unique(InfoData$ColInfo[1:3]), legend = unique(CellClass))
