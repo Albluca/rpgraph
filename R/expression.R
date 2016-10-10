@@ -98,7 +98,6 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       
     }
     
-    
     if(PathType == 'Long.Linear'){
       
       # Looking at all the possible diameters in the graph
@@ -188,6 +187,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     NumericPath <- c(NumericPath, NumericPath[1])
   }
   
+  print("Projecting cells on path")
+  
   PathProjection <- OrderOnPath(PrinGraph = PrinGraph, Path = NumericPath, PointProjections = Projections)
   
   # PlotOnPath(PathProjection, StageVect)
@@ -198,6 +199,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
+  print("Preparing plot")
+  
   if(!Circular){
     
     ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
@@ -226,12 +229,12 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
         ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression")
     }
     
-    print(p) 
-    
   } else {
     
     # We are going to include extra "shadow" points
    
+    print("including virtual points")
+    
     ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
                    as.vector(MatGenesToPlot),
                    rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
@@ -264,17 +267,21 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
         ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
         ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
-        scale_alpha_discrete(range = c(1, 0.2)) + geom_vline(xintercept = c(0,1), linetype = "dashed")
+        ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
+        ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed")
     } else {
       p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
         ggplot2::geom_point(ggplot2::aes(alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
         ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
-        scale_alpha_discrete(range = c(1, 0.2)) + geom_vline(xintercept = c(0,1), linetype = "dashed")
+        ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
+        ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed")
     }
     
-    print(p) 
-    
   }
+  
+  print("Plotting")
+  
+  ggplot2::print(p) 
   
   if (ncol(ggMat) == 5) {
     ggMat <- ggMat[ggMat[,5] == "Real", ]
