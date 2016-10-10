@@ -561,7 +561,7 @@ computeElasticPrincipalGraph <- function(Data, NumNodes, Method = NULL,
     if((ReduceMethod != 'base-svd' & ReduceMethod != 'base-cov') & ReduceSize < ncol(Data)){
       print(paste(signif(100*sum(RetVal$ExpVar), 4), "% (estimated) of the original variance vas retained", sep=''))
     } else {
-      print(paste(signif(100*sum(RetVal$ExpVar), 4), "% of the original variance vas retained", sep=''))
+      print(paste(signif(100*sum(RetVal$ExpVar), 4), "% of the original variance was retained", sep=''))
     }
 
   } else {
@@ -586,6 +586,7 @@ computeElasticPrincipalGraph <- function(Data, NumNodes, Method = NULL,
     PrintGraph <- do.call(computeElPT,
                           append(list(Data = NewData, NumNodes = NumNodes, Parameters = Parameters),
                                  ExtraArgs))
+    PrintGraph$Method <- Method
     return(PrintGraph)
 
   }

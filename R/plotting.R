@@ -398,7 +398,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
        vertex.shape="pie", vertex.pie.color = PieColList[Indexes],
        vertex.pie=TaxonCat[Indexes], vertex.pie.border = NA,
        vertex.size=NodeSizeMult*do.call(what = ScaleFunction, list(unlist(lapply(TaxonCatNoNone[Indexes], sum)))),
-       edge.color = "black", edge.arrow.size = Arrow.size)
+       edge.color = "black", edge.arrow.size = Arrow.size, vertex.label.dist = 0.7, vertex.label.color = "black")
 
   CatReord <- TaxonCat[Indexes]
   CatReordMat <- NULL
