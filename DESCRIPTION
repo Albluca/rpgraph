@@ -11,6 +11,7 @@ LazyData: TRUE
 Depends:
     rJava
 Imports:
+    ggplot2,
     igraph,
     rgl,
     tictoc
@@ -19,7 +20,6 @@ Suggests:
     devtools,
     downloader,
     flashpcaR,
-    ggplot2,
     irlba,
     nsprcomp,
     plotly,

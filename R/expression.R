@@ -12,7 +12,7 @@
 #'
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
-                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE) {
+                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE, Plot = TRUE) {
   
   # Check if cells have a categorization
   
@@ -26,10 +26,10 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     CellClass <- factor(rep(1, nrow(ExpressionData)))
   }
   
-  FoundGenes <- Genes %in% colnames(ExpressionData)
-  print(paste(sum(FoundGenes), "genes found"))
+  FoundGenes <- Genes[Genes %in% colnames(ExpressionData)]
+  print(paste(length(FoundGenes), "genes found"))
   
-  if(sum(FoundGenes) == 0){
+  if(length(FoundGenes) == 0){
     print("Nothing to do")
     return()
   }
@@ -72,6 +72,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
         return()
       }
     }
+    
+    PathToUse <- Path
     
   } else {
     
@@ -168,9 +170,10 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       PathToUseID <- which(VertexMat[,1] == V1 & VertexMat[,2] == V2)
       
       if(length(PathToUseID) == 1){
-        print("Path found")
+        print("Path found:")
         DONE <- TRUE
         PathToUse <- PossiblePaths[[PathToUseID]]$name
+        print(PathToUse)
       }
       
       if(!DONE){
@@ -182,8 +185,9 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   # All preprocessing is done. Now we can look at gene expression over pseudotime
   
+  NumericPath <- as.numeric(unlist(lapply(strsplit(PathToUse, "V_"), "[[", 2)))
+  
   if(Circular){
-    NumericPath <- as.numeric(unlist(lapply(strsplit(rev(PathToUse), "V_"), "[[", 2)))
     NumericPath <- c(NumericPath, NumericPath[1])
   }
   
@@ -199,14 +203,16 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
-  print("Preparing plot")
+  print("Preparing data")
+  
+  tictoc::tic()
   
   if(!Circular){
     
     ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
                    as.vector(MatGenesToPlot),
                    rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
-                       each = ncol(MatGenesToPlot)),
+                       ncol(MatGenesToPlot)),
                    rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
     )
     
@@ -219,14 +225,20 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
     # summary(LM)
     
-    if(length(unique(ggMat$Class))>1){
-      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-        ggplot2::geom_point(ggplot2::aes(color = Class)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
-        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression")
-    } else {
-      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-        ggplot2::geom_point() + ggplot2::facet_wrap(~ Gene, scales="free_y") +
-        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression")
+    if(Plot){
+      if(length(unique(ggMat$Class))>1){
+        p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+          ggplot2::geom_point(ggplot2::aes(color = Class)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::geom_smooth(color = "black", method = "loess") +
+          ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+          ggplot2::scale_x_continuous(limits = c(0,1))
+      } else {
+        p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+          ggplot2::geom_point() + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::geom_smooth(color = "black", method = "loess") +
+          ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+          ggplot2::scale_x_continuous(limits = c(0,1))
+      }
     }
     
   } else {
@@ -238,17 +250,17 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
                    as.vector(MatGenesToPlot),
                    rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
-                       each = ncol(MatGenesToPlot)),
+                       ncol(MatGenesToPlot)),
                    rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
     )
     
     ggMat <- cbind(ggMat, rep("Real", nrow(ggMat)))
      
-    ggMat_Minus <- ggMat[ggMat[, 1]>.9, ]
+    ggMat_Minus <- ggMat[ggMat[, 1]>.8, ]
     ggMat_Minus[,5] <- "Virtual"
     ggMat_Minus[,1] <- as.numeric(ggMat_Minus[,1]) - 1
     
-    ggMat_Plus <- ggMat[ggMat[, 1]<.1, ]
+    ggMat_Plus <- ggMat[ggMat[, 1]<.2, ]
     ggMat_Plus[,5] <- "Virtual"
     ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) + 1
     
@@ -263,38 +275,71 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
     # summary(LM)
     
-    if(length(unique(ggMat$Class))>1){
-      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-        ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
-        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
-        ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
-        ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed")
-    } else {
-      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-        ggplot2::geom_point(ggplot2::aes(alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
-        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
-        ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
-        ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed")
+    if(Plot){
+      if(length(unique(ggMat$Class))>1){
+        p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+          ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+          ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
+          ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
+          ggplot2::scale_x_continuous(limits = c(-0.2,1.2))
+      } else {
+        p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+          ggplot2::geom_point(ggplot2::aes(alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+          ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
+          ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
+          ggplot2::scale_x_continuous(limits = c(-0.2,1.2))
+      }
     }
     
   }
   
-  print("Plotting")
+  tictoc::toc()
   
-  ggplot2::print(p) 
+  if(Plot){
+    print("Plotting")
+    print(p) 
+    
+  }
   
   if (ncol(ggMat) == 5) {
     ggMat <- ggMat[ggMat[,5] == "Real", ]
     ggMat <- ggMat[, -5]
   }
   
-  Smoothed <- list()
+  Smoothed_x <- NULL
+  Smoothed_y <- NULL
   
-  for (gID in unique(ggMat[,4])) {
-    Smoothed[[as.character(gID)]] <- lowess(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
+  print("Preparing output")
+  
+  tictoc::tic()
+  
+  pb <- txtProgressBar(min = 0, max = length(unique(ggMat$Gene)), style = 3)
+  
+  idx <- 0
+  for (gID in unique(ggMat$Gene)){
+    idx <- idx + 1
+    setTxtProgressBar(pb, idx)
+    
+    Smoothed <- lowess(ggMat$Log.Gene.Exp[ggMat$Gene==gID] ~ ggMat$Pseudo.Time[ggMat$Gene==gID])
+    
+    if(idx == 1){
+      Smoothed_x <- Smoothed$x
+      Smoothed_y <- Smoothed$y
+    } else {
+      Smoothed_y <- rbind(Smoothed_y, Smoothed$y)
+    }
+    
   }
   
-  return(Smoothed)
+  if(length(unique(ggMat$Gene))> 1){
+    rownames(Smoothed_y) <- unique(ggMat$Gene)
+  }
   
+  print("")
+  tictoc::toc()
+  
+  return(list(XC = Smoothed_x, YC = Smoothed_y))
   
 }
