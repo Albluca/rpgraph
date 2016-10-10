@@ -3,6 +3,7 @@
 export(ApplytoData)
 export(CheckDirectionality)
 export(ConstructGraph)
+export(GeneExpressiononPath)
 export(GetCiclePath)
 export(GetDirectionalityIndex)
 export(OrderOnPath)

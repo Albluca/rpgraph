@@ -12,7 +12,7 @@
 #'
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
-                                 Path = 'ask', PathType = 'Long.Linear') {
+                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE) {
   
   # Check if cells have a categorization
   
@@ -36,62 +36,99 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   # Looking at potential paths
   
-  Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
+  if(is.null(Net)){
+    print("Constructing graph. Consider doing that separatedly.")
+    Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
+  }
+  
+  
   
   Status <- 'unDone'
   
-  if(Path != 'ask'){
+  if(length(Path) > 1){
     
-    igraph::induced.subgraph(graph = Net, vids = PathToUse)
+    for(i in 2:length(Path)){
+      if(!igraph::are.connected(Net, Path[i], Path[i-1])){
+        print(paste(Path[i], "--", Path[i-1], "not found in the net"))
+        return()
+      }
+    }
+    
+    if(Circular){
+      if(!igraph::are.connected(Net, Path[i], Path[i-1])){
+        print(paste(Path[length(Path)], "--", Path[1], "not found in the net"))
+        return()
+      }
+    }
+    
+    if(!Circular){
+      if(sum(duplicated(Path))>0){
+        print("Duplicqted vertex found on path. This is not supported yet")
+        return()
+      }
+    } else {
+      if(sum(duplicated(Path[-1]))>0){
+        print("Duplicated non-terminal vertex found on path. This is not supported yet")
+        return()
+      }
+    }
+    
+  } else {
+    
+    if(PathType == 'Circular'){
+      
+      # This assules that the graph is a closed line
+      
+      Pattern <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, mutual = FALSE, circular = TRUE)
+      
+      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
+      
+      if (length(PossiblePaths) == 0) {
+        Status <- 'None'
+      }
+      
+      if (length(PossiblePaths) == 1) {
+        Status <- 'Single'
+      }
+      
+      if (length(PossiblePaths)> 1) {
+        # Multiple paths founds. Plotting the graph and asking the user where to start
+        Status <- 'Multiple'
+      }
+      
+    }
+    
+    
+    if(PathType == 'Long.Linear'){
+      
+      # Looking at all the possible diameters in the graph
+      
+      DiamLen <- igraph::diameter(graph = Net, directed = FALSE, unconnected = TRUE)
+      
+      Pattern <- igraph::graph.ring(n = DiamLen, directed = FALSE, mutual = FALSE, circular = FALSE)
+      
+      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
+      
+      if (length(PossiblePaths) == 0) {
+        Status <- 'None'
+      }
+      
+      if (length(PossiblePaths) == 1) {
+        Status <- 'Single'
+      }
+      
+      if (length(PossiblePaths)> 1) {
+        Status <- 'Multiple'
+      }
+      
+      if(Circular){
+        print("Circular option incompatible with Long.Linear")
+      }
+      
+    }
     
   }
   
-  if(PathType == 'Circular'){
-    
-    # This assules that the graph is a closed line
-    
-    Pattern <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, mutual = FALSE, circular = TRUE)
-    
-    PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
-    
-    if (length(PossiblePaths) == 0) {
-      Status <- 'None'
-    }
-    
-    if (length(PossiblePaths) == 1) {
-      Status <- 'Single'
-    }
-    
-    if (length(PossiblePaths)> 1) {
-      # Multiple paths founds. Plotting the graph and asking the user where to start
-      Status <- 'Multiple'
-    }
-  }
-  
-  
-  if(PathType == 'Long.Linear'){
-    
-    # Looking at all the possible diameters in the graph
-    
-    DiamLen <- igraph::diameter(graph = Net, directed = FALSE, unconnected = TRUE)
-    
-    Pattern <- igraph::graph.ring(n = DiamLen, directed = FALSE, mutual = FALSE, circular = FALSE)
-    
-    PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
-    
-    if (length(PossiblePaths) == 0) {
-      Status <- 'None'
-    }
-    
-    if (length(PossiblePaths) == 1) {
-      Status <- 'Single'
-    }
-    
-    if (length(PossiblePaths)> 1) {
-      Status <- 'Multiple'
-    }
-    
-  }
   
   
   if(Status == 'None'){
@@ -102,7 +139,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   if(Status == 'Single'){
     print("A single path was found")
-    PathToUseID <- PossiblePaths[[1]]$name
+    PathToUse <- PossiblePaths[[1]]$name
   }
   
   
@@ -134,7 +171,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       if(length(PathToUseID) == 1){
         print("Path found")
         DONE <- TRUE
-        PathToUseID <- PossiblePaths[[PathToUseID]]$name
+        PathToUse <- PossiblePaths[[PathToUseID]]$name
       }
       
       if(!DONE){
@@ -144,9 +181,113 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   }
   
   
+  # All preprocessing is done. Now we can look at gene expression over pseudotime
   
+  if(Circular){
+    NumericPath <- as.numeric(unlist(lapply(strsplit(rev(PathToUse), "V_"), "[[", 2)))
+    NumericPath <- c(NumericPath, NumericPath[1])
+  }
   
+  PathProjection <- OrderOnPath(PrinGraph = PrinGraph, Path = NumericPath, PointProjections = Projections)
   
+  # PlotOnPath(PathProjection, StageVect)
+  
+  ProjectedPoints <- which(!is.na(PathProjection$PositionOnPath))
+  
+  SortedProj <- sort(PathProjection$PositionOnPath[ProjectedPoints], index.return=TRUE)
+  
+  MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
+
+  if(!Circular){
+    
+    ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
+                   as.vector(MatGenesToPlot),
+                   rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
+                       each = ncol(MatGenesToPlot)),
+                   rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
+    )
+    
+    colnames(ggMat) <- c("Pseudo.Time", "Log.Gene.Exp", "Class", "Gene")
+    
+    ggMat <- data.frame(ggMat)
+    ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
+    ggMat$Log.Gene.Exp <- as.numeric(as.character(ggMat$Log.Gene.Exp))
+    
+    # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
+    # summary(LM)
+    
+    if(length(unique(ggMat$Class))>1){
+      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+        ggplot2::geom_point(ggplot2::aes(color = Class)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression")
+    } else {
+      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+        ggplot2::geom_point() + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression")
+    }
+    
+    print(p) 
+    
+  } else {
+    
+    # We are going to include extra "shadow" points
+   
+    ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
+                   as.vector(MatGenesToPlot),
+                   rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
+                       each = ncol(MatGenesToPlot)),
+                   rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
+    )
+    
+    ggMat <- cbind(ggMat, rep("Real", nrow(ggMat)))
+     
+    ggMat_Minus <- ggMat[ggMat[, 1]>.9, ]
+    ggMat_Minus[,5] <- "Virtual"
+    ggMat_Minus[,1] <- as.numeric(ggMat_Minus[,1]) - 1
+    
+    ggMat_Plus <- ggMat[ggMat[, 1]<.1, ]
+    ggMat_Plus[,5] <- "Virtual"
+    ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) + 1
+    
+    ggMat <- rbind(ggMat, ggMat_Plus, ggMat_Minus)
+    
+    colnames(ggMat) <- c("Pseudo.Time", "Log.Gene.Exp", "Class", "Gene", "Status")
+    
+    ggMat <- data.frame(ggMat)
+    ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
+    ggMat$Log.Gene.Exp <- as.numeric(as.character(ggMat$Log.Gene.Exp))
+    
+    # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
+    # summary(LM)
+    
+    if(length(unique(ggMat$Class))>1){
+      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+        ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+        scale_alpha_discrete(range = c(1, 0.2)) + geom_vline(xintercept = c(0,1), linetype = "dashed")
+    } else {
+      p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
+        ggplot2::geom_point(ggplot2::aes(alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
+        ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
+        scale_alpha_discrete(range = c(1, 0.2)) + geom_vline(xintercept = c(0,1), linetype = "dashed")
+    }
+    
+    print(p) 
+    
+  }
+  
+  if (ncol(ggMat) == 5) {
+    ggMat <- ggMat[ggMat[,5] == "Real", ]
+    ggMat <- ggMat[, -5]
+  }
+  
+  Smoothed <- list()
+  
+  for (gID in unique(ggMat[,4])) {
+    Smoothed[[as.character(gID)]] <- lowess(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
+  }
+  
+  return(Smoothed)
   
   
 }
