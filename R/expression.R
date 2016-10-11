@@ -13,7 +13,7 @@
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
                                  Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
-                                 Plot = TRUE, Return.Smoother = FALSE, CircExt = .4) {
+                                 Plot = TRUE, Return.Smoother = FALSE, CircExt = .3) {
   
   # Initial checks ----------------------------------------------------------
   
@@ -21,10 +21,12 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   if(CircExt > 1){
     print("Only value of CircExt up to 1 will be considered. Setting CircExt = 1")
+    CircExt = 1
   }
   
-  if(CircExt >=0){
+  if(CircExt <=0){
     print("Only value of CircExt strictly positive will be considered. Setting CircExt = .3")
+    CircExt = .3
   }
   
   if(!is.null(CellClass) & length(CellClass) == nrow(ExpressionData)){
