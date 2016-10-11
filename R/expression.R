@@ -51,7 +51,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   }
   
   
-  # Looking for paths of necessary ----------------------------------------------------------
+  # Looking for paths if necessary ----------------------------------------------------------
   
   # Looking at potential paths
   
@@ -142,7 +142,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
   }
   
-  
+  # If multiple path are found ask the user for directions ----------------------------------------------------------
   
   if(Status == 'None'){
     print("No path found")
@@ -204,6 +204,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     }
   }
   
+  # Project the points on the path ----------------------------------------------------------
   
   # All preprocessing is done. Now we can look at gene expression over pseudotime
   
@@ -225,6 +226,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
+  # Prepare data for plotting ----------------------------------------------------------
+  
   print("Preparing data")
   
   tictoc::tic()
@@ -329,6 +332,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat <- ggMat[ggMat[,5] == "Real", ]
     ggMat <- ggMat[, -5]
   }
+  
+  # Return the smoother if necessary ----------------------------------------------------------
   
   if(Return.Smoother){
     
