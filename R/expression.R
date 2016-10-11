@@ -13,9 +13,19 @@
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
                                  Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
-                                 Plot = TRUE, Return.Smoother = FALSE) {
+                                 Plot = TRUE, Return.Smoother = FALSE, CircExt = .4) {
+  
+  # Initial checks ----------------------------------------------------------
   
   # Check if cells have a categorization
+  
+  if(CircExt > 1){
+    print("Only value of CircExt up to 1 will be considered. Setting CircExt = 1")
+  }
+  
+  if(CircExt >=0){
+    print("Only value of CircExt strictly positive will be considered. Setting CircExt = .3")
+  }
   
   if(!is.null(CellClass) & length(CellClass) == nrow(ExpressionData)){
     print("Using CellClass to plot classes")
@@ -35,14 +45,15 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     return()
   }
   
-  # Looking at potential paths
-  
   if(is.null(Net)){
     print("Constructing graph. Consider doing that separatedly.")
     Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
   }
   
   
+  # Looking for paths of necessary ----------------------------------------------------------
+  
+  # Looking at potential paths
   
   Status <- 'unDone'
   
@@ -64,12 +75,12 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     if(!Circular){
       if(sum(duplicated(Path))>0){
-        print("Duplicqted vertex found on path. This is not supported yet")
+        print("Duplicated vertices found on path. This is not supported yet")
         return()
       }
     } else {
       if(sum(duplicated(Path[-1]))>0){
-        print("Duplicated non-terminal vertex found on path. This is not supported yet")
+        print("Duplicated non-terminal vertices found on path. This is not supported yet")
         return()
       }
     }
@@ -80,7 +91,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     if(PathType == 'Circular'){
       
-      # This assules that the graph is a closed line
+      # This assumes that the graph is a closed line
       
       Pattern <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, mutual = FALSE, circular = TRUE)
       
@@ -107,7 +118,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       
       DiamLen <- igraph::diameter(graph = Net, directed = FALSE, unconnected = TRUE)
       
-      Pattern <- igraph::graph.ring(n = DiamLen, directed = FALSE, mutual = FALSE, circular = FALSE)
+      Pattern <- igraph::graph.ring(n = DiamLen+1, directed = FALSE, mutual = FALSE, circular = FALSE)
       
       PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
       
@@ -267,11 +278,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     ggMat <- cbind(ggMat, rep("Real", nrow(ggMat)))
      
-    ggMat_Minus <- ggMat[ggMat[, 1]>.8, ]
+    ggMat_Minus <- ggMat[ggMat[, 1]>1-CircExt, ]
     ggMat_Minus[,5] <- "Virtual"
     ggMat_Minus[,1] <- as.numeric(ggMat_Minus[,1]) - 1
     
-    ggMat_Plus <- ggMat[ggMat[, 1]<.2, ]
+    ggMat_Plus <- ggMat[ggMat[, 1]<CircExt, ]
     ggMat_Plus[,5] <- "Virtual"
     ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) + 1
     
@@ -293,14 +304,14 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
           ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
           ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
-          ggplot2::scale_x_continuous(limits = c(-0.2,1.2))
+          ggplot2::scale_x_continuous(limits = c(-CircExt, 1+CircExt))
       } else {
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(alpha = Status)) + ggplot2::facet_wrap(~ Gene, scales="free_y") +
           ggplot2::geom_smooth(color = "black", method = "loess") + ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
           ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
-          ggplot2::scale_x_continuous(limits = c(-0.2,1.2))
+          ggplot2::scale_x_continuous(limits = c(-CircExt, 1+CircExt))
       }
     }
     
