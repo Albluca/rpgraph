@@ -106,7 +106,10 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       }
       
       if (length(PossiblePaths)> 1) {
-        # Multiple paths founds. Plotting the graph and asking the user where to start
+        Status <- 'Few'
+      }
+      
+      if (length(PossiblePaths)> 5) {
         Status <- 'Multiple'
       }
       
@@ -131,6 +134,10 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       }
       
       if (length(PossiblePaths)> 1) {
+        Status <- 'Few'
+      }
+      
+      if (length(PossiblePaths)> 5) {
         Status <- 'Multiple'
       }
       
@@ -153,6 +160,56 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   if(Status == 'Single'){
     print("A single path was found")
     PathToUse <- PossiblePaths[[1]]$name
+  }
+  
+  
+  if(Status == 'Few'){
+    print(paste(length(PossiblePaths), "paths found"))
+    
+    TaxonList <- getTaxonMap(Results, TransfData, UseR = TRUE)
+    
+    SelLayOut = 'nicely'
+    
+    if(PathType == 'Long.Linear'){
+      SelLayOut = 'circle_line'
+    }
+    
+    if(PathType == 'Circular'){
+      SelLayOut = 'circle'
+    }
+    
+    InfoData <- plotPieNet(Results = PrinGraph, Graph = Net,
+                           Data = TransfData, Categories = CellClass,
+                           TaxonList = TaxonList,
+                           NodeSizeMult = 2, ColCat = NULL, LayOut = SelLayOut,
+                           DirectionMat = NULL)
+    
+    legend(x = "center", fill=unique(InfoData$ColInfo[1:3]), legend = unique(CellClass))
+    
+    DONE <- FALSE
+    
+    while (!DONE) {
+      
+      print("The following paths have been found:")
+      
+      for(i in 1:length(PossiblePaths)){
+        print(paste("Path", i))
+        print(PossiblePaths[[i]])
+      }
+      
+      PathToUseID <- readline(prompt="Select the path number that you want to use: ")
+
+      if(PathToUseID %in% 1:length(PossiblePaths)){
+        print("Accepted")
+        DONE <- TRUE
+        PathToUse <- PossiblePaths[[PathToUseID]]$name
+        print(PathToUse)
+      }
+      
+      if(!DONE){
+        print("Invalid Selection.")
+      }
+    }
   }
   
   
