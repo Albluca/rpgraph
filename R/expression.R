@@ -1,59 +1,16 @@
 #' Title
 #'
-#' @param ExpressionData 
-#' @param CellClass 
-#' @param PrinGraph 
-#' @param Projections 
-#' @param Genes 
+#' @param Results 
+#' @param Data 
+#' @param Categories 
+#' @param Graph 
 #' @param Path 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
-                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
-                                 Plot = TRUE, Return.Smoother = FALSE, CircExt = .3) {
-  
-  # Initial checks ----------------------------------------------------------
-  
-  # Check if cells have a categorization
-  
-  if(CircExt > 1){
-    print("Only value of CircExt up to 1 will be considered. Setting CircExt = 1")
-    CircExt = 1
-  }
-  
-  if(CircExt <=0){
-    print("Only value of CircExt strictly positive will be considered. Setting CircExt = .3")
-    CircExt = .3
-  }
-  
-  if(!is.null(CellClass) & length(CellClass) == nrow(ExpressionData)){
-    print("Using CellClass to plot classes")
-    if(is.null(levels(CellClass))){
-      CellClass <- factor(CellClass)
-    }
-  } else {
-    print("CellClass absent or incompatible with data. Classification be ignored")
-    CellClass <- factor(rep(1, nrow(ExpressionData)))
-  }
-  
-  FoundGenes <- Genes[Genes %in% colnames(ExpressionData)]
-  print(paste(length(FoundGenes), "genes found"))
-  
-  if(length(FoundGenes) == 0){
-    print("Nothing to do")
-    return()
-  }
-  
-  if(is.null(Net)){
-    print("Constructing graph. Consider doing that separatedly.")
-    Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
-  }
-  
-  
-  # Looking for paths if necessary ----------------------------------------------------------
+CheckAndGetPath <- function(Results, Data, Categories, Graph, Path, PathType, Circular) {
   
   # Looking at potential paths
   
@@ -62,14 +19,14 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   if(length(Path) > 1){
     
     for(i in 2:length(Path)){
-      if(!igraph::are.connected(Net, Path[i], Path[i-1])){
+      if(!igraph::are.connected(Graph, Path[i], Path[i-1])){
         print(paste(Path[i], "--", Path[i-1], "not found in the net"))
         return()
       }
     }
     
     if(Circular){
-      if(!igraph::are.connected(Net, Path[i], Path[i-1])){
+      if(!igraph::are.connected(Graph, Path[i], Path[i-1])){
         print(paste(Path[length(Path)], "--", Path[1], "not found in the net"))
         return()
       }
@@ -95,9 +52,9 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       
       # This assumes that the graph is a closed line
       
-      Pattern <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, mutual = FALSE, circular = TRUE)
+      Pattern <- igraph::graph.ring(n = igraph::vcount(Graph), directed = FALSE, mutual = FALSE, circular = TRUE)
       
-      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
+      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Graph, graph2 = Pattern)
       
       if (length(PossiblePaths) == 0) {
         Status <- 'None'
@@ -121,11 +78,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       
       # Looking at all the possible diameters in the graph
       
-      DiamLen <- igraph::diameter(graph = Net, directed = FALSE, unconnected = TRUE)
+      DiamLen <- igraph::diameter(graph = Graph, directed = FALSE, unconnected = TRUE)
       
       Pattern <- igraph::graph.ring(n = DiamLen+1, directed = FALSE, mutual = FALSE, circular = FALSE)
       
-      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
+      PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Graph, graph2 = Pattern)
       
       if (length(PossiblePaths) == 0) {
         Status <- 'None'
@@ -168,7 +125,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   if(Status == 'Few'){
     print(paste(length(PossiblePaths), "paths found"))
     
-    TaxonList <- getTaxonMap(Results, TransfData, UseR = TRUE)
+    TaxonList <- getTaxonMap(Results = Results, Data = Data, UseR = TRUE)
     
     SelLayOut = 'nicely'
     
@@ -180,13 +137,13 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       SelLayOut = 'circle'
     }
     
-    InfoData <- plotPieNet(Results = PrinGraph, Graph = Net,
-                           Data = TransfData, Categories = CellClass,
+    InfoData <- plotPieNet(Results = Resuls, Graph = Graph,
+                           Data = Data, Categories = Categories,
                            TaxonList = TaxonList,
                            NodeSizeMult = 2, ColCat = NULL, LayOut = SelLayOut,
                            DirectionMat = NULL)
     
-    legend(x = "center", fill=unique(InfoData$ColInfo[1:3]), legend = unique(CellClass))
+    legend(x = "center", fill=unique(InfoData$ColInfo[1:3]), legend = unique(Categories))
     
     DONE <- FALSE
     
@@ -200,7 +157,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       }
       
       PathToUseID <- readline(prompt="Select the path number that you want to use: ")
-
+      
       if(PathToUseID %in% 1:length(PossiblePaths)){
         print("Accepted")
         DONE <- TRUE
@@ -218,7 +175,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   if(Status == 'Multiple'){
     print(paste(length(PossiblePaths), "paths found"))
     
-    TaxonList <- getTaxonMap(Results, TransfData, UseR = TRUE)
+    TaxonList <- getTaxonMap(Results = Results, Data =  TransfData, UseR = TRUE)
     
     SelLayOut = 'nicely'
     
@@ -230,8 +187,8 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       SelLayOut = 'circle'
     }
     
-    InfoData <- plotPieNet(Results = PrinGraph, Graph = Net,
-                           Data = TransfData, Categories = CellClass,
+    InfoData <- plotPieNet(Results = Results, Graph = Graph,
+                           Data = Data, Categories = Categories,
                            TaxonList = TaxonList,
                            NodeSizeMult = 2, ColCat = NULL, LayOut = SelLayOut,
                            DirectionMat = NULL)
@@ -263,6 +220,92 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     }
   }
   
+  return(PathToUse)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#' Title
+#'
+#' @param ExpressionData 
+#' @param CellClass 
+#' @param PrinGraph 
+#' @param Projections 
+#' @param Genes 
+#' @param Path 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
+                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
+                                 Plot = TRUE, Return.Smoother = '', CircExt = .3) {
+  
+  # Initial checks ----------------------------------------------------------
+  
+  # Check if cells have a categorization
+  
+  if(CircExt > 1){
+    print("Only value of CircExt up to 1 will be considered. Setting CircExt = 1")
+    CircExt = 1
+  }
+  
+  if(CircExt <=0){
+    print("Only value of CircExt strictly positive will be considered. Setting CircExt = .3")
+    CircExt = .3
+  }
+  
+  if(!is.null(CellClass) & length(CellClass) == nrow(ExpressionData)){
+    print("Using CellClass to plot classes")
+    if(is.null(levels(CellClass))){
+      CellClass <- factor(CellClass)
+    }
+  } else {
+    print("CellClass absent or incompatible with data. Classification be ignored")
+    CellClass <- factor(rep(1, nrow(ExpressionData)))
+  }
+  
+  FoundGenes <- Genes[Genes %in% colnames(ExpressionData)]
+  print(paste(length(FoundGenes), "genes found"))
+  
+  if(length(FoundGenes) == 0){
+    print("Nothing to do")
+    return()
+  }
+  
+  if(is.null(Net)){
+    print("Constructing graph. Consider doing that separatedly.")
+    Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
+  }
+  
+  
+  # Looking for paths if necessary ----------------------------------------------------------
+  
+  # This section has been moved to a different function
+  
+  PathToUse <- CheckAndGetPath(Results = PrinGraph, Data = TransfData,
+                               Categories = CellClass, Graph = Net, Path = Path,
+                               PathType = PathType, Circular = Circular)
+  
+  
   # Project the points on the path ----------------------------------------------------------
   
   # All preprocessing is done. Now we can look at gene expression over pseudotime
@@ -285,6 +328,9 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
+  dim(MatGenesToPlot) <- c(nrow(ExpressionData), length(FoundGenes))
+  colnames(MatGenesToPlot) <- FoundGenes
+  
   # Prepare data for plotting ----------------------------------------------------------
   
   print("Preparing data")
@@ -340,16 +386,23 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     ggMat <- cbind(ggMat, rep("Real", nrow(ggMat)))
      
-    ggMat_Minus <- ggMat[ggMat[, 1]>1-CircExt, ]
-    ggMat_Minus[,5] <- "Virtual"
-    ggMat_Minus[,1] <- as.numeric(ggMat_Minus[,1]) - 1
+    if(sum(ggMat[, 1]>1-CircExt)>0){
+      ggMat_Minus <- ggMat[ggMat[, 1]>1-CircExt, ]
+      dim(ggMat_Minus) <- c(sum(ggMat[, 1]>1-CircExt), 5)
+      ggMat_Minus[,5] <- "Virtual"
+      ggMat_Minus[,1] <- as.numeric(ggMat_Minus[,1]) - 1
+      ggMat <- rbind(ggMat, ggMat_Minus)
+    }
     
-    ggMat_Plus <- ggMat[ggMat[, 1]<CircExt, ]
-    ggMat_Plus[,5] <- "Virtual"
-    ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) + 1
     
-    ggMat <- rbind(ggMat, ggMat_Plus, ggMat_Minus)
-    
+    if(sum(ggMat[, 1]>1-CircExt)>0){
+      ggMat_Plus <- ggMat[ggMat[, 1]<CircExt, ]
+      dim(ggMat_Plus) <- c(sum(ggMat[, 1]<CircExt), 5)
+      ggMat_Plus[,5] <- "Virtual"
+      ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) - 1
+      ggMat <- rbind(ggMat, ggMat_Plus)
+    }
+
     colnames(ggMat) <- c("Pseudo.Time", "Log.Gene.Exp", "Class", "Gene", "Status")
     
     ggMat <- data.frame(ggMat)
@@ -394,46 +447,126 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   # Return the smoother if necessary ----------------------------------------------------------
   
-  if(Return.Smoother){
-    
-    Smoothed_x <- NULL
-    Smoothed_y <- NULL
-    
-    print("Preparing output")
+  if(Return.Smoother == 'lowess'){
+
+    print("Computing lowess smoother")
     
     tictoc::tic()
     
-    pb <- txtProgressBar(min = 0, max = length(unique(ggMat$Gene)), style = 3)
-    
-    idx <- 0
-    for (gID in unique(ggMat$Gene)){
-      idx <- idx + 1
-      setTxtProgressBar(pb, idx)
+    SpltiData <- split(ggMat[,1:2], ggMat$Gene)
       
-      Smoothed <- lowess(ggMat$Log.Gene.Exp[ggMat$Gene==gID] ~ ggMat$Pseudo.Time[ggMat$Gene==gID])
-      
-      if(idx == 1){
-        Smoothed_x <- Smoothed$x
-        Smoothed_y <- Smoothed$y
-      } else {
-        Smoothed_y <- rbind(Smoothed_y, Smoothed$y)
-      }
-      
+    SupportFun <- function(DF) {
+      return(lowess(DF$Log.Gene.Exp ~ DF$Pseudo.Time))
     }
     
-    if(length(unique(ggMat$Gene))> 1){
-      rownames(Smoothed_y) <- unique(ggMat$Gene)
-    }
+    Smoother <- lapply(SpltiData, SupportFun)
     
-    print("")
     tictoc::toc()
     
-    return(list(XC = Smoothed_x, YC = Smoothed_y))
-    
-  } else {
-    
-    return(NULL)
+    return(Smoother)
     
   }
+  
+  if(Return.Smoother == 'loess'){
+    
+    print("Computing lowess smoother")
+    
+    tictoc::tic()
+    
+    SpltiData <- split(ggMat[,1:2], ggMat$Gene)
+    
+    SupportFun <- function(DF) {
+      return(loess(DF$Log.Gene.Exp ~ DF$Pseudo.Time))
+    }
+    
+    Smoother <- lapply(SpltiData, SupportFun)
+    
+    tictoc::toc()
+    
+    return(Smoother)
+    
+  }
+  
+  return(NULL)
+  
+}
+
+
+
+
+
+
+
+#' Title
+#'
+#' @param TransfData 
+#' @param CellClass 
+#' @param PrinGraph 
+#' @param Projections 
+#' @param Path 
+#' @param Net 
+#' @param PathType 
+#' @param Circular 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+CategoriesOnPath <- function(TransfData, CellClass, PrinGraph, Projections, Path = 'ask',
+                             Net = NULL, PathType = 'Long.Linear', Circular = FALSE) {
+  
+ 
+  # Initial checks ----------------------------------------------------------
+  
+  # Check if cells have a categorization
+
+  if(length(unique(CellClass)) <= 1){
+    print("Nothing to do")
+    return()
+  }
+  
+  if(is.null(Net)){
+    print("Constructing graph. Consider doing that separatedly.")
+    Net <- ConstructGraph(Results = PrinGraph, DirectionMat = NULL)
+  }
+  
+  
+  # Looking for paths if necessary ----------------------------------------------------------
+  
+  # This section has been moved to a different function
+  
+  PathToUse <- CheckAndGetPath(Results, Data = TransfData, CellClass, Graph = Net,
+                               Path = Path, PathType = PathType, Circular = Circular)
+  
+  
+  # Project the points on the path ----------------------------------------------------------
+  
+  # All preprocessing is done. Now we can look at gene expression over pseudotime
+  
+  NumericPath <- as.numeric(unlist(lapply(strsplit(PathToUse, "V_"), "[[", 2)))
+  
+  if(Circular){
+    NumericPath <- c(NumericPath, NumericPath[1])
+  }
+  
+  print("Projecting cells on path")
+  
+  PathProjection <- OrderOnPath(PrinGraph = PrinGraph, Path = NumericPath, PointProjections = Projections)
+  
+  # PlotOnPath(PathProjection, StageVect)
+  
+  ProjectedPoints <- which(!is.na(PathProjection$PositionOnPath))
+  
+  ggMat <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen), as.character(CellClass))
+  colnames(ggMat) <- c("Pseudo.Time", "Class")
+  
+  ggMat <- data.frame(ggMat)
+  ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
+  
+  p <- ggplot2::ggplot(ggMat, ggplot2::aes(factor(Class), Pseudo.Time, fill=Class)) +
+    ggplot2::geom_boxplot() + ggplot2::coord_flip() +
+    ggplot2::labs(y = "Pseudo time", x = "Categories")
+  
+  print(p)
   
 }

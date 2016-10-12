@@ -374,7 +374,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
     } else {
       Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
       IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = FALSE)
-      Iso <- igraph::graph.get.isomorphisms.vf2(aigraph::s.undirected(Net1, mode = 'collapse'), IsoGaph)
+      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
       VerOrder <- igraph::V(Net1)[Iso[[1]]]
       RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
       LayOutDONE <- TRUE
