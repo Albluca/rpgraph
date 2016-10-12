@@ -156,7 +156,7 @@ CheckAndGetPath <- function(Results, Data, Categories, Graph, Path, PathType, Ci
         print(PossiblePaths[[i]])
       }
       
-      PathToUseID <- readline(prompt="Select the path number that you want to use: ")
+      PathToUseID <- as.integer(readline(prompt="Select the path number that you want to use: "))
       
       if(PathToUseID %in% 1:length(PossiblePaths)){
         print("Accepted")
@@ -328,7 +328,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
-  dim(MatGenesToPlot) <- c(nrow(ExpressionData), length(FoundGenes))
+  dim(MatGenesToPlot) <- c(length(ProjectedPoints), length(FoundGenes))
   colnames(MatGenesToPlot) <- FoundGenes
   
   # Prepare data for plotting ----------------------------------------------------------

@@ -49,24 +49,6 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
         
         SelPoints <- c(TaxonList[[Nd[1]]], TaxonList[[Nd[2]]])
         SelPoints <- SelPoints[!is.na(SelPoints)]
-        if(length(SelPoints)<1){
-          next()
-        }
-        RestDataMap <- Data[SelPoints,1:Dims]
-        
-        # plot data for debugging purposes
-        
-        # plot(RestDataMap[,1:2])
-        # points(C1[1], C1[2], pch=20)
-        # points(C2[1], C2[2], pch=20)
-        # 
-        # PTOL <- NULL
-        # for(j in seq(from=0, to=1, by=0.01)){
-        #   PTOL <- rbind(PTOL, (j)*C1 + (1-j)*C2 )
-        # }
-        # points(x = PTOL[,1], y = PTOL[,2])
-        # 
-        # table(apply(as.matrix(dist(rbind(PTOL, RestDataMap)))[1:nrow(PTOL),-c(1:nrow(PTOL))], 2, which.min))
         
         # This is probaly a terrible method, but it's rather quick and straightforward
         
@@ -77,52 +59,67 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
         P1Pos <- PCARet$x["C1","PC1"]
         P2Pos <- PCARet$x["C2","PC1"]
         
-        # Use the rotation matrix obtained by the PCA to project the nodes.
         
-        if(length(SelPoints)>1){
-          PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
+        if(length(SelPoints)>0){
+          RestDataMap <- Data[SelPoints,1:Dims]
+          
+          
+          # Use the rotation matrix obtained by the PCA to project the nodes.
+          
+          if(length(SelPoints)>1){
+            PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
+          } else {
+            PointPosFull <- t(RestDataMap - PCARet$center) %*% PCARet$rotation
+          }
+          
+          # The 1st component will allow me to hortogonally project the points on the lines
+          
+          PointPos <- PointPosFull[,"PC1"]
+          
+          # Get the position on the line by reversing the PCA
+          
+          PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])) + PCARet$center)
+          
+          # Plotting stuff to debug
+          
+          # plot(PrjPoints[,1:2])
+          # Nodepoints <- t(t(PCARet$x[,"PC1"] %*% t(PCARet$rotation[,1])) + PCARet$center)
+          # points(Nodepoints[,1:2], col='red')
+          
+          # plot(PrjPoints[,1], PrjPoints[,2], col='red')
+          # points(x = PCARet$x[,1], y = PCARet$x[,2])
+          
+          # arrows(x0 = RestDataMap[,1], y0 = RestDataMap[,2], x1 = PrjPoints[,1], y1 = PrjPoints[,2], length = 0)
+          
+          # Due to the high dimensionality of the system some poits will project outside fo the
+          # segment joining the two nodes. In this case the points are associqted with the nearesrt node.
+          
+          if(P1Pos < P2Pos){
+            PointPos <- (PointPos - P1Pos) / (P2Pos-P1Pos)
+            PointPos[PointPos < 0] <- 0
+            PointPos[PointPos > 1] <- 1
+          } else {
+            PointPos <- (PointPos - P2Pos) / (P1Pos-P2Pos)
+            PointPos[PointPos < 0] <- 0
+            PointPos[PointPos > 1] <- 1
+            PointPos <- 1 - PointPos
+          }
+          
+          ElList <- list(Nodes = Nd,
+                         PointsProjections = PointPos,
+                         PointsIndices = SelPoints,
+                         SegmentDist = abs(P2Pos-P1Pos),
+                         ProjectedCoords = PrjPoints)
+          
         } else {
-          PointPosFull <- t(RestDataMap - PCARet$center) %*% PCARet$rotation
+          
+          ElList <- list(Nodes = Nd,
+                         PointsProjections = NULL,
+                         PointsIndices = NULL,
+                         SegmentDist = abs(P2Pos-P1Pos),
+                         ProjectedCoords = NULL)
+          
         }
-        
-        # The 1st component will allow me to hortogonally project the points on the lines
-        
-        PointPos <- PointPosFull[,"PC1"]
-        
-        # Get the position on the line by reversing the PCA
-        
-        PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])) + PCARet$center)
-        
-        # Plotting stuff to debug
-        
-        # plot(PrjPoints[,1:2])
-        # Nodepoints <- t(t(PCARet$x[,"PC1"] %*% t(PCARet$rotation[,1])) + PCARet$center)
-        # points(Nodepoints[,1:2], col='red')
-        
-        # plot(PrjPoints[,1], PrjPoints[,2], col='red')
-        # points(x = PCARet$x[,1], y = PCARet$x[,2])
-        
-        # arrows(x0 = RestDataMap[,1], y0 = RestDataMap[,2], x1 = PrjPoints[,1], y1 = PrjPoints[,2], length = 0)
-        
-        # Due to the high dimensionality of the system some poits will project outside fo the
-        # segment joining the two nodes. In this case the points are associqted with the nearesrt node.
-        
-        if(P1Pos < P2Pos){
-          PointPos <- (PointPos - P1Pos) / (P2Pos-P1Pos)
-          PointPos[PointPos < 0] <- 0
-          PointPos[PointPos > 1] <- 1
-        } else {
-          PointPos <- (PointPos - P2Pos) / (P1Pos-P2Pos)
-          PointPos[PointPos < 0] <- 0
-          PointPos[PointPos > 1] <- 1
-          PointPos <- 1 - PointPos
-        }
-        
-        ElList <- list(Nodes = Nd,
-                       PointsProjections = PointPos,
-                       PointsIndices = SelPoints,
-                       SegmentDist = abs(P2Pos-P1Pos),
-                       ProjectedCoords = PrjPoints)
         
         DistsLists[[i]] <- ElList
         
@@ -150,11 +147,11 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
       
       for (i in 1:length(DistsLists)) {
         
-        if(is.null(DistsLists[[i]])){
+        SegLen <- c(SegLen, DistsLists[[i]]$SegmentDist)
+        
+        if(is.null(DistsLists[[i]]$PointsProjections)){
           next()
         }
-        
-        SegLen <- c(SegLen, DistsLists[[i]]$SegmentDist)
         
         Inside <- DistsLists[[i]]$PointsProjections > 0 & DistsLists[[i]]$PointsProjections < 1
         
