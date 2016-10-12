@@ -156,7 +156,7 @@ CheckAndGetPath <- function(Results, Data, Categories, Graph, Path, PathType, Ci
         print(PossiblePaths[[i]])
       }
       
-      PathToUseID <- readline(prompt="Select the path number that you want to use: ")
+      PathToUseID <- as.integer(readline(prompt="Select the path number that you want to use: "))
       
       if(PathToUseID %in% 1:length(PossiblePaths)){
         print("Accepted")
@@ -263,6 +263,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   # Check if cells have a categorization
   
+  if(PathType == 'Long.Linear' & Circular){
+    print("Pathtype incompatible with circular options. Using Circular = FALSE")
+    Circular <- FALSE
+  }
+  
   if(CircExt > 1){
     print("Only value of CircExt up to 1 will be considered. Setting CircExt = 1")
     CircExt = 1
@@ -328,7 +333,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   MatGenesToPlot <- ExpressionData[ProjectedPoints[SortedProj$ix],FoundGenes]
 
-  dim(MatGenesToPlot) <- c(nrow(ExpressionData), length(FoundGenes))
+  dim(MatGenesToPlot) <- c(length(ProjectedPoints), length(FoundGenes))
   colnames(MatGenesToPlot) <- FoundGenes
   
   # Prepare data for plotting ----------------------------------------------------------
@@ -469,7 +474,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   if(Return.Smoother == 'loess'){
     
-    print("Computing lowess smoother")
+    print("Computing loess smoother")
     
     tictoc::tic()
     
