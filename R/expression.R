@@ -402,11 +402,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     }
     
     
-    if(sum(ggMat[, 1]>1-CircExt)>0){
+    if(sum(ggMat[, 1]<CircExt)>0){
       ggMat_Plus <- ggMat[ggMat[, 1]<CircExt, ]
       dim(ggMat_Plus) <- c(sum(ggMat[, 1]<CircExt), 5)
       ggMat_Plus[,5] <- "Virtual"
-      ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) - 1
+      ggMat_Plus[,1] <- as.numeric(ggMat_Plus[,1]) + 1
       ggMat <- rbind(ggMat, ggMat_Plus)
     }
 
@@ -452,7 +452,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   }
   
   if (ncol(ggMat) == 5) {
-    ggMat <- ggMat[ggMat[,5] == "Real", ]
+    # ggMat <- ggMat[ggMat[,5] == "Real", ]
     ggMat <- ggMat[, -5]
   }
   
@@ -474,7 +474,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     tictoc::toc()
     
-    return(Smoother)
+    return(list(Smooth = Smoother, CellsOnPath = PathProjection))
     
   }
   
@@ -494,11 +494,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     tictoc::toc()
     
-    return(Smoother)
+    return(list(Smooth = Smoother, CellsOnPath = PathProjection))
     
   }
   
-  return(NULL)
+  return(list(Smooth = NULL, CellsOnPath = PathProjection))
   
 }
 

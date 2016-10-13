@@ -214,3 +214,6 @@ Rand.POrd.Cor <- function(OrdVect, Vect1, Vect2, Round) {
 
 
 
+
+
+
