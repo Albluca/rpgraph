@@ -256,12 +256,24 @@ CheckAndGetPath <- function(Results, Data, Categories, Graph, Path, PathType, Ci
 #'
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
-                                 Path = 'ask', Net = NULL, PathType = 'Long.Linear', Circular = FALSE,
+                                 InvTransNodes = NULL, Path = 'ask', Net = NULL, PathType = 'Long.Linear',
+                                 Circular = FALSE, Plot.Smoother = 'none',
                                  Plot = TRUE, Return.Smoother = '', CircExt = .3) {
   
   # Initial checks ----------------------------------------------------------
   
   # Check if cells have a categorization
+  
+  if(is.null(InvTransNodes) & Plot.Smoother == "Nodes"){
+    print("InvTransNodes need to be specifid for Plot.Smoother == Nodes. Using Plot.Smoother = gg")
+    Plot.Smoother = "gg"
+  }
+  
+  if(!is.null(InvTransNodes) & Plot.Smoother == 'none'){
+    Plot.Smoother = "Nodes"
+  }
+  
+  
   
   if(PathType == 'Long.Linear' & Circular){
     print("Pathtype incompatible with circular options. Using Circular = FALSE")
@@ -342,16 +354,36 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   
   tictoc::tic()
   
-  if(!Circular){
+  ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
+                 as.vector(MatGenesToPlot),
+                 rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
+                     ncol(MatGenesToPlot)),
+                 rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
+  )
+  
+  ggMat <- cbind(ggMat, rep("Data", nrow(ggMat)))
+  
+  if(!is.null(InvTransNodes)){
+    NodeMat <- InvTransNodes[NumericPath, FoundGenes]
     
-    ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
-                   as.vector(MatGenesToPlot),
-                   rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
-                       ncol(MatGenesToPlot)),
-                   rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
+    dim(NodeMat) <- c(length(NumericPath), length(FoundGenes))
+    colnames(NodeMat) <- FoundGenes
+    
+    ggMat.Nodes <- cbind(rep(cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen), ncol(NodeMat)),
+                         as.vector(NodeMat),
+                         rep("Nodes", ncol(NodeMat)),
+                         rep(colnames(NodeMat), each = nrow(NodeMat))
     )
     
-    colnames(ggMat) <- c("Pseudo.Time", "Log.Gene.Exp", "Class", "Gene")
+    ggMat.Nodes <- cbind(ggMat.Nodes, rep("Data", nrow(ggMat.Nodes)))
+    
+    ggMat <- rbind(ggMat, ggMat.Nodes)
+    
+  }
+  
+  if(!Circular){
+    
+    colnames(ggMat) <- c("Pseudo.Time", "Log.Gene.Exp", "Class", "Gene", "Status")
     
     ggMat <- data.frame(ggMat)
     ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
@@ -363,14 +395,12 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     if(Plot){
       if(length(unique(ggMat$Class))>1){
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-          ggplot2::geom_smooth(color = "black", method = "loess") +
           ggplot2::geom_point(ggplot2::aes(color = Class)) +
           ggplot2::facet_wrap(~ Gene, scales="free_y") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_x_continuous(limits = c(0,1))
       } else {
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-          ggplot2::geom_smooth(color = "black", method = "loess") +
           ggplot2::geom_point() +
           ggplot2::facet_wrap(~ Gene, scales="free_y") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
@@ -383,15 +413,6 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     # We are going to include extra "shadow" points
    
     print("including virtual points")
-    
-    ggMat <- cbind(rep(SortedProj$x/sum(PathProjection$PathLen), ncol(MatGenesToPlot)),
-                   as.vector(MatGenesToPlot),
-                   rep(as.character(CellClass[ProjectedPoints[SortedProj$ix]]),
-                       ncol(MatGenesToPlot)),
-                   rep(colnames(MatGenesToPlot), each = nrow(MatGenesToPlot))
-    )
-    
-    ggMat <- cbind(ggMat, rep("Real", nrow(ggMat)))
      
     if(sum(ggMat[, 1]>1-CircExt)>0){
       ggMat_Minus <- ggMat[ggMat[, 1]>1-CircExt, ]
@@ -422,7 +443,6 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     if(Plot){
       if(length(unique(ggMat$Class))>1){
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-          ggplot2::geom_smooth(color = "black", method = "loess") +
           ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) +
           ggplot2::facet_wrap(~ Gene, scales="free_y") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
@@ -431,7 +451,6 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
           ggplot2::scale_x_continuous(limits = c(-CircExt, 1+CircExt))
       } else {
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
-          ggplot2::geom_smooth(color = "black", method = "loess") +
           ggplot2::geom_point(ggplot2::aes(alpha = Status)) +
           ggplot2::facet_wrap(~ Gene, scales="free_y") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
@@ -441,6 +460,14 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       }
     }
     
+  }
+  
+  if(Plot.Smoother == 'gg'){
+    p <- p + ggplot2::geom_smooth(data = subset(ggMat, Class != "Nodes"), color = "black", method = "loess")
+  }
+  
+  if(Plot.Smoother == 'Nodes'){
+    p <- p + ggplot2::geom_line(data = subset(ggMat, Class == "Nodes"))
   }
   
   tictoc::toc()
