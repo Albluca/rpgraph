@@ -292,10 +292,9 @@ getTaxonMap <- function(Results, Data, UseR = FALSE){
     CurvePoints <- Results$Nodes
     # rownames(CurvePoints) <- paste("V_", 1:nrow(CurvePoints), sep='')
     
-    AllPoints <- rbind(Data, CurvePoints)
-    DistPoints <- as.matrix(dist(AllPoints))
-    IntDist <- DistPoints[1:nrow(Data),(nrow(Data)+1):(nrow(CurvePoints)+nrow(Data))]
-    PointsNodesProjections <- apply(IntDist, 1, which.min)
+    SelDists <- fields::rdist(Data, CurvePoints)
+
+    PointsNodesProjections <- apply(SelDists, 1, which.min)
 
     TaxonMap <- list()
     
