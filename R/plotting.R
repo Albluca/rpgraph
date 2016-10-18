@@ -46,30 +46,30 @@ plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 #' @export
 #'
 #' @examples
-accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
+accuracyComplexityPlot <- function(PrintGraph, AdjFactor=1, Main = '', Cex.Main = .7,
                                    Cex.Text = .8, Mode = 'LocMin', Xlims = NULL){
-
-  attach(PrintGraph$Report)
   
   if(is.null(Xlims)){
-    Xlims <- range(FVEP)
+    Xlims <- range(PrintGraph$Report$FVEP)
   }
 
-  plot(FVEP, URN2, type = 'b', col='green',
+  YVal <- PrintGraph$Report$UR*(PrintGraph$Report$NNODES^AdjFactor)
+  
+  plot(PrintGraph$Report$FVEP, YVal, type = 'b', col='green',
        xlab = "Fraction of Explained Variance",
        ylab = "Geometrical Complexity", lwd = 2,
        pch = 1, main = Main, cex.main = Cex.Main,
        xlim = Xlims)
 
   if(Mode == 'LocMin'){
-    for(i in 2:(length(URN2)-1)){
-      xp = URN2[i-1]
-      x = URN2[i]
-      xn = URN2[i+1]
+    for(i in 2:(length(YVal)-1)){
+      xp = YVal[i-1]
+      x = YVal[i]
+      xn = YVal[i+1]
       if(x < min(c(xp,xn))){
         diff = abs(x-(xp+xn)/2);
         if(diff>0.01){
-          text(x = FVEP[i], y = URN2[i], labels = PrintGraph$Report$BARCODE[i+1],
+          text(x = PrintGraph$Report$FVEP[i], y = YVal[i], labels = PrintGraph$Report$BARCODE[i],
                pos = 1, cex = Cex.Text, col = 'red')
         }
       }
@@ -80,20 +80,20 @@ accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
   if(is.numeric(Mode)){
     Mode = round(Mode)
 
-    text(x = FVEP[2], y = URN2[2], labels = PrintGraph$Report$BARCODE[3],
+    text(x = FVEP[2], y = YVal[2], labels = PrintGraph$Report$BARCODE[3],
          pos = 1, cex = Cex.Text, col = 'red')
 
-    text(x = FVEP[length(URN2)-1], y = URN2[length(URN2)-1],
-         labels = PrintGraph$Report$BARCODE[length(URN2)],
+    text(x = FVEP[length(YVal)], y = YVal[length(YVal)],
+         labels = PrintGraph$Report$BARCODE[length(YVal)],
          pos = 1, cex = Cex.Text, col = 'red')
 
     if(Mode > 2){
 
       Mode <- Mode - 1
-      Step <- (length(URN2) - 2)/Mode
+      Step <- (length(YVal) - 2)/Mode
 
-      for (i in seq(from=2+Step, to = length(URN2)-1, by = Step)) {
-        text(x = FVEP[round(i)], y = URN2[round(i)],
+      for (i in seq(from=2+Step, to = length(YVal)-1, by = Step)) {
+        text(x = PrintGraph$Report$FVEP[round(i)], y = YVal[round(i)],
              labels = PrintGraph$Report$BARCODE[round(i)],
              pos = 1, cex = Cex.Text, col = 'red')
       }
@@ -102,9 +102,6 @@ accuracyComplexityPlot <- function(PrintGraph, Main = '', Cex.Main = .7,
 
 
   }
-
-
-  detach(PrintGraph$Report)
 
 }
 
@@ -280,7 +277,13 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
   if(is.null(ColCat)){
     ColCat <- c(rainbow(length(unique(Categories))), NA)
+    names(ColCat) <- c(levels(Categories), NA)
   } else {
+    if(sum(names(ColCat) %in% levels(Categories)) < length(unique(Categories))){
+      print("Reassigning colors to categories")
+      names(ColCat) <- c(levels(Categories), NA)
+    }
+    ColCat <- ColCat[levels(Categories)]
     ColCat <- c(ColCat, NA)
   }
 
