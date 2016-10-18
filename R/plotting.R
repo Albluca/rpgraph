@@ -80,10 +80,10 @@ accuracyComplexityPlot <- function(PrintGraph, AdjFactor=1, Main = '', Cex.Main 
   if(is.numeric(Mode)){
     Mode = round(Mode)
 
-    text(x = FVEP[2], y = YVal[2], labels = PrintGraph$Report$BARCODE[3],
+    text(x = PrintGraph$Report$FVEP[2], y = YVal[2], labels = PrintGraph$Report$BARCODE[3],
          pos = 1, cex = Cex.Text, col = 'red')
 
-    text(x = FVEP[length(YVal)], y = YVal[length(YVal)],
+    text(x = PrintGraph$Report$FVEP[length(YVal)], y = YVal[length(YVal)],
          labels = PrintGraph$Report$BARCODE[length(YVal)],
          pos = 1, cex = Cex.Text, col = 'red')
 
