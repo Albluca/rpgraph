@@ -396,13 +396,13 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       if(length(unique(ggMat$Class))>1){
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(color = Class)) +
-          ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::facet_wrap(~ Gene, scales="fixed") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_x_continuous(limits = c(0,1))
       } else {
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point() +
-          ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::facet_wrap(~ Gene, scales="fixed") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_x_continuous(limits = c(0,1))
       }
@@ -444,7 +444,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       if(length(unique(ggMat$Class))>1){
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) +
-          ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::facet_wrap(~ Gene, scales="fixed") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
           ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
@@ -452,7 +452,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
       } else {
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(alpha = Status)) +
-          ggplot2::facet_wrap(~ Gene, scales="free_y") +
+          ggplot2::facet_wrap(~ Gene, scales="fixed") +
           ggplot2::labs(x = "Pseudo time", y = "Gene expression") +
           ggplot2::scale_alpha_discrete(range = c(1, 0.2)) +
           ggplot2::geom_vline(xintercept = c(0,1), linetype = "dashed") +
