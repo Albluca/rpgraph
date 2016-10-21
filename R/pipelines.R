@@ -1,11 +1,15 @@
 # A function to standardize the Initial steps of the analysis
 
-StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
-                           MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE, Scaling = FALSE) {
+StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
+                            StageAssociation = NULL,
+                            PathOpt = "switch", GeneOpt = 10,
+                            GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
+                            MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
+                            Scaling = FALSE, nDim = NULL, nPoints = 20) {
   
   print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", nrow(ExpressionMatrix), "genes"))
   
-  # Filtering ---------------------------------------------------------------
+  # Cell filtering ---------------------------------------------------------------
   
   print("Stage I - Cell filtering")
   
@@ -13,8 +17,6 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
        freq = TRUE, ylab = "Number of cells")
   
   OutExpr <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneDetectedFilter)
-  
- 
   
   
   hist(apply(ExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
@@ -28,6 +30,7 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
   print(paste(sum(OutCount), "Cells will be removed due to read count filtering"))
   print(paste(sum(!(OutExpr & OutCount)), "Cells will be used for analysis")) 
 
+  Grouping <- Grouping[!(OutExpr & OutCount)]
   NormExpressionMatrix <- ExpressionMatrix[!(OutExpr & OutCount),]
   
   readline("Press any key")
@@ -41,6 +44,8 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
        freq = TRUE, ylab = "Number of cells (After filtering)")
   
   
+  # Gene filtering ---------------------------------------------------------------
+  
   print("Stage II - Genes filtering")
   
   print(paste("Removing genes that are detected in less than", MinCellExp, "cell(s)"))
@@ -49,8 +54,8 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
   NormExpressionMatrix <- NormExpressionMatrix[, !GeneFilterBool]
 
   print(paste(sum(GeneFilterBool), "genes will be removed"))
-  print(paste(ncol(NormExpressionMatrix), "genes will be used for the analysis"))
-
+  print(paste(ncol(NormExpressionMatrix), "genes are available for the analysis"))
+  
   if(LogTranform){
     print("Transforming using pseudo counts (Log10(x+1))")
     NormExpressionMatrix <- log10(NormExpressionMatrix + 1)
@@ -74,7 +79,25 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
   legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
          col=c('red', 'green', 'blue', "black"), lty=2)
   
-  print("Stage II - Gene scaling")
+  
+  if(!is.null(GeneSet)){
+    SelGenes <- intersect(colnames(NormExpressionMatrix), GeneSet)
+    
+    print(paste(length(SelGenes), "selected for analysis"))
+    
+    if(length(SelGenes)==0){
+      return()
+    }
+    
+    NormExpressionMatrix <- NormExpressionMatrix[,SelGenes]
+    
+  }
+  
+  
+  
+  # Gene Scaling ---------------------------------------------------------------
+  
+  print("Stage III - Gene scaling")
   
   if(Centering){
     print("Gene expression will be centered")
@@ -86,7 +109,153 @@ StudyCellCycle <- function(ExpressionMatrix, GeneDetectedFilter = 2.5, GeneCount
   
   NormExpressionMatrix <- scale(NormExpressionMatrix, Centering, Scaling)
   
-  print("Stage II - PCA")
+  print("Stage IV - PCA")
+  
+  if(is.null(nDim)){
+    nDim <- min(dim(NormExpressionMatrix))
+  }
+  
+  NormExpressionMatrixPCA <- SelectComputePCA(NormExpressionMatrix,
+                                              Components = nDim, Method = 'base-svd',
+                                              center = FALSE, scale.=FALSE)
+  
+  RotatedExpression <- NormExpressionMatrix %*% NormExpressionMatrixPCA$Comp
+  
+  # Curve Fit ---------------------------------------------------------------
+  
+  print("Stage V - Curve fit")
+  
+  Results <- computeElasticPrincipalGraph(Data = RotatedExpression, NumNodes = nPoints, Method = 'CircleConfiguration')
+  
+  par(mfcol=c(1,2))
+  
+  accuracyComplexityPlot(Results, AdjFactor = 1, Mode = 'LocMin')
+  plotMSDEnergyPlot(Results)
+  
+  
+  ColCells <- rainbow(length(unique(Grouping)))
+  Col = ColCells[as.integer(factor(ColCells))]
+  
+  par(mfcol=c(1,1))
+  
+  plotData2D(Data = RotatedExpression, PrintGraph = Results, Col = "black", NodeSizeMult = 0.1,
+             Main = "All genes", Plot.ly = FALSE, GroupsLab = NULL,
+             Xlab = paste("PC1 (", signif(100*NormExpressionMatrixPCA$ExpVar[1], 4), "%)", sep=''),
+             Ylab = paste("PC2 (", signif(100*NormExpressionMatrixPCA$ExpVar[2], 4), "%)", sep=''))
+  
+  
+  TaxonList <- getTaxonMap(Results, RotatedExpression, UseR = TRUE)
+  
+  ProjPoints <- projectPoints(Results = Results, Data = RotatedExpression, TaxonList=TaxonList,
+                              UseR = TRUE,
+                              method = 'PCALin', Dims = NULL)
+  
+  arrows(x0 = RotatedExpression[,1], y0 = RotatedExpression[,2],
+         x1 = ProjPoints$PointsOnEdgesCoords[,1], y1 = ProjPoints$PointsOnEdgesCoords[,2], length = 0)
+  
+  Net <- ConstructGraph(Results = Results, DirectionMat = NULL)
+  
+  # Curve Fit ---------------------------------------------------------------
+  
+  print("Stage V - Path Selection")
+  
+  # Start be selecting the first available path.
+  
+  Pattern <- igraph::graph.ring(n = nPoints, directed = FALSE, mutual = FALSE, circular = FALSE)
+  
+  PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
+  
+  UsedPath <- PossiblePaths[[1]]$name
+  
+  print("Using")
+  print(UsedPath)
+  
+  NodeOnGenes <- t(t(Results$Nodes %*% t(NormExpressionMatrixPCA$Comp)))
+  
+  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+  
+  # if(Circular){
+  #   NumericPath <- c(NumericPath, NumericPath[1])
+  # }
+  
+  # PathProjection <- OrderOnPath(PrinGraph = Results, Path = NumericPath, PointProjections = ProjPoints)
+
+  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
+  
+  # Select path that optimize a given behaviour
+  # GraphVarSorted <- sort(apply(NodeOnGenes, 2, var), index.return=TRUE)
+  # sign(t(NodeOnGenesOnPath) - apply(NodeOnGenesOnPath, 2, mean))["CDC6",]
+  
+  
+  # StageAssociation <- list(G1 = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
+  #                                 "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
+  #                                 "PCNA", "SLBP"),
+  #                          S = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
+  #                                "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
+  #                          G2 = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
+  #                                 "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
+  #                                 "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
+  #                                 "AURKA", "RACGAP1", "KIF20A"))
+  
+  
+  
+  
+  if(is.list(StageAssociation)){
+    
+    StageMat <- NULL
+    
+    for (Stage in names(StageAssociation)) {
+      StageGenes <- unlist(StageAssociation[Stage], use.names = FALSE)
+      
+      StageTracks <- NodeOnGenesOnPath[, StageGenes]
+      SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .95))
+      
+      SignStageMat[SignStageMat <= 0] <- NA
+      SignStageMat[SignStageMat > 0] <- Stage
+      
+      StageMat <- rbind(StageMat, SignStageMat)
+    }
+    
+    SummaryStageMat <- NULL
+    
+    for (Stage in names(StageAssociation)) {
+      SummaryStageMat <- rbind(SummaryStageMat, colSums(StageMat == Stage, na.rm = TRUE))
+    }
+    
+    SummaryStageMat/unlist(lapply(StageAssociation, length))
+    
+    rownames(SummaryStageMat) <- names(StageAssociation)
+    
+    StageNodeAssociation <- apply(SummaryStageMat, 2, which.max)
+    
+  }
+  
+  print("Gene/Stage information found. Trying to Optimize")
+  
+  # Start be selecting the first available path.
+
+
+  
+  # StageAssociation <- list(G1 = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
+  #                                 "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
+  #                                 "PCNA", "SLBP"),
+  #                          S = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
+  #                                "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
+  #                          G2 = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
+  #                                 "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
+  #                                 "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
+  #                                 "AURKA", "RACGAP1", "KIF20A"))
+  
+  # NodeOnGenes.DF <- cbind(rep(1:nrow(NodeOnGenes), ncol(NodeOnGenes)), as.vector(NodeOnGenes),
+  #                         rep(colnames(NodeOnGenes), each=nrow(NodeOnGenes)))
+  # 
+  # colnames(NodeOnGenes.DF) <- c("Node", "Exp", "Gene")
+  # 
+  # NodeOnGenes.DF <- data.frame(NodeOnGenes.DF)
+  # NodeOnGenes.DF$Node <- as.numeric(as.character(NodeOnGenes.DF$Node))
+  # NodeOnGenes.DF$Exp <- as.numeric(as.character(NodeOnGenes.DF$Exp))
+  
+  
   
   
 }

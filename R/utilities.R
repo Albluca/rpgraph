@@ -213,6 +213,20 @@ Rand.POrd.Cor <- function(OrdVect, Vect1, Vect2, Round) {
 }
 
 
+CircShift <- function(x, n = 1) {
+  if(n == 0){
+    x
+  } else {
+    c(tail(x, -n), head(x, n))
+  } 
+}
+
+
+CircCor <- function(Xvect, YVect) {
+  
+  CorWith
+  
+}
 
 
 
