@@ -213,6 +213,8 @@ Rand.POrd.Cor <- function(OrdVect, Vect1, Vect2, Round) {
 }
 
 
+
+
 CircShift <- function(x, n = 1) {
   if(n == 0){
     x
@@ -222,10 +224,18 @@ CircShift <- function(x, n = 1) {
 }
 
 
-CircCor <- function(Xvect, YVect) {
+
+
+CircCor <- function(XVect, YVect) {
   
-  CorWith
+  ShiftAndCor <- function(Sl) {
+    cor(cumsum(c(0,CircShift(XVect[-1], Sl))), CircShift(YVect, Sl))
+  }
   
+  Ret <- cbind(0:(length(XVect)-1), sapply(0:(length(XVect)-1), ShiftAndCor))
+  colnames(Ret) = c("Shift", "Corr")
+  
+  return(Ret)
 }
 
 
