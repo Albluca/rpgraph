@@ -233,28 +233,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   print("Gene/Stage information found. Trying to Optimize")
   
   # Start be selecting the first available path.
-
-
-  
-  # StageAssociation <- list(G1 = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
-  #                                 "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
-  #                                 "PCNA", "SLBP"),
-  #                          S = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
-  #                                "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
-  #                          G2 = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
-  #                                 "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
-  #                                 "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
-  #                                 "AURKA", "RACGAP1", "KIF20A"))
-  
-  # NodeOnGenes.DF <- cbind(rep(1:nrow(NodeOnGenes), ncol(NodeOnGenes)), as.vector(NodeOnGenes),
-  #                         rep(colnames(NodeOnGenes), each=nrow(NodeOnGenes)))
-  # 
-  # colnames(NodeOnGenes.DF) <- c("Node", "Exp", "Gene")
-  # 
-  # NodeOnGenes.DF <- data.frame(NodeOnGenes.DF)
-  # NodeOnGenes.DF$Node <- as.numeric(as.character(NodeOnGenes.DF$Node))
-  # NodeOnGenes.DF$Exp <- as.numeric(as.character(NodeOnGenes.DF$Exp))
-  
   
   
   
