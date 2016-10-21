@@ -208,7 +208,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       StageGenes <- unlist(StageAssociation[Stage], use.names = FALSE)
       
       StageTracks <- NodeOnGenesOnPath[, StageGenes]
-      SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .95))
+      SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
       
       SignStageMat[SignStageMat <= 0] <- NA
       SignStageMat[SignStageMat > 0] <- Stage
@@ -222,11 +222,13 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       SummaryStageMat <- rbind(SummaryStageMat, colSums(StageMat == Stage, na.rm = TRUE))
     }
     
-    SummaryStageMat/unlist(lapply(StageAssociation, length))
+    SummaryStageMat <- SummaryStageMat/unlist(lapply(StageAssociation, length))
     
     rownames(SummaryStageMat) <- names(StageAssociation)
     
     StageNodeAssociation <- apply(SummaryStageMat, 2, which.max)
+    
+    StageNodeAssociation
     
   }
   
