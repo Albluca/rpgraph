@@ -1,11 +1,39 @@
 # A function to standardize the Initial steps of the analysis
 
+#' Title
+#'
+#' @param ExpressionMatrix 
+#' @param Grouping 
+#' @param GeneSet 
+#' @param StageAssociation 
+#' @param TopQ 
+#' @param LowQ 
+#' @param AggressiveStaging 
+#' @param PathOpt 
+#' @param GeneOpt 
+#' @param GeneDetectedFilter 
+#' @param GeneCountFilter 
+#' @param MinCellExp 
+#' @param VarFilter 
+#' @param LogTranform 
+#' @param Centering 
+#' @param Scaling 
+#' @param nDim 
+#' @param nPoints 
+#' @param Data.Return 
+#' @param GeneToPlot 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
-                            StageAssociation = NULL,
+                            StageAssociation = NULL, TopQ = .9, LowQ = .1, AggressiveStaging = FALSE,
                             PathOpt = "switch", GeneOpt = 10,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
-                            Scaling = FALSE, nDim = NULL, nPoints = 20) {
+                            Scaling = FALSE, nDim = NULL, nPoints = 20,
+                            Data.Return = FALSE, GeneToPlot) {
   
   print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", nrow(ExpressionMatrix), "genes"))
   
@@ -61,7 +89,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     NormExpressionMatrix <- log10(NormExpressionMatrix + 1)
   }
   
-  print("Plotting variance distribution (For reference only ATM)")
+  print("Plotting variance distribution (For reference only)")
     
   par(mfcol=c(1,2))
 
@@ -93,7 +121,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
   }
   
-  
+  readline("Press any key")
   
   # Gene Scaling ---------------------------------------------------------------
   
@@ -155,7 +183,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   Net <- ConstructGraph(Results = Results, DirectionMat = NULL)
   
-  # Curve Fit ---------------------------------------------------------------
+  readline("Press any key")
+  
+  # Path Selection ---------------------------------------------------------------
   
   print("Stage V - Path Selection")
   
@@ -167,41 +197,26 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   UsedPath <- PossiblePaths[[1]]$name
   
-  print("Using")
+  print("Using the following reference path")
   print(UsedPath)
   
   NodeOnGenes <- t(t(Results$Nodes %*% t(NormExpressionMatrixPCA$Comp)))
   
   NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
   
-  # if(Circular){
-  #   NumericPath <- c(NumericPath, NumericPath[1])
-  # }
-  
-  # PathProjection <- OrderOnPath(PrinGraph = Results, Path = NumericPath, PointProjections = ProjPoints)
 
   NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
   
-  # Select path that optimize a given behaviour
-  # GraphVarSorted <- sort(apply(NodeOnGenes, 2, var), index.return=TRUE)
-  # sign(t(NodeOnGenesOnPath) - apply(NodeOnGenesOnPath, 2, mean))["CDC6",]
-  
-  
-  StageAssociation <- list(Stages = c("G1", "S", "G2"),
-                           S1_U = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
-                                    "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
-                                    "PCNA", "SLBP"),
-                           S2_U = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
-                                    "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
-                           S3_U = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
-                                    "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
-                                    "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
-                                    "AURKA", "RACGAP1", "KIF20A"))
   
   if(is.list(StageAssociation)){
     
+    print("Gene/Stage information found. Trying to Optimize")
+    
     StageMatU <- NULL
     StageMatD <- NULL
+    GeneCount <- rep(0, length(StageAssociation$Stages))
+    
+    print("Stage V.I - Associating peacks and valleys")
     
     for (Stage in 1:length(StageAssociation$Stages)) {
       
@@ -209,54 +224,264 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
         
-        StageTracks <- NodeOnGenesOnPath[, StageGenes]
-        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
-        
-        SignStageMat[SignStageMat <= 0] <- NA
-        SignStageMat[SignStageMat > 0] <- Stage
-        
-        StageMatU <- rbind(StageMatU, SignStageMat)
+        if(length(intersect(StageGenes, colnames(NodeOnGenesOnPath)))>0){
+          StageTracks <- NodeOnGenesOnPath[, StageGenes]
+          SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
+          
+          SignStageMat[SignStageMat <= 0] <- NA
+          SignStageMat[SignStageMat > 0] <- Stage
+          
+          StageMatU <- rbind(StageMatU, SignStageMat)
+          GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
+        }
         
       }
       
       if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
         
-        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE)
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
         
-        StageTracks <- NodeOnGenesOnPath[, StageGenes]
-        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
-        
-        SignStageMat[SignStageMat <= 0] <- NA
-        SignStageMat[SignStageMat > 0] <- Stage
-        
-        StageMatD <- rbind(StageMatD, SignStageMat)
+        if(length(intersect(StageGenes, colnames(NodeOnGenesOnPath)))>0){
+          StageTracks <- NodeOnGenesOnPath[, StageGenes]
+          SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
+          
+          SignStageMat[SignStageMat >= 0] <- NA
+          SignStageMat[SignStageMat < 0] <- Stage
+          
+          StageMatD <- rbind(StageMatD, SignStageMat)
+          GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
+        }
         
       }
       
     }
     
+    
     SummaryStageMat <- NULL
     
-    for (Stage in names(StageAssociation)) {
-      SummaryStageMat <- rbind(SummaryStageMat, colSums(StageMat == Stage, na.rm = TRUE))
+    for (Stage in 1:length(StageAssociation$Stages)) {
+      
+      StageCount <- rep(0, nPoints)
+      
+      if(!is.null(StageMatU)){
+        dim(StageMatU) <- c(length(StageMatU)/nPoints, nPoints)
+        StageCount <- StageCount + colSums(StageMatU == Stage, na.rm = TRUE)
+      }
+      
+      if(!is.null(StageMatD)){
+        dim(StageMatD) <- c(length(StageMatD)/nPoints, nPoints)
+        StageCount <- StageCount + colSums(StageMatD == Stage, na.rm = TRUE)
+      }
+      
+      SummaryStageMat <- rbind(SummaryStageMat, StageCount)
+      
     }
     
-    SummaryStageMat <- SummaryStageMat/unlist(lapply(StageAssociation, length))
     
-    rownames(SummaryStageMat) <- names(StageAssociation)
+    print("Stage V.II - Maximising stage association")
+    
+    SummaryStageMat <- SummaryStageMat/GeneCount
     
     StageNodeAssociation <- apply(SummaryStageMat, 2, which.max)
     
-    StageNodeAssociation
+    NodeSize <- unlist(lapply(lapply(TaxonList, is.finite), sum))
+    
+    StageNodeAssociationSmooth <- StageNodeAssociation
+    
+    for(i in 1:length(NodeSize)){
+      
+      SmoothedAssociation <- SmoothFilter(CircShift(StageNodeAssociationSmooth, i-1)[1:5],
+                                          CircShift(NodeSize, i-1)[1:5],
+                                          1)
+      
+      if(i+4 <= length(NodeSize)){
+        StageNodeAssociationSmooth[i:(i+4)] <- SmoothedAssociation
+      } else {
+        Tail <- i:length(StageNodeAssociationSmooth)
+        Head <- 1:(5-length(Tail))
+        StageNodeAssociationSmooth[Tail] <- SmoothedAssociation[1:length(Tail)]
+        StageNodeAssociationSmooth[Head] <- SmoothedAssociation[(length(Tail)+1):5]
+      }
+      
+    }
+    
+    
+    
+    ShiftMat <- NULL
+    
+    for(i in 1:length(StageNodeAssociationSmooth)){
+      SfiftAssociation <- CircShift(StageNodeAssociationSmooth, i)
+      ShiftMat <- rbind(ShiftMat, c(0, kruskal.test(1:length(StageNodeAssociationSmooth), SfiftAssociation)$p.val,
+                                    aggregate(1:length(StageNodeAssociationSmooth), by=list(SfiftAssociation), mean)[,2]))
+    }
+    
+    for(i in 1:length(StageNodeAssociationSmooth)){
+      SfiftAssociation <- CircShift(rev(StageNodeAssociationSmooth), i)
+      ShiftMat <- rbind(ShiftMat, c(1, kruskal.test(1:length(StageNodeAssociationSmooth), SfiftAssociation)$p.val,
+                                       aggregate(1:length(StageNodeAssociationSmooth), by=list(SfiftAssociation), mean)[,2]))
+    }
+    
+    ShiftMat <- cbind(1:length(StageNodeAssociationSmooth), ShiftMat)
+    
+    Candisdates <- !apply(ShiftMat[,-c(1:3)], 1, is.unsorted)
+    
+    if(sum(Candisdates) > 0){
+      
+      print("Stage V.III - Mean ordered association found")
+      
+      ShiftMat <- ShiftMat[Candisdates,]
+      if(sum(Candisdates)>1){
+        MeansSpan <- ShiftMat[,ncol(ShiftMat)] - ShiftMat[,3]
+        ShiftMatSel <- ShiftMat[which.max(MeansSpan),]
+      } else {
+        ShiftMatSel <- ShiftMat
+      }
+      
+      if(ShiftMatSel[2] == 1){
+        UsedPath <- rev(UsedPath)
+        StageNodeAssociationSmooth <- rev(StageNodeAssociationSmooth)
+      }
+      
+      UsedPath <- CircShift(UsedPath, ShiftMatSel[1])
+      StagesOnPath <- CircShift(StageNodeAssociationSmooth, ShiftMatSel[1])
+      
+    } else {
+      
+      print("Stage V.III - No mean ordered association found. Using only the 1st and last stages")
+      
+      MeansSpan <- ShiftMat[,ncol(ShiftMat)] - ShiftMat[,3]
+      ShiftMatSel <- ShiftMat[,which.max(MeansSpan)]
+      
+      if(ShiftMatSel[2] == 1){
+        UsedPath <- rev(UsedPath)
+        StageNodeAssociationSmooth <- rev(StageNodeAssociationSmooth)
+      }
+      
+      UsedPath <- CircShift(UsedPath, ShiftMatSel[1])
+      StagesOnPath <- CircShift(StageNodeAssociationSmooth, ShiftMatSel[1])
+      
+    }
+
+  } else {
+    
+    Optimized <- FALSE
+    
+    if(PathOpt == "switch"){
+      print("Optimizing switch-Like behaviours")
+      print("... but not now")
+    }
+    
+    if(!Optimized){
+      print("No valid optimization strategy found. Reference path will be used")
+    }
+    
+    StagesOnPath <- rep(NA, length(UsedPath))
+  }
+  
+  print(StagesOnPath)
+  
+  if(AggressiveStaging){
+
+    print("Using aggressive staging")
+    
+    for(St in sort(unique(StagesOnPath))){
+      StagesOnPath[intersect(which(StagesOnPath > St), 1:min(which(StagesOnPath==St)))] <- St
+      StagesOnPath[intersect(which(StagesOnPath < St), max(which(StagesOnPath==St)):length(StagesOnPath))] <- St
+    }
     
   }
   
-  print("Gene/Stage information found. Trying to Optimize")
+  print(StagesOnPath)
   
-  # Start be selecting the first available path.
+  # Projecting on Path ---------------------------------------------------------------
+  
+  print("Stage VI - Path Projection")
+  
+  print("The following path will be used")
+  print(UsedPath)
+  readline("Press any key")
+  
+  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+  
+  NumericPath <- c(NumericPath, NumericPath[1])
+  
+  PathProjection <- OrderOnPath(PrinGraph = Results, Path = NumericPath, PointProjections = ProjPoints)
+  
+  par(mfcol=c(1,1))
+
+  CellStages <- rep(NA, length(PathProjection$PositionOnPath))
+  
+  if(is.list(StageAssociation)){
+    for(i in 1:length(TaxonList)){
+      
+      if(any(is.na(TaxonList[[i]]))){
+        next()
+      }
+      
+      CellStages[TaxonList[[i]]] <- StageAssociation$Stages[StagesOnPath[which(NumericPath == i)[1]]] 
+    }
+  }
+  
+  DF.Plot <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen),
+                   PathProjection$DistanceFromPath,
+                   CellStages)
+  colnames(DF.Plot) <- c("PseudoTime", "Distance", "Stage")
+  
+  DF.Plot <- as.data.frame(DF.Plot)
+  DF.Plot$PseudoTime <- as.numeric(as.character(DF.Plot$PseudoTime))
+  DF.Plot$Distance <- as.numeric(as.character(DF.Plot$Distance))
+  
+  p <- ggplot2::ggplot(data = DF.Plot, mapping = aes(x = PseudoTime, y = Distance, color = Stage, label=rownames(RotatedExpression)))
+  p <- p + ggplot2::geom_point() + ggplot2::geom_text(check_overlap = FALSE, hjust = "inward")
+  print(p)  
+  
+  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
+  
+  readline("Press any key")
+  
+  # Plot Genes ---------------------------------------------------------------
+  
+  print("Stage VII - Plotting")
+   
+  if(is.list(StageAssociation)){
+    
+    for (Stage in 1:length(StageAssociation$Stages)) {
+      
+      if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+        
+        SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                              CellClass = CellStages, PrinGraph = Results,
+                                              Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                              Genes = StageAssociation[[paste("S", Stage, "_U", sep = "")]],
+                                              Path = UsedPath, Net = Net,
+                                              PathType = 'Circular', Circular = TRUE,
+                                              Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+        
+      }
+      
+      if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
+        
+        SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                              CellClass = CellStages, PrinGraph = Results,
+                                              Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                              Genes = StageAssociation[[paste("S", Stage, "_D", sep = "")]],
+                                              Path = UsedPath, Net = Net,
+                                              PathType = 'Circular', Circular = TRUE,
+                                              Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+        
+      }
+
+      }
+    }
+
+  }
+
   
   
-  
-}
+
+
+
+
+
 
 

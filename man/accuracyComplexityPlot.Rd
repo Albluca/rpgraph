@@ -4,8 +4,8 @@
 \alias{accuracyComplexityPlot}
 \title{Title}
 \usage{
-accuracyComplexityPlot(PrintGraph, Main = "", Cex.Main = 0.7,
-  Cex.Text = 0.8, Mode = "LocMin", Xlims = NULL)
+accuracyComplexityPlot(PrintGraph, AdjFactor = 1, Main = "",
+  Cex.Main = 0.7, Cex.Text = 0.8, Mode = "LocMin", Xlims = NULL)
 }
 \arguments{
 \item{PrintGraph}{}

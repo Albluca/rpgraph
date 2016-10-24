@@ -241,3 +241,30 @@ CircCor <- function(XVect, YVect) {
 
 
 
+SmoothFilter <- function(CateVect, Weigth, Thr) {
+  
+  if(is.na(CateVect[1]) | is.na(CateVect[length(CateVect)])){
+    return(CateVect)
+  }
+  
+  if(length(unique(CateVect))==1){
+    return(CateVect)
+  }
+  
+  if(CateVect[1] == CateVect[length(CateVect)]){
+    if(sum(CateVect == CateVect[1], na.rm = TRUE) > length(CateVect)/2){
+      RefSizes <- Weigth[CateVect == CateVect[1]]
+      TarSizes <- Weigth[CateVect != CateVect[1]]
+      
+      if((mean(TarSizes) - mean(RefSizes))/sd(RefSizes) < -Thr){
+        CateVect[] <- CateVect[1]
+      }
+      return(CateVect)
+    }
+  }
+  
+  return(CateVect)
+  
+}
+
+

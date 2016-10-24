@@ -4,7 +4,7 @@
 \alias{CheckAndGetPath}
 \title{Title}
 \usage{
-CheckAndGetPath(Results, Data, Categories, Graph, Path)
+CheckAndGetPath(Results, Data, Categories, Graph, Path, PathType, Circular)
 }
 \arguments{
 \item{Results}{}
