@@ -187,33 +187,52 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   # sign(t(NodeOnGenesOnPath) - apply(NodeOnGenesOnPath, 2, mean))["CDC6",]
   
   
-  # StageAssociation <- list(G1 = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
-  #                                 "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
-  #                                 "PCNA", "SLBP"),
-  #                          S = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
-  #                                "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
-  #                          G2 = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
-  #                                 "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
-  #                                 "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
-  #                                 "AURKA", "RACGAP1", "KIF20A"))
-  
-  
-  
+  StageAssociation <- list(Stages = c("G1", "S", "G2"),
+                           S1_U = c("E2F5", "CCNE1", "CCNE2", "CDC25A", "CDC45", "CDC6",
+                                    "CDKN1A", "CDKN3", "E2F1", "MCM2", "MCM6", "NPAT",
+                                    "PCNA", "SLBP"),
+                           S2_U = c("BRCA1", "BRCA2", "CCNG2", "CDKN2C", "DHFR",
+                                    "MSH2", "NASP", "RRM1", "RRM2", "TYMS"),
+                           S3_U = c("CCNA2", "CCNF", "CENPF", "TOP2A", "BIRC5", "BUB1",
+                                    "BUB1B", "CCNB1", "CCNB2", "CDK1", "CDC20", "CDC25B",
+                                    "CDC25C", "CDKN2D", "CENPA", "CKS1B", "CKS2", "PLK1",
+                                    "AURKA", "RACGAP1", "KIF20A"))
   
   if(is.list(StageAssociation)){
     
-    StageMat <- NULL
+    StageMatU <- NULL
+    StageMatD <- NULL
     
-    for (Stage in names(StageAssociation)) {
-      StageGenes <- unlist(StageAssociation[Stage], use.names = FALSE)
+    for (Stage in 1:length(StageAssociation$Stages)) {
       
-      StageTracks <- NodeOnGenesOnPath[, StageGenes]
-      SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
+      if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+        
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
+        
+        StageTracks <- NodeOnGenesOnPath[, StageGenes]
+        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
+        
+        SignStageMat[SignStageMat <= 0] <- NA
+        SignStageMat[SignStageMat > 0] <- Stage
+        
+        StageMatU <- rbind(StageMatU, SignStageMat)
+        
+      }
       
-      SignStageMat[SignStageMat <= 0] <- NA
-      SignStageMat[SignStageMat > 0] <- Stage
+      if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
+        
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE)
+        
+        StageTracks <- NodeOnGenesOnPath[, StageGenes]
+        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, .90))
+        
+        SignStageMat[SignStageMat <= 0] <- NA
+        SignStageMat[SignStageMat > 0] <- Stage
+        
+        StageMatD <- rbind(StageMatD, SignStageMat)
+        
+      }
       
-      StageMat <- rbind(StageMat, SignStageMat)
     }
     
     SummaryStageMat <- NULL
