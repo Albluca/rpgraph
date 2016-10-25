@@ -7,7 +7,7 @@
 GeneExpressiononPath(ExpressionData, TransfData, CellClass = NULL, PrinGraph,
   Projections, Genes, InvTransNodes = NULL, Path = "ask", Net = NULL,
   PathType = "Long.Linear", Circular = FALSE, Plot.Smoother = "none",
-  Plot = TRUE, Return.Smoother = "", CircExt = 0.3)
+  Title = "", Plot = TRUE, Return.Smoother = "", CircExt = 0.3)
 }
 \arguments{
 \item{ExpressionData}{}

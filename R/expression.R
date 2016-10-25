@@ -257,7 +257,7 @@ CheckAndGetPath <- function(Results, Data, Categories, Graph, Path, PathType, Ci
 #' @examples
 GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, PrinGraph, Projections, Genes,
                                  InvTransNodes = NULL, Path = 'ask', Net = NULL, PathType = 'Long.Linear',
-                                 Circular = FALSE, Plot.Smoother = 'none',
+                                 Circular = FALSE, Plot.Smoother = 'none', Title = "",
                                  Plot = TRUE, Return.Smoother = '', CircExt = .3) {
   
   # Initial checks ----------------------------------------------------------
@@ -371,7 +371,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     ggMat.Nodes <- cbind(rep(cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen), ncol(NodeMat)),
                          as.vector(NodeMat),
-                         rep("Nodes", ncol(NodeMat)),
+                         rep(" Nodes", ncol(NodeMat)),
                          rep(colnames(NodeMat), each = nrow(NodeMat))
     )
     
@@ -388,6 +388,12 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat <- data.frame(ggMat)
     ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
     ggMat$Log.Gene.Exp <- as.numeric(as.character(ggMat$Log.Gene.Exp))
+    
+    for(Ref in rev(levels(CellClass))){
+      if(Ref %in% levels(ggMat$Class)){
+        ggMat$Class <- relevel(ggMat$Class, Ref)
+      }
+    }
     
     # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
     # summary(LM)
@@ -437,6 +443,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat$Pseudo.Time <- as.numeric(as.character(ggMat$Pseudo.Time))
     ggMat$Log.Gene.Exp <- as.numeric(as.character(ggMat$Log.Gene.Exp))
     
+    for(Ref in rev(levels(CellClass))){
+      ggMat$Class <- relevel(ggMat$Class, Ref)
+    }
+    
+    
     # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
     # summary(LM)
     
@@ -463,16 +474,17 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
   }
   
   if(Plot.Smoother == 'gg'){
-    p <- p + ggplot2::geom_smooth(data = subset(ggMat, Class != "Nodes"), color = "black", method = "loess")
+    p <- p + ggplot2::geom_smooth(data = subset(ggMat, Class != " Nodes"), color = "black", method = "loess")
   }
   
   if(Plot.Smoother == 'Nodes'){
-    p <- p + ggplot2::geom_line(data = subset(ggMat, Class == "Nodes"))
+    p <- p + ggplot2::geom_line(data = subset(ggMat, Class == " Nodes"))
   }
   
   tictoc::toc()
   
   if(Plot){
+    p <- p + ggplot2::labs(title = Title)
     print("Plotting")
     print(p) 
     

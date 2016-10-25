@@ -5,11 +5,11 @@
 \title{Title}
 \usage{
 StudyCellCycles(ExpressionMatrix, Grouping, GeneSet = NULL,
-  StageAssociation = NULL, TopQ = 0.9, LowQ = 0.1,
-  AggressiveStaging = FALSE, PathOpt = "switch", GeneOpt = 10,
-  GeneDetectedFilter = 2.5, GeneCountFilter = 2.5, MinCellExp = 1,
-  VarFilter = 0, LogTranform = TRUE, Centering = FALSE, Scaling = FALSE,
-  nDim = NULL, nPoints = 20, Data.Return = FALSE, GeneToPlot)
+  StageAssociation = NULL, TopQ = 0.9, LowQ = 0.1, NodePower = 2,
+  PathOpt = "switch", GeneOpt = 10, GeneDetectedFilter = 2.5,
+  GeneCountFilter = 2.5, MinCellExp = 1, VarFilter = 0,
+  LogTranform = TRUE, Centering = FALSE, Scaling = FALSE, nDim = NULL,
+  nPoints = 20, Data.Return = FALSE, GeneToPlot)
 }
 \arguments{
 \item{ExpressionMatrix}{}
@@ -23,8 +23,6 @@ StudyCellCycles(ExpressionMatrix, Grouping, GeneSet = NULL,
 \item{TopQ}{}
 
 \item{LowQ}{}
-
-\item{AggressiveStaging}{}
 
 \item{PathOpt}{}
 
@@ -51,6 +49,8 @@ StudyCellCycles(ExpressionMatrix, Grouping, GeneSet = NULL,
 \item{Data.Return}{}
 
 \item{GeneToPlot}{}
+
+\item{AggressiveStaging}{}
 }
 \description{
 Title

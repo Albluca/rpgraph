@@ -215,6 +215,15 @@ Rand.POrd.Cor <- function(OrdVect, Vect1, Vect2, Round) {
 
 
 
+#' Title
+#'
+#' @param x 
+#' @param n 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 CircShift <- function(x, n = 1) {
   if(n == 0){
     x
@@ -266,5 +275,75 @@ SmoothFilter <- function(CateVect, Weigth, Thr) {
   return(CateVect)
   
 }
+
+
+
+
+#' Title
+#'
+#' @param StageMatrix 
+#' @param NodePenalty 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+FitStagesCirc <- function(StageMatrix, NodePenalty) {
+  
+  NormStageMatrix <- StageMatrix
+  NormStageMatrix <- NormStageMatrix[,colSums(StageMatrix)>0]
+  NormStageMatrixIdx <- (1:ncol(StageMatrix))[colSums(StageMatrix)>0]
+  
+  NormNodePenalty <- NodePenalty[colSums(StageMatrix)>0]
+  
+  Possibilities <- combn(1:ncol(NormStageMatrix),4)
+  
+  ToKeep <- !apply(Possibilities, 2, is.unsorted)
+  
+  Possibilities <- Possibilities[, ToKeep]
+  
+  PathPenelity <- function(ChangeNodes, InitialStage) {
+    
+    Sphases <- rep(InitialStage, ncol(NormStageMatrix))
+    
+    for (i in 1:(length(ChangeNodes)-1)) {
+      Sphases[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- InitialStage + i
+    }
+    
+    Sphases[Sphases>length(ChangeNodes)] <- Sphases[Sphases>length(ChangeNodes)] - length(ChangeNodes)
+    
+    sum(NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))^2)
+    
+  }
+  
+  CombinedInfo <- NULL
+  
+  for (i in 1: nrow(NormStageMatrix)) {
+    Penalities <- apply(Possibilities, 2, PathPenelity, InitialStage = i)
+    Best <- which(Penalities == min(Penalities))
+    BestPossibilities <- Possibilities[, Best]
+    dim(BestPossibilities) <- c(nrow(NormStageMatrix), length(BestPossibilities)/nrow(NormStageMatrix))
+    
+    CombinedInfo <- cbind(CombinedInfo, rbind(rep(i, ncol(BestPossibilities)),
+                                              rep(min(Penalities), ncol(BestPossibilities)),
+                                              BestPossibilities)
+    )
+  }
+  
+  SelInfo <- CombinedInfo[,which.min(CombinedInfo[2,])]
+
+  ChangeNodes <- NormStageMatrixIdx[SelInfo[-c(1:2)]]
+  StageVect <- rep(SelInfo[1], ncol(StageMatrix))
+  
+  for (i in 1:(length(ChangeNodes)-1)) {
+    StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelInfo[1] + i
+  }
+  
+  StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)
+  
+  return(list(Order = StageVect, Penality = SelInfo[2]))
+  
+}
+
 
 
