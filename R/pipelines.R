@@ -596,11 +596,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   }
   
   if (Data.Return) {
-    return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, InferredStages = factor(CellStages, levels = StageAssociation$Stages),
-                   PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes, Path = UsedPath, Net = Net))
+    
+    return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, Grouping = Grouping,
+                InferredStages = CellStages, PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                Path = UsedPath, NumericPath = NumericPath, Net = Net, PathProjection = PathProjection))
   }
-  
-
   
 }
   
