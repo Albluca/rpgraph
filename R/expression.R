@@ -444,9 +444,10 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     ggMat$Log.Gene.Exp <- as.numeric(as.character(ggMat$Log.Gene.Exp))
     
     for(Ref in rev(levels(CellClass))){
-      ggMat$Class <- relevel(ggMat$Class, Ref)
+      if(Ref %in% levels(ggMat$Class)){
+        ggMat$Class <- relevel(ggMat$Class, Ref)
+      }
     }
-    
     
     # LM <- lm(ggMat$Log.Gene.Exp ~ ggMat$Pseudo.Time)
     # summary(LM)

@@ -36,7 +36,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                             Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL,
                             Interactive = TRUE) {
   
-  print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", nrow(ExpressionMatrix), "genes"))
+  print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", ncol(ExpressionMatrix), "genes"))
   
   # Cell filtering ---------------------------------------------------------------
   
@@ -233,6 +233,12 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     StageMatD <- NULL
     GeneCount <- rep(0, length(StageAssociation$Stages))
     
+    CutOffVar <- NULL
+    
+    if(exists("QVarCutOff", where=StageAssociation)){
+      CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), StageAssociation$QVarCutOff)
+    }
+    
     print("Stage V.I - Associating peacks and valleys")
     
     for (Stage in 1:length(StageAssociation$Stages)) {
@@ -241,8 +247,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
         
-        if(length(intersect(StageGenes, colnames(NodeOnGenesOnPath)))>0){
-          StageTracks <- NodeOnGenesOnPath[, intersect(StageGenes, colnames(NodeOnGenesOnPath))]
+        AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
+        
+        if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+          AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          print(paste("S", Stage, "_U: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
+        }
+        
+        if(length(AvailableGenes)>0){
+          
+          StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
+          
           SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
           
           SignStageMat[SignStageMat <= 0] <- NA
@@ -258,8 +273,15 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
         
-        if(length(intersect(StageGenes, colnames(NodeOnGenesOnPath)))>0){
-          StageTracks <- NodeOnGenesOnPath[, intersect(StageGenes, colnames(NodeOnGenesOnPath))]
+        AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
+        
+        if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+          AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          print(paste("S", Stage, "_D: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
+        }
+        
+        if(length(AvailableGenes)>0){
+          StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
           SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
           
           SignStageMat[SignStageMat >= 0] <- NA
@@ -359,18 +381,19 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     }
   }
   
+  Labels <- rownames(RotatedExpression)
   
   DF.Plot <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen),
                    PathProjection$DistanceFromPath,
-                   CellStages, Grouping)
-  colnames(DF.Plot) <- c("PseudoTime", "Distance", "Stage", "Grouping")
+                   CellStages, Grouping, Labels)
+  colnames(DF.Plot) <- c("PseudoTime", "Distance", "Stage", "Grouping", "Labels")
   
   DF.Plot <- as.data.frame(DF.Plot)
   DF.Plot$PseudoTime <- as.numeric(as.character(DF.Plot$PseudoTime))
   DF.Plot$Distance <- as.numeric(as.character(DF.Plot$Distance))
   
-  print(CellStages)
-  print(StageAssociation$Stages)
+  # print(CellStages)
+  # print(StageAssociation$Stages)
   
   if(is.list(StageAssociation)){
     for(Ref in rev(StageAssociation$Stages)){
@@ -383,23 +406,20 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   AtBottom <- which(DF.Plot$PseudoTime == 0)
   AtTop <- which(DF.Plot$PseudoTime == 1)
   
-  Labels <- rownames(RotatedExpression)
+  
   
   if(length(AtBottom) > 0){
     BottomCells <- DF.Plot[AtBottom,]
     BottomCells$PseudoTime <- 1
     DF.Plot <- rbind(DF.Plot, BottomCells)
-    Labels <- c(Labels, Labels[AtBottom])
   }
   
   if(length(AtTop) > 0){
     TopCells <- DF.Plot[AtTop,]
     TopCells$PseudoTime <- 0
     DF.Plot <- rbind(DF.Plot, TopCells)
-    Labels <- c(Labels, Labels[AtTop])
   }
-  
-  
+
   
   if(Interactive){
     
@@ -411,7 +431,12 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage), main = "Stage / Phase association")
     
+    barplot(unlist(lapply(split(PathProjection$PathLen[-1], StagesOnPath), sum)), names.arg = StageAssociation$Stages,
+            ylab = "Pseudo Duration")
+    
   }
+  
+  
   
   
   
