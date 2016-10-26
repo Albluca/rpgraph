@@ -441,7 +441,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                                                 Genes = StageAssociation[[paste("S", Stage, "_U", sep = "")]],
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "UP"),
                                                 PathType = 'Circular', Circular = TRUE,
-                                                Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+                                                Plot = TRUE, CircExt = .1, Return.Smoother = '')
           
         }
         
@@ -454,7 +454,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                                                 Genes = StageAssociation[[paste("S", Stage, "_D", sep = "")]],
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "DOWN"),
                                                 PathType = 'Circular', Circular = TRUE,
-                                                Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+                                                Plot = TRUE, CircExt = .1, Return.Smoother = '')
           
         }
         
@@ -486,7 +486,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                                             Genes = IdentifiedGenes,
                                             Path = UsedPath, Net = Net, Title = "Most varying genes",
                                             PathType = 'Circular', Circular = TRUE,
-                                            Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+                                            Plot = TRUE, CircExt = .1, Return.Smoother = '')
       
       SelectedGenes <- IdentifiedGenes
       
@@ -504,7 +504,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                                             Genes = GeneToPlot,
                                             Path = UsedPath, Net = Net, Title = "Selected genes",
                                             PathType = 'Circular', Circular = TRUE,
-                                            Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+                                            Plot = TRUE, CircExt = .1, Return.Smoother = '')
       
       SelectedGenes <- IdentifiedGenes
       if(Interactive){
