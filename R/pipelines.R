@@ -236,7 +236,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     CutOffVar <- NULL
     
     if(exists("QVarCutOff", where=StageAssociation)){
-      CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), StageAssociation$QVarCutOff)
+      CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), as.numeric(StageAssociation$QVarCutOff))
     }
     
     print("Stage V.I - Associating peacks and valleys")
@@ -257,6 +257,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         if(length(AvailableGenes)>0){
           
           StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
+          dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
           
           SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
           
@@ -282,6 +283,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         if(length(AvailableGenes)>0){
           StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
+          dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
           SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
           
           SignStageMat[SignStageMat >= 0] <- NA
@@ -334,8 +336,15 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       UsedPath <- rev(UsedPath)
     }
 
-    UsedPath <- CircShift(UsedPath, min(which(StagesOnNodes==min(StagesOnNodes)))-1)
-    StagesOnPath <- CircShift(StagesOnNodes, min(which(StagesOnNodes==min(StagesOnNodes)))-1)
+    for (i in 1:length(StagesOnNodes)) {
+      TestShift <- CircShift(StagesOnNodes, i-1)
+      if(TestShift[1] == min(StagesOnNodes) & TestShift[length(TestShift)] != min(StagesOnNodes)){
+        break
+      }
+    }
+    
+    UsedPath <- CircShift(UsedPath, i-1)
+    StagesOnPath <- CircShift(StagesOnNodes, i-1)
 
   } else {
     
@@ -459,11 +468,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
           
+          AvailableGenes <- intersect(StageAssociation[[paste("S", Stage, "_U", sep = "")]], colnames(NodeOnGenesOnPath))
+          
+          if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+            AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          }
+          
           SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                                 CellClass = factor(CellStages, levels = StageAssociation$Stages),
                                                 PrinGraph = Results,
                                                 Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                                Genes = StageAssociation[[paste("S", Stage, "_U", sep = "")]],
+                                                Genes = AvailableGenes,
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "UP"),
                                                 PathType = 'Circular', Circular = TRUE,
                                                 Plot = TRUE, CircExt = .1, Return.Smoother = '')
@@ -472,11 +487,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
           
+          AvailableGenes <- intersect(StageAssociation[[paste("S", Stage, "_D", sep = "")]], colnames(NodeOnGenesOnPath))
+          
+          if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+            AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          }
+          
           SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                                 CellClass = factor(CellStages, levels = StageAssociation$Stages),
                                                 PrinGraph = Results,
                                                 Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                                Genes = StageAssociation[[paste("S", Stage, "_D", sep = "")]],
+                                                Genes = AvailableGenes,
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "DOWN"),
                                                 PathType = 'Circular', Circular = TRUE,
                                                 Plot = TRUE, CircExt = .1, Return.Smoother = '')

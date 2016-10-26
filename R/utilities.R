@@ -291,8 +291,26 @@ SmoothFilter <- function(CateVect, Weigth, Thr) {
 FitStagesCirc <- function(StageMatrix, NodePenalty) {
   
   NormStageMatrix <- StageMatrix
-  NormStageMatrix <- NormStageMatrix[,colSums(StageMatrix)>0]
-  NormStageMatrixIdx <- (1:ncol(StageMatrix))[colSums(StageMatrix)>0]
+  
+  ToAnalyze <- which(colSums(StageMatrix)>0)
+  
+  if(length(ToAnalyze)<nrow(StageMatrix)){
+    
+    PaddedIdxs <- c(
+      (min(ToAnalyze) - nrow(StageMatrix)):(min(ToAnalyze)-1),
+      ToAnalyze,
+      (max(ToAnalyze)+1):(max(ToAnalyze) + nrow(StageMatrix))
+    )
+    
+    PaddedIdxs[PaddedIdxs > ncol(StageMatrix)] <-  PaddedIdxs[PaddedIdxs > ncol(StageMatrix)] - ncol(StageMatrix)
+    PaddedIdxs[PaddedIdxs < 0] <-  PaddedIdxs[PaddedIdxs < 0] + ncol(StageMatrix)
+    
+    ToAnalyze <- sort(unique(PaddedIdxs))
+    
+  }
+  
+  NormStageMatrix <- NormStageMatrix[,ToAnalyze]
+  NormStageMatrixIdx <- ToAnalyze
   
   NormNodePenalty <- NodePenalty[colSums(StageMatrix)>0]
   
@@ -301,6 +319,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
   ToKeep <- !apply(Possibilities, 2, is.unsorted)
   
   Possibilities <- Possibilities[, ToKeep]
+  dim(Possibilities) <- c(length(Possibilities)/length(ToKeep), length(ToKeep))
   
   PathPenelity <- function(ChangeNodes, InitialStage) {
     
