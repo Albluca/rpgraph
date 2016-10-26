@@ -33,7 +33,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
                             Scaling = FALSE, nDim = NULL, nPoints = 20,
-                            Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL) {
+                            Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL,
+                            Interactive = TRUE) {
   
   print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", nrow(ExpressionMatrix), "genes"))
   
@@ -41,14 +42,18 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   print("Stage I - Cell filtering")
   
-  hist(apply(ExpressionMatrix > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
-       freq = TRUE, ylab = "Number of cells")
+  if(Interactive){
+    hist(apply(ExpressionMatrix > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
+         freq = TRUE, ylab = "Number of cells")
+  }
   
   OutExpr <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneDetectedFilter)
   
   
-  hist(apply(ExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
-       freq = TRUE, ylab = "Number of cells")
+  if(Interactive){
+    hist(apply(ExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
+         freq = TRUE, ylab = "Number of cells")
+  }
   
   OutCount <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneCountFilter)
 
@@ -61,15 +66,18 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   Grouping <- Grouping[!(OutExpr & OutCount)]
   NormExpressionMatrix <- ExpressionMatrix[!(OutExpr & OutCount),]
   
-  readline("Press any key")
+  if(Interactive){
+    readline("Press any key")
+    
+    par(mfcol=c(1,2))
+    
+    hist(apply(NormExpressionMatrix > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
+         freq = TRUE, ylab = "Number of cells (After filtering)")
+    
+    hist(apply(NormExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
+         freq = TRUE, ylab = "Number of cells (After filtering)")
   
-  par(mfcol=c(1,2))
-  
-  hist(apply(NormExpressionMatrix > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
-       freq = TRUE, ylab = "Number of cells (After filtering)")
-  
-  hist(apply(NormExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
-       freq = TRUE, ylab = "Number of cells (After filtering)")
+  }
   
   
   # Gene filtering ---------------------------------------------------------------
@@ -95,17 +103,21 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
 
   VarVect <- apply(NormExpressionMatrix, 2, var)
   
-  plot(density(VarVect, from=min(VarVect)), xlab = "Variance", main = "Variance distribution")
-  abline(v=quantile(VarVect, c(.01, .05, .25, .50)), lty=2, col=c('red', 'green', 'blue', "black"))
-  legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
-         col=c('red', 'green', 'blue', "black"), lty=2)
-  
-  plot(density(VarVect, from=min(VarVect)), xlab = "Variance (1% - 75% Q)",
-       xlim = quantile(VarVect, c(.01, .75)), main = "Variance distribution")
-  abline(v=quantile(VarVect, c(.01, .05, .25, .50)), lty=2, col=c('red', 'green', 'blue', "black"))
+  if(Interactive){
     
-  legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
-         col=c('red', 'green', 'blue', "black"), lty=2)
+    plot(density(VarVect, from=min(VarVect)), xlab = "Variance", main = "Variance distribution")
+    abline(v=quantile(VarVect, c(.01, .05, .25, .50)), lty=2, col=c('red', 'green', 'blue', "black"))
+    legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
+           col=c('red', 'green', 'blue', "black"), lty=2)
+    
+    plot(density(VarVect, from=min(VarVect)), xlab = "Variance (1% - 75% Q)",
+         xlim = quantile(VarVect, c(.01, .75)), main = "Variance distribution")
+    abline(v=quantile(VarVect, c(.01, .05, .25, .50)), lty=2, col=c('red', 'green', 'blue', "black"))
+    
+    legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
+           col=c('red', 'green', 'blue', "black"), lty=2)
+    
+  }
   
   
   if(!is.null(GeneSet)){
@@ -121,7 +133,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
   }
   
-  readline("Press any key")
+  if(Interactive){
+    readline("Press any key")
+  }
   
   # Gene Scaling ---------------------------------------------------------------
   
@@ -155,35 +169,38 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   Results <- computeElasticPrincipalGraph(Data = RotatedExpression, NumNodes = nPoints, Method = 'CircleConfiguration')
   
-  par(mfcol=c(1,2))
-  
-  accuracyComplexityPlot(Results, AdjFactor = 1, Mode = 'LocMin')
-  plotMSDEnergyPlot(Results)
-  
-  
-  ColCells <- rainbow(length(unique(Grouping)))
-  Col = ColCells[as.integer(factor(ColCells))]
-  
-  par(mfcol=c(1,1))
-  
-  plotData2D(Data = RotatedExpression, PrintGraph = Results, Col = ColCells, NodeSizeMult = 0.1,
-             Main = "All genes", Plot.ly = FALSE, GroupsLab = NULL,
-             Xlab = paste("PC1 (", signif(100*NormExpressionMatrixPCA$ExpVar[1], 4), "%)", sep=''),
-             Ylab = paste("PC2 (", signif(100*NormExpressionMatrixPCA$ExpVar[2], 4), "%)", sep=''))
-  
-  
   TaxonList <- getTaxonMap(Results, RotatedExpression, UseR = TRUE)
   
   ProjPoints <- projectPoints(Results = Results, Data = RotatedExpression, TaxonList=TaxonList,
                               UseR = TRUE,
                               method = 'PCALin', Dims = NULL)
   
-  arrows(x0 = RotatedExpression[,1], y0 = RotatedExpression[,2],
-         x1 = ProjPoints$PointsOnEdgesCoords[,1], y1 = ProjPoints$PointsOnEdgesCoords[,2], length = 0)
-  
   Net <- ConstructGraph(Results = Results, DirectionMat = NULL)
   
-  readline("Press any key")
+  if(Interactive){
+    
+    par(mfcol=c(1,2))
+    
+    accuracyComplexityPlot(Results, AdjFactor = 1, Mode = 'LocMin')
+    plotMSDEnergyPlot(Results)
+    
+    
+    ColCells <- rainbow(length(unique(Grouping)))
+    Col = ColCells[as.integer(factor(ColCells))]
+    
+    par(mfcol=c(1,1))
+    
+    plotData2D(Data = RotatedExpression, PrintGraph = Results, Col = ColCells, NodeSizeMult = 0.1,
+               Main = "All genes", Plot.ly = TRUE, GroupsLab = Grouping,
+               Xlab = paste("PC1 (", signif(100*NormExpressionMatrixPCA$ExpVar[1], 4), "%)", sep=''),
+               Ylab = paste("PC2 (", signif(100*NormExpressionMatrixPCA$ExpVar[2], 4), "%)", sep=''))
+    
+    # arrows(x0 = RotatedExpression[,1], y0 = RotatedExpression[,2],
+    #        x1 = ProjPoints$PointsOnEdgesCoords[,1], y1 = ProjPoints$PointsOnEdgesCoords[,2], length = 0)
+    
+    readline("Press any key")
+  
+  }
   
   # Path Selection ---------------------------------------------------------------
   
@@ -317,7 +334,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   print("The following staging has been inferred")
   print(StagesOnPath)
   
-  readline("Press any key")
+  if(Interactive){
+    readline("Press any key")
+  }
   
   NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
   
@@ -370,6 +389,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     BottomCells <- DF.Plot[AtBottom,]
     BottomCells$PseudoTime <- 1
     DF.Plot <- rbind(DF.Plot, BottomCells)
+    Labels <- c(Labels, Labels[AtBottom])
   }
   
   if(length(AtTop) > 0){
@@ -381,175 +401,206 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   
   
-  p <- ggplot2::ggplot(data = DF.Plot, mapping = ggplot2::aes(x = PseudoTime, y = Distance, color = Stage, label=Labels, shape=Grouping))
-  p <- p + ggplot2::geom_point(size = 5) + ggplot2::geom_text(check_overlap = FALSE, hjust = "inward")
-  print(p)  
+  if(Interactive){
+    
+    p <- ggplot2::ggplot(data = DF.Plot, mapping = ggplot2::aes(x = PseudoTime, y = Distance, color = Stage, label=Labels, shape=Grouping))
+    p <- p + ggplot2::geom_point(size = 5) + ggplot2::geom_text(check_overlap = FALSE, hjust = "inward")
+    print(p)  
+    
+    NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
+    
+    barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage), main = "Stage / Phase association")
+    
+  }
   
-  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
   
-  readline("Press any key")
+  
+  if(Interactive){
+    readline("Press any key")
+  }
   
   # Plot Genes ---------------------------------------------------------------
   
-  print("Stage VII - Plotting")
-   
-  if(is.list(StageAssociation)){
+  if(Interactive){
     
-    print("Stage VII.I - Plotting staging genes")
     
-    for (Stage in 1:length(StageAssociation$Stages)) {
+    print("Stage VII - Plotting")
+    
+    if(is.list(StageAssociation)){
       
-      if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+      print("Stage VII.I - Plotting staging genes")
+      
+      for (Stage in 1:length(StageAssociation$Stages)) {
         
-        SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
-                                              CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                              PrinGraph = Results,
-                                              Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                              Genes = StageAssociation[[paste("S", Stage, "_U", sep = "")]],
-                                              Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "UP"),
-                                              PathType = 'Circular', Circular = TRUE,
-                                              Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+        if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+          
+          SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                                CellClass = factor(CellStages, levels = StageAssociation$Stages),
+                                                PrinGraph = Results,
+                                                Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                                Genes = StageAssociation[[paste("S", Stage, "_U", sep = "")]],
+                                                Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "UP"),
+                                                PathType = 'Circular', Circular = TRUE,
+                                                Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+          
+        }
+        
+        if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
+          
+          SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                                CellClass = factor(CellStages, levels = StageAssociation$Stages),
+                                                PrinGraph = Results,
+                                                Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                                Genes = StageAssociation[[paste("S", Stage, "_D", sep = "")]],
+                                                Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "DOWN"),
+                                                PathType = 'Circular', Circular = TRUE,
+                                                Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+          
+        }
+        
+        if(Interactive){
+          readline("Press any key")
+        }
         
       }
+    }
+    
+    print("Stage VII.II - Plotting target genes")
+    
+    SelectedGenes <- NULL
+    
+    if(length(GeneToPlot) == 1 & is.numeric(GeneToPlot)){
       
-      if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
-        
-        SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
-                                              CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                              PrinGraph = Results,
-                                              Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                              Genes = StageAssociation[[paste("S", Stage, "_D", sep = "")]],
-                                              Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "DOWN"),
-                                              PathType = 'Circular', Circular = TRUE,
-                                              Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
-        
+      GeneToPlot <- round(GeneToPlot)
+      
+      print(paste("Plotting the top", GeneToPlot, "genes with the largest variance"))
+      
+      VarVect <- apply(ExpressionMatrix, 2, var)
+      
+      IdentifiedGenes <- names(VarVect)[order(VarVect, decreasing = TRUE)[1:GeneToPlot]]
+      
+      SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                            CellClass = factor(CellStages, levels = StageAssociation$Stages),
+                                            PrinGraph = Results,
+                                            Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                            Genes = IdentifiedGenes,
+                                            Path = UsedPath, Net = Net, Title = "Most varying genes",
+                                            PathType = 'Circular', Circular = TRUE,
+                                            Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+      
+      SelectedGenes <- IdentifiedGenes
+      
+      
+    }
+    
+    if(is.character(GeneToPlot)){
+      
+      print(paste("Plotting selected genes"))
+      
+      SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                            CellClass = factor(CellStages, levels = StageAssociation$Stages),
+                                            PrinGraph = Results,
+                                            Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                            Genes = GeneToPlot,
+                                            Path = UsedPath, Net = Net, Title = "Selected genes",
+                                            PathType = 'Circular', Circular = TRUE,
+                                            Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
+      
+      SelectedGenes <- IdentifiedGenes
+      if(Interactive){
+        readline("Press any key")
       }
-      
-      readline("Press any key")
+    }
+    
+  }
 
-    }
-  }
-  
-  
-  print("Stage VII.II - Plotting target genes")
-  
-  SelectedGenes <- NULL
-  
-  if(length(GeneToPlot) == 1 & is.numeric(GeneToPlot)){
-    
-    GeneToPlot <- round(GeneToPlot)
-    
-    print(paste("Plotting the top", GeneToPlot, "genes with the largest variance"))
-    
-    VarVect <- apply(ExpressionMatrix, 2, var)
-    
-    IdentifiedGenes <- names(VarVect)[order(VarVect, decreasing = TRUE)[1:GeneToPlot]]
-    
-    SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
-                                          CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                          PrinGraph = Results,
-                                          Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                          Genes = IdentifiedGenes,
-                                          Path = UsedPath, Net = Net, Title = "Most varying genes",
-                                          PathType = 'Circular', Circular = TRUE,
-                                          Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
-    
-    SelectedGenes <- IdentifiedGenes
-    
-    
-  }
-  
-  if(is.character(GeneToPlot)){
    
-    print(paste("Plotting selected genes"))
+  if(Interactive){
     
-    SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
-                                          CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                          PrinGraph = Results,
-                                          Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                          Genes = GeneToPlot,
-                                          Path = UsedPath, Net = Net, Title = "Selected genes",
-                                          PathType = 'Circular', Circular = TRUE,
-                                          Plot = TRUE, CircExt = .1, Return.Smoother = 'loess')
     
-    SelectedGenes <- IdentifiedGenes
-    readline("Press any key")
-  }
+    # Look at correlations ---------------------------------------------------------------
     
-  # Look at correlations ---------------------------------------------------------------
-  
-  if(!is.null(ThrNumb)){
-    
-    print("Stage VIII - Exhamining Correlations of selected genes")
-    
-    tictoc::tic()
-    CorrMat <- cor(NodeOnGenes)
-    tictoc::toc()
-    
-    for (Targ in SelectedGenes) {
+    if(!is.null(ThrNumb)){
       
-      BaseCor <- CorrMat[, Targ]
-      # hist(BaseCor, xlab = "Correlation", main = paste("Correlations of", Targ))
-      Selected <- order(BaseCor, decreasing = TRUE)[1:(ThrNumb+1)]
-      Selected <- setdiff(Selected, which(names(BaseCor) == Targ))
+      print("Stage VIII - Exhamining Correlations of selected genes")
       
+      tictoc::tic()
+      CorrMat <- cor(NodeOnGenes)
+      tictoc::toc()
       
-      ToPlotMat <- NodeOnGenesOnPath[,Selected]
-      ToPlotMat <- ToPlotMat[-nrow(ToPlotMat),]
+      for (Targ in SelectedGenes) {
+        
+        BaseCor <- CorrMat[, Targ]
+        # hist(BaseCor, xlab = "Correlation", main = paste("Correlations of", Targ))
+        Selected <- order(BaseCor, decreasing = TRUE)[1:(ThrNumb+1)]
+        Selected <- setdiff(Selected, which(names(BaseCor) == Targ))
+        
+        
+        ToPlotMat <- NodeOnGenesOnPath[,Selected]
+        ToPlotMat <- ToPlotMat[-nrow(ToPlotMat),]
+        
+        Df.ToPlot <- cbind(as.vector(ToPlotMat),
+                           rep(cumsum(PathProjection$PathLen[-length(PathProjection$PathLen)])/sum(PathProjection$PathLen[-length(PathProjection$PathLen)]),
+                               ncol(ToPlotMat)),
+                           rep(StageAssociation$Stages[StagesOnPath], ncol(ToPlotMat)),
+                           rep(colnames(ToPlotMat), each = nrow(ToPlotMat))
+        )  
+        
+        colnames(Df.ToPlot) <- c("Expression", "PseudoTime", "Stage", "Gene")
+        
+        Df.ToPlot <- as.data.frame(Df.ToPlot)
+        Df.ToPlot$PseudoTime <- as.numeric(as.character(Df.ToPlot$PseudoTime))
+        Df.ToPlot$Expression <- as.numeric(as.character(Df.ToPlot$Expression))
+        
+        p <- ggplot2::ggplot(data = Df.ToPlot, mapping = ggplot2::aes(x = PseudoTime, y = Expression, color = Stage))
+        p <- p + ggplot2::geom_point() + ggplot2::labs(title = paste("Genes behaving like", Targ)) + ggplot2::facet_wrap( ~ Gene)
+        print(p)
+        
+        
+        
+        
+        BaseCor <- CorrMat[, Targ]
+        # hist(BaseCor, xlab = "Correlation", main = paste("Correlations of", Targ))
+        Selected <- order(BaseCor, decreasing = FALSE)[1:ThrNumb]
+        Selected <- setdiff(Selected, which(names(BaseCor) == Targ))
+        
+        
+        ToPlotMat <- NodeOnGenesOnPath[,Selected]
+        ToPlotMat <- ToPlotMat[-nrow(ToPlotMat),]
+        
+        Df.ToPlot <- cbind(as.vector(ToPlotMat),
+                           rep(cumsum(PathProjection$PathLen[-length(PathProjection$PathLen)])/sum(PathProjection$PathLen[-length(PathProjection$PathLen)]),
+                               ncol(ToPlotMat)),
+                           rep(StageAssociation$Stages[StagesOnPath], ncol(ToPlotMat)),
+                           rep(colnames(ToPlotMat), each = nrow(ToPlotMat))
+        )  
+        
+        colnames(Df.ToPlot) <- c("Expression", "PseudoTime", "Stage", "Gene")
+        
+        Df.ToPlot <- as.data.frame(Df.ToPlot)
+        Df.ToPlot$PseudoTime <- as.numeric(as.character(Df.ToPlot$PseudoTime))
+        Df.ToPlot$Expression <- as.numeric(as.character(Df.ToPlot$Expression))
+        
+        p <- ggplot2::ggplot(data = Df.ToPlot, mapping = ggplot2::aes(x = PseudoTime, y = Expression, color = Stage))
+        p <- p + ggplot2::geom_point() + ggplot2::labs(title = paste("Genes behaving opposite to", Targ)) + ggplot2::facet_wrap( ~ Gene)
+        print(p)
+        
+        if(Interactive){
+          readline("Press any key")
+        }
+        
+      }
       
-      Df.ToPlot <- cbind(as.vector(ToPlotMat),
-                         rep(cumsum(PathProjection$PathLen[-length(PathProjection$PathLen)])/sum(PathProjection$PathLen[-length(PathProjection$PathLen)]),
-                             ncol(ToPlotMat)),
-                         rep(StageAssociation$Stages[StagesOnPath], ncol(ToPlotMat)),
-                         rep(colnames(ToPlotMat), each = nrow(ToPlotMat))
-                         )  
-     
-      colnames(Df.ToPlot) <- c("Expression", "PseudoTime", "Stage", "Gene")
-      
-      Df.ToPlot <- as.data.frame(Df.ToPlot)
-      Df.ToPlot$PseudoTime <- as.numeric(as.character(Df.ToPlot$PseudoTime))
-      Df.ToPlot$Expression <- as.numeric(as.character(Df.ToPlot$Expression))
-    
-      p <- ggplot2::ggplot(data = Df.ToPlot, mapping = ggplot2::aes(x = PseudoTime, y = Expression, color = Stage))
-      p <- p + ggplot2::geom_point() + ggplot2::labs(title = paste("Genes behaving like", Targ)) + ggplot2::facet_wrap( ~ Gene)
-      print(p)
-     
-      
-      
-      
-      BaseCor <- CorrMat[, Targ]
-      # hist(BaseCor, xlab = "Correlation", main = paste("Correlations of", Targ))
-      Selected <- order(BaseCor, decreasing = FALSE)[1:ThrNumb]
-      Selected <- setdiff(Selected, which(names(BaseCor) == Targ))
-      
-      
-      ToPlotMat <- NodeOnGenesOnPath[,Selected]
-      ToPlotMat <- ToPlotMat[-nrow(ToPlotMat),]
-      
-      Df.ToPlot <- cbind(as.vector(ToPlotMat),
-                         rep(cumsum(PathProjection$PathLen[-length(PathProjection$PathLen)])/sum(PathProjection$PathLen[-length(PathProjection$PathLen)]),
-                             ncol(ToPlotMat)),
-                         rep(StageAssociation$Stages[StagesOnPath], ncol(ToPlotMat)),
-                         rep(colnames(ToPlotMat), each = nrow(ToPlotMat))
-      )  
-      
-      colnames(Df.ToPlot) <- c("Expression", "PseudoTime", "Stage", "Gene")
-      
-      Df.ToPlot <- as.data.frame(Df.ToPlot)
-      Df.ToPlot$PseudoTime <- as.numeric(as.character(Df.ToPlot$PseudoTime))
-      Df.ToPlot$Expression <- as.numeric(as.character(Df.ToPlot$Expression))
-      
-      p <- ggplot2::ggplot(data = Df.ToPlot, mapping = ggplot2::aes(x = PseudoTime, y = Expression, color = Stage))
-      p <- p + ggplot2::geom_point() + ggplot2::labs(title = paste("Genes behaving opposite to", Targ)) + ggplot2::facet_wrap( ~ Gene)
-      print(p)
-      
-      readline("Press any key")
-         
     }
     
   }
   
+  if (Data.Return) {
+    return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, InferredStages = factor(CellStages, levels = StageAssociation$Stages),
+                   PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes, Path = UsedPath, Net = Net))
+  }
   
+
   
 }
   
