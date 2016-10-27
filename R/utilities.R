@@ -314,7 +314,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
   
   NormNodePenalty <- NodePenalty[colSums(StageMatrix)>0]
   
-  Possibilities <- combn(1:ncol(NormStageMatrix),4)
+  Possibilities <- combn(1:ncol(NormStageMatrix), nrow(NormStageMatrix))
   
   ToKeep <- !apply(Possibilities, 2, is.unsorted)
   

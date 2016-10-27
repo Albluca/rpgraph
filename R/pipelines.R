@@ -28,7 +28,7 @@
 #'
 #' @examples
 StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
-                            StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 2,
+                            StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 2, PercNorm = TRUE, MinWit = 0,
                             PathOpt = "switch", GeneOpt = 10,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
@@ -43,6 +43,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   print("Stage I - Cell filtering")
   
   if(Interactive){
+    
+    par(mfcol=c(1,2))
+    
     hist(apply(ExpressionMatrix > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
          freq = TRUE, ylab = "Number of cells")
   }
@@ -272,7 +275,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       
       if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
         
-        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE)
         
         AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
         
@@ -318,12 +321,20 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       
     }
     
+    rownames(SummaryStageMat) <- StageAssociation$Stages
     
     print("Stage V.II - Maximising stage association")
     
-    SummaryStageMat <- SummaryStageMat/GeneCount
-    
     NodeSize <- unlist(lapply(lapply(TaxonList, is.finite), sum))
+    
+    NoNormSummaryStageMat <- SummaryStageMat
+    NoNormWeigth <- NodeSize^NodePower
+    
+    SummaryStageMat[SummaryStageMat<MinWit] <- 0
+    
+    if(PercNorm){
+      SummaryStageMat <- SummaryStageMat/GeneCount
+    }
     
     Staging <- FitStagesCirc(SummaryStageMat, NodeSize^NodePower)
 
@@ -345,6 +356,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     UsedPath <- CircShift(UsedPath, i-1)
     StagesOnPath <- CircShift(StagesOnNodes, i-1)
+    NoNormSummaryStageMat <- NoNormSummaryStageMat[, CircShift(1:ncol(NoNormSummaryStageMat), i-1)]
 
   } else {
     
@@ -416,7 +428,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   AtTop <- which(DF.Plot$PseudoTime == 1)
   
   
-  
   if(length(AtBottom) > 0){
     BottomCells <- DF.Plot[AtBottom,]
     BottomCells$PseudoTime <- 1
@@ -438,10 +449,38 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
     
+    DF2.ToPlot <- cbind(rep(1:ncol(SummaryStageMat), nrow(SummaryStageMat)),
+                        NoNormWeigth*as.vector(t(SummaryStageMat)),
+                       rep(StageAssociation$Stages, each=ncol(SummaryStageMat)),
+                       rep(StageAssociation$Stages[StagesOnPath], nrow(SummaryStageMat)))
+    colnames(DF2.ToPlot) <- c("Node", "Percentage", "WStage", "AStage")
+    
+    DF2.ToPlot <- data.frame(DF2.ToPlot)
+    DF2.ToPlot$Node <- as.numeric(as.character(DF2.ToPlot$Node))
+    DF2.ToPlot$Percentage <- as.numeric(as.character(DF2.ToPlot$Percentage))
+    
+    for(Ref in rev(StageAssociation$Stages)){
+      if(Ref %in% levels(DF2.ToPlot$WStage)){
+        DF2.ToPlot$WStage <- relevel(DF2.ToPlot$WStage, Ref)
+        DF2.ToPlot$AStage <- relevel(DF2.ToPlot$AStage, Ref)
+      }
+    }
+    
+    p <- ggplot2::ggplot(data = DF2.ToPlot, mapping = ggplot2::aes(x = Node, y = Percentage, shape=AStage))
+    p <- p + ggplot2::geom_point(size = 2) + ggplot2::geom_line() + ggplot2::facet_wrap(~WStage)
+    print(p)
+    
+    
+    # barplot(NoNormSummaryStageMat/GeneCount, beside = TRUE)
+    
+    par(mfcol=c(1,2))
+    
     barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage), main = "Stage / Phase association")
     
     barplot(unlist(lapply(split(PathProjection$PathLen[-1], StagesOnPath), sum)), names.arg = StageAssociation$Stages,
             ylab = "Pseudo Duration")
+    
+    par(mfcol=c(1,1))
     
   }
   
@@ -521,21 +560,71 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       
       print(paste("Plotting the top", GeneToPlot, "genes with the largest variance"))
       
-      VarVect <- apply(ExpressionMatrix, 2, var)
+      VarVect <- apply(NormExpressionMatrix, 2, var)
       
       IdentifiedGenes <- names(VarVect)[order(VarVect, decreasing = TRUE)[1:GeneToPlot]]
       
-      SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
-                                            CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                            PrinGraph = Results,
-                                            Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                                            Genes = IdentifiedGenes,
-                                            Path = UsedPath, Net = Net, Title = "Most varying genes",
-                                            PathType = 'Circular', Circular = TRUE,
-                                            Plot = TRUE, CircExt = .1, Return.Smoother = '')
-      
-      SelectedGenes <- IdentifiedGenes
-      
+      if(is.null(GeneSet)){
+        
+        SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
+                                              CellClass = factor(CellStages, levels = StageAssociation$Stages),
+                                              PrinGraph = Results,
+                                              Projections = ProjPoints, InvTransNodes = NodeOnGenes,
+                                              Genes = IdentifiedGenes,
+                                              Path = UsedPath, Net = Net, Title = "Most varying genes",
+                                              PathType = 'Circular', Circular = TRUE,
+                                              Plot = TRUE, CircExt = .1, Return.Smoother = '')
+        
+      } else {
+        
+        
+        
+        DF.Plot <- cbind(rep(IdentifiedGenes, each = nrow(NormExpressionMatrix)),
+                         rep(PathProjection$PositionOnPath/sum(PathProjection$PathLen), length(IdentifiedGenes)),
+                        as.vector(NormExpressionMatrix[,IdentifiedGenes]),
+                        rep(CellStages, length(IdentifiedGenes)),
+                        rep(Grouping, length(IdentifiedGenes)),
+                        rep(Labels, length(IdentifiedGenes)))
+        
+        colnames(DF.Plot) <- c("Gene", "PseudoTime", "Expression", "Stage", "Grouping", "Labels")
+        
+        DF.Plot <- as.data.frame(DF.Plot)
+        DF.Plot$PseudoTime <- as.numeric(as.character(DF.Plot$PseudoTime))
+        DF.Plot$Expression <- as.numeric(as.character(DF.Plot$Expression))
+        
+        if(is.list(StageAssociation)){
+          for(Ref in rev(StageAssociation$Stages)){
+            if(Ref %in% levels(DF.Plot$Stage)){
+              DF.Plot$Stage <- relevel(DF.Plot$Stage, Ref)
+            }
+          }
+        }
+        
+        
+        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = Stage, y = Expression, fill = Stage))
+        p <- p + ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene)
+        print(p)
+        
+        
+        if(length(AtBottom) > 0){
+          BottomCells <- DF.Plot[AtBottom,]
+          BottomCells$PseudoTime <- 1
+          DF.Plot <- rbind(DF.Plot, BottomCells)
+        }
+        
+        if(length(AtTop) > 0){
+          TopCells <- DF.Plot[AtTop,]
+          TopCells$PseudoTime <- 0
+          DF.Plot <- rbind(DF.Plot, TopCells)
+        }
+        
+        
+        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = PseudoTime, y = Expression))
+        p <- p + ggplot2::geom_point(mapping = ggplot2::aes(color = Stage, shape = Grouping)) + ggplot2::geom_smooth() + ggplot2::facet_wrap( ~ Gene)
+        print(p)
+        
+      }
+  
       
     }
     
@@ -645,9 +734,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, Grouping = Grouping,
                 InferredStages = CellStages, PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes,
-                Path = UsedPath, NumericPath = NumericPath, Net = Net, PathProjection = PathProjection))
-  }
-  
+                Path = UsedPath, NumericPath = NumericPath, Net = Net, PathProjection = PathProjection, StagesOnPath = StagesOnPath,
+                StageWitnesses = SummaryStageMat, StageWitnessesCount = GeneCount, StageWitWeigh = NodeSize^NodePower))
+    }
+
+    
 }
   
   
