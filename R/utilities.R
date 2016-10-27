@@ -366,3 +366,102 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
 
 
 
+
+
+#' Title
+#'
+#' @param StageAssociation 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ExtendImplicitStaging <- function(StageAssociation) {
+
+  AllGenes <- NULL
+    
+  for (Stage in 1:length(StageAssociation$Stages)) {
+    
+    if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+      AllGenes <- c(AllGenes, unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE))
+    }
+    
+    if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
+      AllGenes <- c(AllGenes, unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE))
+    }
+    
+  }
+  
+  AllGenes <- unique(AllGenes)
+  
+  ContributionMatrix <- NULL
+  NameVect <- NULL
+  
+  for (Stage in 1:length(StageAssociation$Stages)) {
+    
+    Name <- paste("S", Stage, "_U", sep = "")
+    
+    if(exists(Name, where=StageAssociation)) {
+      
+      NameVect <- c(NameVect, Name)
+      FoundGenes <- unlist(StageAssociation[Name], use.names = FALSE)
+      
+      ContributionMatrix <- rbind(ContributionMatrix, AllGenes %in% FoundGenes)
+      
+    } else {
+      
+      NameVect <- c(NameVect, Name)
+      FoundGenes <- ''
+      
+      ContributionMatrix <- rbind(ContributionMatrix, AllGenes %in% FoundGenes)
+    }
+    
+    Name <- paste("S", Stage, "_D", sep = "")
+    
+    if(exists(Name, where=StageAssociation)) {
+      
+      NameVect <- c(NameVect, Name)
+      FoundGenes <- unlist(StageAssociation[Name], use.names = FALSE)
+      
+      ContributionMatrix <- rbind(ContributionMatrix, AllGenes %in% FoundGenes)
+      
+    } else {
+      
+      NameVect <- c(NameVect, Name)
+      FoundGenes <- ''
+      
+      ContributionMatrix <- rbind(ContributionMatrix, AllGenes %in% FoundGenes)
+    }
+    
+  }
+  
+  colnames(ContributionMatrix) <- AllGenes
+  rownames(ContributionMatrix) <- NameVect
+  
+  UpIdx <- seq(1, nrow(ContributionMatrix), 2)
+  DownIdx <- seq(2, nrow(ContributionMatrix), 2)
+  
+  for (i in 1:ncol(ContributionMatrix)) {
+    
+      if(any(ContributionMatrix[UpIdx, i])){
+        ContributionMatrix[DownIdx, i] <- !ContributionMatrix[UpIdx, i]
+        next()
+      }
+      
+    if(any(ContributionMatrix[DownIdx, i])){
+      ContributionMatrix[UpIdx, i] <- !ContributionMatrix[DownIdx, i]
+      next()
+    }
+  }
+  
+  if(any(colSums(ContributionMatrix) != colSums(!ContributionMatrix))){
+    warning("Something went orribly wrong ...")
+  }
+  
+  for(i in 1:nrow(ContributionMatrix)){
+    StageAssociation[[rownames(ContributionMatrix)[i]]] <- colnames(ContributionMatrix)[ContributionMatrix[i, ]]
+  }
+  
+  return(StageAssociation)
+ 
+}
