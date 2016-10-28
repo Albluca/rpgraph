@@ -624,8 +624,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         }
         
         
-        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = Stage, y = Expression, fill = Stage))
-        p <- p + ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene)
+        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = Stage, y = Expression, fill = Stage)) +
+          ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene) +
+          ggplot2::labs(title = "Most varying genes", x = "Pseudo time", y = "Gene expression")
         print(p)
         
         
@@ -642,9 +643,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         }
         
         
-        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = PseudoTime, y = Expression))
-        p <- p + ggplot2::geom_point(mapping = ggplot2::aes(color = Stage, shape = Grouping)) + 
-          ggplot2::geom_smooth(color="black") + ggplot2::facet_wrap( ~ Gene)
+        p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = PseudoTime, y = Expression)) +
+          ggplot2::geom_smooth(color="black") +
+          ggplot2::geom_point(mapping = ggplot2::aes(color = Stage, shape = Grouping)) +
+          ggplot2::labs(title = "Most varying genes", x = "Pseudo time", y = "Gene expression") +
+          ggplot2::facet_wrap( ~ Gene)
         print(p)
         
       }
