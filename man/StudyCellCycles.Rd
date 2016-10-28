@@ -6,11 +6,11 @@
 \usage{
 StudyCellCycles(ExpressionMatrix, Grouping, GeneSet = NULL,
   StageAssociation = NULL, TopQ = 0.9, LowQ = 0.1, NodePower = 2,
-  PathOpt = "switch", GeneOpt = 10, GeneDetectedFilter = 2.5,
-  GeneCountFilter = 2.5, MinCellExp = 1, VarFilter = 0,
-  LogTranform = TRUE, Centering = FALSE, Scaling = FALSE, nDim = NULL,
-  nPoints = 20, Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL,
-  Interactive = TRUE)
+  PercNorm = TRUE, MinWit = 0, PathOpt = "switch", GeneOpt = 10,
+  GeneDetectedFilter = 2.5, GeneCountFilter = 2.5, MinCellExp = 1,
+  VarFilter = 0, LogTranform = TRUE, Centering = FALSE, Scaling = FALSE,
+  nDim = NULL, nPoints = 20, Data.Return = FALSE, GeneToPlot = 10,
+  ThrNumb = NULL, Interactive = TRUE)
 }
 \arguments{
 \item{ExpressionMatrix}{}

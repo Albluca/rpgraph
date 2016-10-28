@@ -631,3 +631,53 @@ CategoriesOnPath <- function(TransfData, CellClass, PrinGraph, Projections, Path
   print(p)
   
 }
+
+
+
+
+
+
+
+
+#' Title
+#'
+#' @param ExpressionMatrix 
+#' @param NodeOnGenes 
+#' @param NodePos 
+#' @param CellPos 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+DistanceStatistics <- function(ExpressionMatrix, NodeOnGenes, NodePos, CellPos) {
+  
+  
+  # ExpressionMatrix <- M0Sel$ExpressionData
+  # NodeOnGenes <- M0Sel$InvTransNodes
+  # NodePos <- cumsum(M0Sel$PathProjection$PathLen)
+  # CellPos <- M0Sel$PathProjection$PositionOnPath
+  
+  NodeOnGenes <- rbind(NodeOnGenes, NodeOnGenes[1,])
+  
+  GetDistances <- function(i) {
+    
+    fn <- approxfun(x = NodePos, y = NodeOnGenes[,i], method = 'linear')
+    return(fn(CellPos) - ExpressionMatrix[, i])
+    
+  }
+  
+  IdxList <- as.list(1:ncol(ExpressionMatrix))
+  
+  DistList <- lapply(IdxList, GetDistances)
+  names(DistList) <- colnames(ExpressionMatrix)
+  AbsDistList <- lapply(DistList, abs)
+  
+  MaxDists <- unlist(lapply(DistList, max))
+  MeanDists <- unlist(lapply(DistList, mean))
+  SdDists <- unlist(lapply(DistList, sd))
+  MedianDists <- unlist(lapply(DistList, median))
+  
+  return(list(Max = MaxDists, Median = MedianDists, Sd = SdDists, Mean = MeanDists))
+  
+}
