@@ -497,10 +497,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     par(mfcol=c(1,2))
     
-    barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage), main = "Stage / Phase association")
+    barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage),
+            main = "Stage / Phase association", ylab = "number of cells")
     
     barplot(unlist(lapply(split(PathProjection$PathLen[-1], StagesOnPath), sum)), names.arg = StageAssociation$Stages,
-            ylab = "Pseudo Duration")
+            ylab = "Pseudo Duration", main = "Genetic diversity of cell stages")
     
     par(mfcol=c(1,1))
     
