@@ -400,6 +400,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     if(Plot){
       if(length(unique(ggMat$Class))>1){
+        
+        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
+          ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene) + ggplot2::labs(title = Title, x = "Pseudo time", y = "Gene expression")
+        print(p)
+        
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(color = Class)) +
           ggplot2::facet_wrap(~ Gene, scales="fixed") +
@@ -454,6 +459,11 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     
     if(Plot){
       if(length(unique(ggMat$Class))>1){
+        
+        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
+          ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene) + ggplot2::labs(title = Title, x = "Pseudo time", y = "Gene expression")
+        print(p)
+        
         p <- ggplot2::ggplot(ggMat, ggplot2::aes(x = Pseudo.Time, y = Log.Gene.Exp)) +
           ggplot2::geom_point(ggplot2::aes(color = Class, alpha = Status)) +
           ggplot2::facet_wrap(~ Gene, scales="fixed") +
