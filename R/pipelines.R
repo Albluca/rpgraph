@@ -56,6 +56,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   if(Interactive){
     hist(apply(ExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
          freq = TRUE, ylab = "Number of cells")
+    
+    par(mfcol=c(1,1))  
   }
   
   OutCount <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneCountFilter)
@@ -80,6 +82,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     hist(apply(NormExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
          freq = TRUE, ylab = "Number of cells (After filtering)")
   
+    par(mfcol=c(1,1))
   }
   
   
@@ -102,11 +105,13 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   print("Plotting variance distribution (For reference only)")
     
-  par(mfcol=c(1,2))
+  
 
   VarVect <- apply(NormExpressionMatrix, 2, var)
   
   if(Interactive){
+    
+    par(mfcol=c(1,2))
     
     plot(density(VarVect, from=min(VarVect)), xlab = "Variance", main = "Variance distribution")
     abline(v=quantile(VarVect, c(.01, .05, .25, .50)), lty=2, col=c('red', 'green', 'blue', "black"))
@@ -119,6 +124,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     legend(x = "topright", legend = c("1% Q", "5% Q", "25% Q", "50% Q"),
            col=c('red', 'green', 'blue', "black"), lty=2)
+    
+    par(mfcol=c(1,1))
     
   }
   
@@ -162,7 +169,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   NormExpressionMatrixPCA <- SelectComputePCA(NormExpressionMatrix,
                                               Components = nDim, Method = 'base-svd',
-                                              center = FALSE, scale.=FALSE)
+                                              center = FALSE, scale. = FALSE)
   
   RotatedExpression <- NormExpressionMatrix %*% NormExpressionMatrixPCA$Comp
   
@@ -336,9 +343,14 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       SummaryStageMat <- SummaryStageMat/GeneCount
     }
     
+    
+    tictoc::tic()
     Staging <- FitStagesCirc(SummaryStageMat, NodeSize^NodePower)
+    tictoc::toc()
 
+    tictoc::tic()
     StagingRev <- FitStagesCirc(SummaryStageMat[, rev(1:ncol(SummaryStageMat))], rev(NodeSize)^NodePower)  
+    tictoc::toc()
     
     if(Staging$Penality <= StagingRev$Penality){
       StagesOnNodes <- Staging$Order
@@ -384,23 +396,33 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
   
   NumericPath <- c(NumericPath, NumericPath[1])
+  StagesOnPath <- c(StagesOnPath, StagesOnPath[1])
   
   PathProjection <- OrderOnPath(PrinGraph = Results, Path = NumericPath, PointProjections = ProjPoints)
+  
+  # Move cells from the end to the beginning
+  # Since floating point aritmetic is involved, I need to use a threshold for zero
+  
+  PathProjection$PositionOnPath[ abs(PathProjection$PositionOnPath - sum(PathProjection$PathLen)) < 1e-9 ] <- 0
   
   par(mfcol=c(1,1))
 
   CellStages <- rep(NA, length(PathProjection$PositionOnPath))
   
+  
   if(is.list(StageAssociation)){
-    for(i in 1:length(TaxonList)){
-      
-      if(any(is.na(TaxonList[[i]]))){
-        next()
-      }
-      
-      CellStages[TaxonList[[i]]] <- StageAssociation$Stages[StagesOnPath[which(NumericPath == i)[1]]] 
+    
+    for(i in 2:length(PathProjection$PathLen)){
+      CellStages[PathProjection$PositionOnPath >= cumsum(PathProjection$PathLen)[i-1] &
+                   PathProjection$PositionOnPath < mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- StageAssociation$Stages[StagesOnPath[i-1]]
+      CellStages[PathProjection$PositionOnPath < cumsum(PathProjection$PathLen)[i] &
+                   PathProjection$PositionOnPath >= mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- StageAssociation$Stages[StagesOnPath[i]]
+
     }
+    
   }
+  
+  StagesOnPath <- StagesOnPath[-length(StagesOnPath)]
   
   Labels <- rownames(RotatedExpression)
   
@@ -620,7 +642,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         
         p <- ggplot2::ggplot(DF.Plot, ggplot2::aes(x = PseudoTime, y = Expression))
-        p <- p + ggplot2::geom_point(mapping = ggplot2::aes(color = Stage, shape = Grouping)) + ggplot2::geom_smooth() + ggplot2::facet_wrap( ~ Gene)
+        p <- p + ggplot2::geom_point(mapping = ggplot2::aes(color = Stage, shape = Grouping)) + 
+          ggplot2::geom_smooth(color="black") + ggplot2::facet_wrap( ~ Gene)
         print(p)
         
       }
