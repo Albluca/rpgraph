@@ -401,7 +401,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     if(Plot){
       if(length(unique(ggMat$Class))>1){
         
-        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
+        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data" & ggMat$Class != " Nodes",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
           ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene) + ggplot2::labs(title = Title, x = "Pseudo time", y = "Gene expression")
         print(p)
         
@@ -460,7 +460,7 @@ GeneExpressiononPath <- function(ExpressionData, TransfData, CellClass = NULL, P
     if(Plot){
       if(length(unique(ggMat$Class))>1){
         
-        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
+        p <- ggplot2::ggplot(ggMat[ggMat$Status == "Data" & ggMat$Class != " Nodes",], ggplot2::aes(x = Class, y = Log.Gene.Exp, fill = Class)) +
           ggplot2::geom_boxplot() + ggplot2::facet_wrap(~ Gene) + ggplot2::labs(title = Title, x = "Pseudo time", y = "Gene expression")
         print(p)
         
