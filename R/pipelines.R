@@ -260,7 +260,10 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
         
         if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
-          AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
+          dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
+                                               length(AvailableGenes))
+          AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
           print(paste("S", Stage, "_U: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
         }
         
@@ -287,7 +290,10 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
         
         if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
-          AvailableGenes <- AvailableGenes[apply(NormExpressionMatrix[,AvailableGenes], 2, var) > CutOffVar]
+          RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
+          dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
+                                               length(AvailableGenes))
+          AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
           print(paste("S", Stage, "_D: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
         }
         
@@ -343,13 +349,18 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       SummaryStageMat <- SummaryStageMat/GeneCount
     }
     
+    SummaryStageMat[is.nan(SummaryStageMat)] <- 0
+    
+    # print(dim(SummaryStageMat))
     
     tictoc::tic()
-    Staging <- FitStagesCirc(SummaryStageMat, NodeSize^NodePower)
+    Staging <- FitStagesCirc(StageMatrix = SummaryStageMat,
+                             NodePenalty = NodeSize^NodePower)
     tictoc::toc()
 
     tictoc::tic()
-    StagingRev <- FitStagesCirc(SummaryStageMat[, rev(1:ncol(SummaryStageMat))], rev(NodeSize)^NodePower)  
+    StagingRev <- FitStagesCirc(StageMatrix = SummaryStageMat[, rev(1:ncol(SummaryStageMat))],
+                                NodePenalty = rev(NodeSize)^NodePower)  
     tictoc::toc()
     
     if(Staging$Penality <= StagingRev$Penality){

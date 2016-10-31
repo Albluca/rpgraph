@@ -235,16 +235,28 @@ CircShift <- function(x, n = 1) {
 
 
 
-CircCor <- function(XVect, YVect) {
+#' Title
+#'
+#' @param XVect 
+#' @param YVect 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+CircCor <- function(XVect, YVect, method = "pearson") {
   
-  ShiftAndCor <- function(Sl) {
-    cor(cumsum(c(0,CircShift(XVect[-1], Sl))), CircShift(YVect, Sl))
+  LocShift <- function(i) {
+    return(CircShift(XVect, i))
   }
   
-  Ret <- cbind(0:(length(XVect)-1), sapply(0:(length(XVect)-1), ShiftAndCor))
-  colnames(Ret) = c("Shift", "Corr")
+  AllShift <- sapply(X = 0:(length(XVect)-1), LocShift)
   
-  return(Ret)
+  LocCor <- function(XVect) {
+    return(cor(XVect, YVect, method = method))
+  }
+  
+  return(apply(AllShift, 2, LocCor))
 }
 
 
@@ -292,10 +304,14 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
   
   NormStageMatrix <- StageMatrix
   
+  # Find which columns are associated with at least one stage
+  
   ToAnalyze <- which(colSums(StageMatrix)>0)
   
   if(length(ToAnalyze)<nrow(StageMatrix)){
-    
+  
+    # Not enough columns. Adding a padding around them
+      
     PaddedIdxs <- c(
       (min(ToAnalyze) - nrow(StageMatrix)):(min(ToAnalyze)-1),
       ToAnalyze,
@@ -303,16 +319,18 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
     )
     
     PaddedIdxs[PaddedIdxs > ncol(StageMatrix)] <-  PaddedIdxs[PaddedIdxs > ncol(StageMatrix)] - ncol(StageMatrix)
-    PaddedIdxs[PaddedIdxs < 0] <-  PaddedIdxs[PaddedIdxs < 0] + ncol(StageMatrix)
+    PaddedIdxs[PaddedIdxs <= 0] <-  PaddedIdxs[PaddedIdxs <= 0] + ncol(StageMatrix)
     
     ToAnalyze <- sort(unique(PaddedIdxs))
     
   }
   
+  # Selecting the matrix that will be analysed and saving the indices
+  
   NormStageMatrix <- NormStageMatrix[,ToAnalyze]
   NormStageMatrixIdx <- ToAnalyze
   
-  NormNodePenalty <- NodePenalty[colSums(StageMatrix)>0]
+  NormNodePenalty <- NodePenalty[ToAnalyze]
   
   Possibilities <- combn(1:ncol(NormStageMatrix), nrow(NormStageMatrix))
   
@@ -465,3 +483,4 @@ ExtendImplicitStaging <- function(StageAssociation) {
   return(StageAssociation)
  
 }
+
