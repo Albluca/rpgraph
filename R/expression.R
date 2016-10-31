@@ -673,12 +673,22 @@ DistanceStatistics <- function(ExpressionMatrix, NodeOnGenes, NodePos, CellPos) 
   names(DistList) <- colnames(ExpressionMatrix)
   AbsDistList <- lapply(DistList, abs)
   
+<<<<<<< HEAD
   MaxDists <- unlist(lapply(DistList, max))
   MinDists <- unlist(lapply(DistList, min))
   MeanDists <- unlist(lapply(DistList, mean))
   SdDists <- unlist(lapply(DistList, sd))
   MedianDists <- unlist(lapply(DistList, median))
   
+=======
+  MaxDists <- unlist(lapply(AbsDistList, max))
+  MinDists <- unlist(lapply(AbsDistList, min))
+  MeanDists <- unlist(lapply(AbsDistList, mean))
+  SdDists <- unlist(lapply(AbsDistList, sd))
+  MedianDists <- unlist(lapply(AbsDistList, median))
+  
+  
+>>>>>>> 419ca42d1f4cf78ffc5a624bd2577536ff71f651
   return(list(Max = MaxDists, Min = MinDists, Median = MedianDists, Sd = SdDists, Mean = MeanDists))
   
 }
