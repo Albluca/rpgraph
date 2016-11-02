@@ -369,6 +369,10 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05) {
   
   SelIdxs <- which(CombinedInfo[2,] <= quantile(CombinedInfo[2,], QuantSel))
   
+  if(length(SelIdxs) == 0){
+    SelIdxs <- which.min(CombinedInfo[2,])
+  }
+  
   SelInfo <- CombinedInfo[,SelIdxs]
   dim(SelInfo) <- c(length(SelInfo)/length(SelIdxs), length(SelIdxs))
 
