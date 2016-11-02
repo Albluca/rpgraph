@@ -364,7 +364,16 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     tictoc::toc()
     
     
-    if(runif(1) < mean(StagingRev$Penality)/(mean(Staging$Penality)+mean(StagingRev$Penality))){
+    if(mean(Staging$Penality) != 0 & mean(StagingRev$Penality) != 0){
+      PrThr <- mean(StagingRev$Penality)/(mean(Staging$Penality)+mean(StagingRev$Penality))
+    } else {
+      PrThr <- 0.5
+    }
+    
+    
+    
+    
+    if(runif(1) < PrThr){
       StagesOnNodes <- Staging$Order[[sample(1:length(Staging$Penality), 1, FALSE, rank(1/Staging$Penality))]]
     } else {
       print("Path reversal")
