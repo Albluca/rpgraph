@@ -300,7 +300,7 @@ SmoothFilter <- function(CateVect, Weigth, Thr) {
 #' @export
 #'
 #' @examples
-FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05) {
+FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05, Mode = 1) {
   
   NormStageMatrix <- StageMatrix
   
@@ -339,7 +339,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05) {
   Possibilities <- Possibilities[, ToKeep]
   dim(Possibilities) <- c(length(Possibilities)/length(ToKeep), length(ToKeep))
   
-  PathPenelity <- function(ChangeNodes, InitialStage) {
+  PathPenality <- function(ChangeNodes, InitialStage) {
     
     Sphases <- rep(InitialStage, ncol(NormStageMatrix))
     
@@ -349,14 +349,29 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05) {
     
     Sphases[Sphases>length(ChangeNodes)] <- Sphases[Sphases>length(ChangeNodes)] - length(ChangeNodes)
     
-    sum(NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))^2)
+    if(Mode == 1){
+      return(
+        sum(
+          NormNodePenalty*(apply(NormStageMatrix, 2, sum) - diag(NormStageMatrix[Sphases,]))
+        )
+      )
+    }
+    
+    if(Mode == 2){
+      return(
+        sum(
+          NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))^2
+        )
+      )
+    }
+
     
   }
   
   CombinedInfo <- NULL
   
   for (i in 1: nrow(NormStageMatrix)) {
-    Penalities <- apply(Possibilities, 2, PathPenelity, InitialStage = i)
+    Penalities <- apply(Possibilities, 2, PathPenality, InitialStage = i)
     Best <- which(Penalities == min(Penalities))
     BestPossibilities <- Possibilities[, Best]
     dim(BestPossibilities) <- c(nrow(NormStageMatrix), length(BestPossibilities)/nrow(NormStageMatrix))
