@@ -376,10 +376,12 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       
       if(runif(1) < PrThr){
         SelId <- sample(1:length(Staging$Penality), 1, FALSE, rank(1/Staging$Penality))
+        SelPenality <- Staging$Penality[[SelId]]
         StagesOnNodes <- Staging$Order[[SelId]]
       } else {
         print("Path reversal")
         SelId <- sample(1:length(StagingRev$Penality), 1, FALSE, rank(1/StagingRev$Penality))
+        SelPenality <- StagingRev$Penality[[SelId]]
         StagesOnNodes <- StagingRev$Order[[SelId]]
         UsedPath <- rev(UsedPath)
       }
@@ -395,7 +397,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       StagesOnPath <- CircShift(StagesOnNodes, i-1)
       NoNormSummaryStageMat <- NoNormSummaryStageMat[, CircShift(1:ncol(NoNormSummaryStageMat), i-1)]
       
-      StagingAttempts[[Count]] <- list(UsedPath = UsedPath, StagesOnPath = StagesOnPath, NoNormSummaryStageMat = NoNormSummaryStageMat)
+      StagingAttempts[[Count]] <- list(Penality = SelPenality, UsedPath = UsedPath, StagesOnPath = StagesOnPath, NoNormSummaryStageMat = NoNormSummaryStageMat)
       
     } else {
       print("No staging information available. The defult path will be used")
