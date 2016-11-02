@@ -463,7 +463,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   print(table(DF.Plot$Grouping, DF.Plot$Stage))
   
-  if(Interactive){
+  if(Interactive & length(unique(Grouping)) > 1){
     gplots::heatmap.2(table(DF.Plot$Grouping, DF.Plot$Stage))
   }
   
