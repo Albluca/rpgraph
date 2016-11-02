@@ -300,7 +300,7 @@ SmoothFilter <- function(CateVect, Weigth, Thr) {
 #' @export
 #'
 #' @examples
-FitStagesCirc <- function(StageMatrix, NodePenalty) {
+FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05) {
   
   NormStageMatrix <- StageMatrix
   
@@ -310,7 +310,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
   
   if(length(ToAnalyze)<nrow(StageMatrix)){
   
-    # Not enough columns. Adding a padding around them
+    # Not enough columns. Padding around them
       
     PaddedIdxs <- c(
       (min(ToAnalyze) - nrow(StageMatrix)):(min(ToAnalyze)-1),
@@ -367,18 +367,29 @@ FitStagesCirc <- function(StageMatrix, NodePenalty) {
     )
   }
   
-  SelInfo <- CombinedInfo[,which.min(CombinedInfo[2,])]
-
-  ChangeNodes <- NormStageMatrixIdx[SelInfo[-c(1:2)]]
-  StageVect <- rep(SelInfo[1], ncol(StageMatrix))
+  SelIdxs <- which(CombinedInfo[2,] <= quantile(CombinedInfo[2,], QuantSel))
   
-  for (i in 1:(length(ChangeNodes)-1)) {
-    StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelInfo[1] + i
+  SelInfo <- CombinedInfo[,SelIdxs]
+  dim(SelInfo) <- c(length(SelInfo)/length(SelIdxs), length(SelIdxs))
+
+  ChangeNodes <- NormStageMatrixIdx[SelInfo[-c(1:2),]]
+  dim(ChangeNodes) <- c(nrow(SelInfo)-2, length(ChangeNodes)/(nrow(SelInfo)-2))
+  
+  ExpandStages <- function(idx) {
+    
+    StageVect <- rep(SelInfo[1,idx], ncol(StageMatrix))
+    
+    for (i in 1:(nrow(ChangeNodes)-1)) {
+      StageVect[ChangeNodes[i,idx]:ChangeNodes[nrow(ChangeNodes),idx]] <- SelInfo[1,idx] + i
+    }
+    
+    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - nrow(ChangeNodes)
+    
+    return(StageVect)
+    
   }
   
-  StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)
-  
-  return(list(Order = StageVect, Penality = SelInfo[2]))
+  return(list(Order = lapply(as.list(1:ncol(ChangeNodes)), ExpandStages), Penality = SelInfo[2,]))
   
 }
 

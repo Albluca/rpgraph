@@ -222,7 +222,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
   
-  UsedPath <- PossiblePaths[[1]]$name
+  UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
   
   print("Using the following reference path")
   print(UsedPath)
@@ -363,10 +363,12 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                                 NodePenalty = rev(NodeSize)^NodePower)  
     tictoc::toc()
     
-    if(Staging$Penality <= StagingRev$Penality){
-      StagesOnNodes <- Staging$Order
+    
+    if(runif(1) < mean(StagingRev$Penality)/(mean(Staging$Penality)+mean(StagingRev$Penality))){
+      StagesOnNodes <- Staging$Order[[sample(1:length(Staging$Penality), 1, FALSE, rank(1/Staging$Penality))]]
     } else {
-      StagesOnNodes <- StagingRev$Order
+      print("Path reversal")
+      StagesOnNodes <- StagingRev$Order[[sample(1:length(StagingRev$Penality), 1, FALSE, rank(1/StagingRev$Penality))]]
       UsedPath <- rev(UsedPath)
     }
 
@@ -385,7 +387,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     print("No staging information available. The defult path will be used")
     print("Future updates will include behavioural reorganization")
-    
     
   }
     
@@ -460,6 +461,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   AtBottom <- which(DF.Plot$PseudoTime == 0)
   AtTop <- which(DF.Plot$PseudoTime == 1)
   
+  print(table(DF.Plot$Grouping, DF.Plot$Stage))
+  
+  if(Interactive){
+    gplots::heatmap.2(table(DF.Plot$Grouping, DF.Plot$Stage))
+  }
   
   if(length(AtBottom) > 0){
     BottomCells <- DF.Plot[AtBottom,]
