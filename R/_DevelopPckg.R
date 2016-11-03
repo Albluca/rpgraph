@@ -23,6 +23,44 @@
 # devtools::use_package("pcaMethods", "Suggests")
 #
 #
+# 
+# 
+# 
+# 
+# load("~/Datasets/Human_Gene_Info.RData")
+# 
+# library(GO.db)
+# AllTerms <- GOBPOFFSPRING[["GO:0007049"]]
+# HumanGenes_GOCellCycle <- unique(Human_Gene_Info$hgnc_symbol[which(Human_Gene_Info$go_id %in% AllTerms)])
+# 
+# 
+# AllTerms <- GOBPOFFSPRING[["GO:0006260"]]
+# HumanGenes_GODNAReplication <- unique(Human_Gene_Info$hgnc_symbol[which(Human_Gene_Info$go_id %in% AllTerms)])
+# 
+# 
+# load("~/Datasets/Mouse_Gene_Info.RData")
+# 
+# library(GO.db)
+# AllTerms <- GOBPOFFSPRING[["GO:0007049"]]
+# MouseGenes_GOCellCycle <- unique(Mouse_Gene_Info$external_gene_name[which(Mouse_Gene_Info$go_id %in% AllTerms)])
+# 
+# 
+# AllTerms <- GOBPOFFSPRING[["GO:0006260"]]
+# MouseGenes_GODNAReplication <- unique(Mouse_Gene_Info$external_gene_name[which(Mouse_Gene_Info$go_id %in% AllTerms)])
+# 
+# 
+# 
+# 
+# library(devtools)
+# use_data(HumanGenes_GOCellCycle)
+# use_data(MouseGenes_GOCellCycle)
+# use_data(HumanGenes_GODNAReplication)
+# use_data(MouseGenes_GODNAReplication)
+# 
+# 
+# 
+# 
+# 
 # library(downloader)
 #
 # UrlLoc <- "https://raw.githubusercontent.com/auranic/Elastic-principal-graphs/master/ElasticPrincipalGraphs_matlab/test_data/circle/simple_circle.data"
@@ -54,3 +92,36 @@
 # devtools::use_data(simple_iris)
 
 # devtools::use_vignette("Simple_Examples")
+
+
+
+
+
+
+
+
+
+# 
+# 
+# 
+# WHITFIELD_CELL_CYCLE_S <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_S.txt")
+# WHITFIELD_CELL_CYCLE_G1_S <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G1_S.txt")
+# WHITFIELD_CELL_CYCLE_G2_M <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G2_M.txt")
+# WHITFIELD_CELL_CYCLE_M_G1 <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_M_G1.txt")
+# WHITFIELD_CELL_CYCLE_G2 <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G2.txt")
+# 
+# 
+# 
+# StageAssociation_Whit <- list(QVarCutOff = 0.7,
+#                               Stages = c("G1", "S", "G2", "M"),
+#                               S1_U = unique(c(WHITFIELD_CELL_CYCLE_G1_S[[1]],
+#                                               WHITFIELD_CELL_CYCLE_M_G1[[1]])),
+#                               S2_U = unique(c(WHITFIELD_CELL_CYCLE_G1_S[[1]],
+#                                               WHITFIELD_CELL_CYCLE_S[[1]])),
+#                               S3_U = unique(c(WHITFIELD_CELL_CYCLE_G2[[1]],
+#                                               WHITFIELD_CELL_CYCLE_G2_M[[1]])),
+#                               S4_U = unique(c(WHITFIELD_CELL_CYCLE_G2_M[[1]],
+#                                               WHITFIELD_CELL_CYCLE_M_G1[[1]])))
+# 
+# 
+# devtools::use_data(StageAssociation_Whit)
