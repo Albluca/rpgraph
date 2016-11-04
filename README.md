@@ -1,12 +1,12 @@
 # rpgraph R package
 
-## An essential overview of Pircipal elastic circles
+## An essential overview of elastic principal graphs
 
-[Will do later]
+[TO DO]
 
 ## rpgraph prerequisite and installation
 
-The package is currently under development and only available on GitHub. It relises on the Java code written by Andrei Zynoviev available in the java library [VDAOEngine](https://github.com/auranic/VDAOEngine). The R code interfaces with the java library via the [`rJava` package](https://www.rforge.net/rJava/). 
+The package is currently under development and only available on GitHub. It relises on the Java code written by [Andrei Zynoviev](https://github.com/auranic) available in the java library [VDAOEngine](https://github.com/auranic/VDAOEngine). The R code interfaces with the java library via the [`rJava` package](https://www.rforge.net/rJava/). A MATLAB implementation of elastic principal graphs developed and mainteined by Andrei Zynoviev is available [here](https://github.com/auranic/Elastic-principal-graphs).
 
 A functional java virtual machine is necessary for the package to work correctly. It is advisable to install `rJava` from sources, **before** installing `rpgraph`. This can be done by typing
 
