@@ -417,52 +417,52 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     VertexStageMatrix[i,StagingAttempts[[i]]$UsedPath] <- StagingAttempts[[i]]$StagesOnPath
   }
   
-  BestBet <- NULL
-  
   CompactVertexStage <- NULL
   for(i in 1:length(StageAssociation$Stages)){
     CompactVertexStage <- rbind(CompactVertexStage,
                                 colSums(VertexStageMatrix==i))
   }
   
-  barplot(CompactVertexStage, beside = TRUE)
-  barplot(CompactVertexStage, las=2)
-  
-  
-  for(i in 1:length(StageAssociation$Stages)){
-    BestBet <- c(BestBet, which.max(colSums(VertexStageMatrix==i)))
-  }
-  
-  PathScore <- rep(0, length(PossiblePaths))
-  for(k in 1:length(PossiblePaths)){
-    for(i in 1:(length(BestBet)-1)){
-      for(j in (i+1):length(BestBet)){
-        if(which(PossiblePaths[[k]]$name ==  names(BestBet)[i]) < which(PossiblePaths[[k]]$name ==  names(BestBet)[j])){
-          PathScore[k] <- PathScore[k] + 1
-        }
-      }
-    }
-  }
-  
-  UsedPathMatrix <- NULL
-  
-  for(i in 1:length(StagingAttempts)){
-    UsedPathMatrix <- rbind(UsedPathMatrix, StagingAttempts[[i]]$UsedPath)
-  }
-  
-  BestPathsID <- which(PathScore == max(PathScore))
-  BestPathsCounts <- rep(0, length(BestPathsID))
-  
-  for(i in 1:length(BestPathsID)){
-    for(j in 1:nrow(UsedPathMatrix)){
-      if(all(UsedPathMatrix[,j] == PossiblePaths[[BestPathsID[i]]]$name)){
-        BestPathsCounts[i] <- BestPathsCounts[i] + 1
-      }
-    }
-  }
-  
- 
+  if(Interactive){
+    barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)), las=2)
+    abline(h = ReStage/length(StageAssociation$Stages))
     
+    barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)), las=2)
+    abline(h = ReStage/length(StageAssociation$Stages))
+  }
+  
+  CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage, QuantSel = NULL, NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
+  CollectiveBestFitReverse <- FitStagesCirc(StageMatrix = CompactVertexStage[,rev(1:ncol(CompactVertexStage))], QuantSel = NULL, NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
+  
+  if(CollectiveBestFit$Penality <= CollectiveBestFitReverse$Penality){
+    UsedPath <- colnames(CompactVertexStage)
+    StagesOnNodes <- unlist(CollectiveBestFit$Order)
+  } else {
+    UsedPath <- rev(colnames(CompactVertexStage))
+    StagesOnNodes <- unlist(rev(CollectiveBestFitReverse$Order))
+  }
+  
+  for (i in 1:length(StagesOnNodes)) {
+    TestShift <- CircShift(StagesOnNodes, i-1)
+    if(TestShift[1] == min(StagesOnNodes) & TestShift[length(TestShift)] != min(StagesOnNodes)){
+      break
+    }
+  }
+  
+  UsedPath <- CircShift(UsedPath, i-1)
+  StagesOnPath <- CircShift(StagesOnNodes, i-1)
+  VertexStageMatrix <- VertexStageMatrix[,CircShift(1:ncol(VertexStageMatrix), i-1)]
+  CompactVertexStage <- CompactVertexStage[,CircShift(1:ncol(CompactVertexStage), i-1)]
+  
+  
+  if(Interactive){
+    barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)), las=2)
+    abline(h = ReStage/length(StageAssociation$Stages))
+    
+    barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)), las= 2)
+    abline(h = ReStage/length(StageAssociation$Stages))
+  }
+  
   
   # Projecting on Path ---------------------------------------------------------------
   
@@ -472,7 +472,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   print(UsedPath)
   
   print("The following staging has been inferred")
-  print(StagesOnPath)
+  print(StageAssociation$Stages[StagesOnPath])
   
   if(Interactive){
     readline("Press any key")
@@ -483,29 +483,39 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   NumericPath <- c(NumericPath, NumericPath[1])
   StagesOnPath <- c(StagesOnPath, StagesOnPath[1])
   
-  PathProjection <- OrderOnPath(PrinGraph = Results, Path = NumericPath, PointProjections = ProjPoints)
+  PathProjection <- OrderOnPath(PrinGraph = Results[[1]], Path = NumericPath, PointProjections = ProjPoints)
   
   # Move cells from the end to the beginning
   # Since floating point aritmetic is involved, I need to use a threshold for zero
   
-  PathProjection$PositionOnPath[ abs(PathProjection$PositionOnPath - sum(PathProjection$PathLen)) < 1e-9 ] <- 0
+  PathProjection$PositionOnPath[ abs(PathProjection$PositionOnPath - sum(PathProjection$PathLen)) < 1e-8 ] <- 0
   
   par(mfcol=c(1,1))
 
-  CellStages <- rep(NA, length(PathProjection$PositionOnPath))
-  
+  CellOnNodes <- rep(NA, length(PathProjection$PositionOnPath))
   
   if(is.list(StageAssociation)){
-    
     for(i in 2:length(PathProjection$PathLen)){
-      CellStages[PathProjection$PositionOnPath >= cumsum(PathProjection$PathLen)[i-1] &
-                   PathProjection$PositionOnPath < mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- StageAssociation$Stages[StagesOnPath[i-1]]
-      CellStages[PathProjection$PositionOnPath < cumsum(PathProjection$PathLen)[i] &
-                   PathProjection$PositionOnPath >= mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- StageAssociation$Stages[StagesOnPath[i]]
-
+      CellOnNodes[PathProjection$PositionOnPath >= cumsum(PathProjection$PathLen)[i-1] &
+                   PathProjection$PositionOnPath < mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- i-1
+      CellOnNodes[PathProjection$PositionOnPath < cumsum(PathProjection$PathLen)[i] &
+                   PathProjection$PositionOnPath >= mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- i
     }
-    
   }
+  
+  CellOnNodes[CellOnNodes > nPoints] <- CellOnNodes[CellOnNodes > nPoints] - nPoints
+  
+  CellStagesMat <- t((CompactVertexStage/colSums(CompactVertexStage))[, CellOnNodes])
+  CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes])
+  colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage")
+  
+
+  barplot(t(CellStagesMat[order(PathProjection$PositionOnPath),-length(StageAssociation$Stages)-1]),
+          horiz = TRUE, las=2, col=rainbow(length(StageAssociation$Stages)),
+          names.arg = StageAssociation$Stages[CellStagesMat[order(PathProjection$PositionOnPath),length(StageAssociation$Stages)+1]])
+  abline(v = ReStage/length(StageAssociation$Stages)/100)
+  
+  CellStages <- StageAssociation$Stages[CellStagesMat[,length(StageAssociation$Stages)+1]]
   
   StagesOnPath <- StagesOnPath[-length(StagesOnPath)]
   
@@ -628,7 +638,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
           
           SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                                 CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                                PrinGraph = Results,
+                                                PrinGraph = Results[[1]],
                                                 Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                                                 Genes = AvailableGenes,
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "UP"),
@@ -647,7 +657,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
           
           SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                                 CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                                PrinGraph = Results,
+                                                PrinGraph = Results[[1]],
                                                 Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                                                 Genes = AvailableGenes,
                                                 Path = UsedPath, Net = Net, Title = paste(StageAssociation$Stages[Stage], "DOWN"),
@@ -681,7 +691,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
         
         SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                               CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                              PrinGraph = Results,
+                                              PrinGraph = Results[[1]],
                                               Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                                               Genes = IdentifiedGenes,
                                               Path = UsedPath, Net = Net, Title = "Most varying genes",
@@ -751,7 +761,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
       
       SmoothedGenes <- GeneExpressiononPath(ExpressionData = NormExpressionMatrix, TransfData  = RotatedExpression,
                                             CellClass = factor(CellStages, levels = StageAssociation$Stages),
-                                            PrinGraph = Results,
+                                            PrinGraph = Results[[1]],
                                             Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                                             Genes = GeneToPlot,
                                             Path = UsedPath, Net = Net, Title = "Selected genes",
@@ -852,7 +862,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, Grouping = Grouping,
                 InferredStages = CellStages, PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                 Path = UsedPath, NumericPath = NumericPath, Net = Net, PathProjection = PathProjection, StagesOnPath = StagesOnPath,
-                StageWitnesses = SummaryStageMat, StageWitnessesCount = GeneCount, StageWitWeigh = NodeSize^NodePower))
+                StageWitnesses = SummaryStageMat, StageWitnessesCount = GeneCount, StageWitWeigh = NodeSize^NodePower,
+                CellsStagesAssociation = CellStagesMat))
     }
 
     
