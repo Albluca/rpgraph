@@ -584,6 +584,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     for(Ref in rev(StageAssociation$Stages)){
       if(Ref %in% levels(DF2.ToPlot$WStage)){
         DF2.ToPlot$WStage <- relevel(DF2.ToPlot$WStage, Ref)
+      }
+    }
+    
+    for(Ref in rev(StageAssociation$Stages)){
+      if(Ref %in% levels(DF2.ToPlot$AStage)){
         DF2.ToPlot$AStage <- relevel(DF2.ToPlot$AStage, Ref)
       }
     }
