@@ -178,20 +178,20 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   Results <- computeElasticPrincipalGraph(Data = RotatedExpression, NumNodes = nPoints, Method = 'CircleConfiguration')
   
-  TaxonList <- getTaxonMap(Results, RotatedExpression, UseR = TRUE)
+  TaxonList <- getTaxonMap(Results[[1]], RotatedExpression, UseR = TRUE)
   
-  ProjPoints <- projectPoints(Results = Results, Data = RotatedExpression, TaxonList=TaxonList,
+  ProjPoints <- projectPoints(Results = Results[[1]], Data = RotatedExpression, TaxonList=TaxonList,
                               UseR = TRUE,
                               method = 'PCALin', Dims = NULL)
   
-  Net <- ConstructGraph(Results = Results, DirectionMat = NULL)
+  Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL)
   
   if(Interactive){
     
     par(mfcol=c(1,2))
     
-    accuracyComplexityPlot(Results, AdjFactor = 1, Mode = 'LocMin')
-    plotMSDEnergyPlot(Results)
+    accuracyComplexityPlot(Results[[1]], AdjFactor = 1, Mode = 'LocMin')
+    plotMSDEnergyPlot(Results[[1]])
     
     
     ColCells <- rainbow(length(unique(Grouping)))
@@ -199,7 +199,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     par(mfcol=c(1,1))
     
-    plotData2D(Data = RotatedExpression, PrintGraph = Results, Col = ColCells, NodeSizeMult = 0.1,
+    plotData2D(Data = RotatedExpression, PrintGraph = Results[[1]], Col = ColCells, NodeSizeMult = 0.1,
                Main = "All genes", Plot.ly = TRUE, GroupsLab = Grouping,
                Xlab = paste("PC1 (", signif(100*NormExpressionMatrixPCA$ExpVar[1], 4), "%)", sep=''),
                Ylab = paste("PC2 (", signif(100*NormExpressionMatrixPCA$ExpVar[2], 4), "%)", sep=''))
@@ -221,7 +221,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = Net, graph2 = Pattern)
   
-  NodeOnGenes <- t(t(Results$Nodes %*% t(NormExpressionMatrixPCA$Comp)))
+  NodeOnGenes <- t(t(Results[[1]]$Nodes %*% t(NormExpressionMatrixPCA$Comp)))
   
   StagingAttempts <- list()
   
@@ -418,6 +418,16 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   }
   
   BestBet <- NULL
+  
+  CompactVertexStage <- NULL
+  for(i in 1:length(StageAssociation$Stages)){
+    CompactVertexStage <- rbind(CompactVertexStage,
+                                colSums(VertexStageMatrix==i))
+  }
+  
+  barplot(CompactVertexStage, beside = TRUE)
+  barplot(CompactVertexStage, las=2)
+  
   
   for(i in 1:length(StageAssociation$Stages)){
     BestBet <- c(BestBet, which.max(colSums(VertexStageMatrix==i)))
