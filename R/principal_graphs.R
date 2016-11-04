@@ -34,7 +34,7 @@ CircleConfiguration <- function(){
   params$epochs[[1]]$numiterSLAU = 1000
 
   # what grammar to use
-  params$epochs[[1]]$grammartype = 'circle';
+  params$epochs[[1]]$grammartype = 'circle'
 
   # elasticity parameters
   params$epochs[[1]]$ep = 0.01
@@ -69,7 +69,7 @@ DefaultPrincipalTreeConfiguration <- function(){
   params$epochs[[1]]$numiterSLAU = 1000
 
   # what grammar to use
-  params$epochs[[1]]$grammartype = 'treeWithPruning';
+  params$epochs[[1]]$grammartype = 'treeWithPruning'
 
   # elasticity parameters
   params$epochs[[1]]$ep = 0.01
@@ -141,7 +141,7 @@ RobustPrincipalTreeConfiguration <- function(){
   params$epochs[[1]]$numiterSLAU = 1000
 
   # what grammar to use
-  params$epochs[[1]]$grammartype = 'treeWithPruning';
+  params$epochs[[1]]$grammartype = 'treeWithPruning'
 
   # elasticity parameters
   params$epochs[[1]]$ep = 0.01
@@ -188,7 +188,7 @@ TwoStagesRobustPrincipalTreeConfiguration <- function(){
   epochs[[1]]$numiterSLAU = 1000
 
   # what grammar to use
-  epochs[[1]]$grammartype = 'treeWithPruning';
+  epochs[[1]]$grammartype = 'treeWithPruning'
 
   # elasticity parameters
   epochs[[1]]$ep = 0.01
@@ -215,7 +215,7 @@ TwoStagesRobustPrincipalTreeConfiguration <- function(){
   epochs[[2]]$numiterSLAU = 1000
 
   # what grammar to use
-  epochs[[2]]$grammartype = 'treeWithPruning';
+  epochs[[2]]$grammartype = 'treeWithPruning'
 
   # elasticity parameters
   epochs[[2]]$ep = 0.0001
@@ -374,7 +374,7 @@ getTaxonMap <- function(Results, Data, UseR = FALSE){
 #' @param ... Additional parameter to be procesed by the Java procedure. Currently only EP, RP and TrimRadius are supported
 #'
 #' @return A list describing the principal elastic graph
-computeElPT <- function(Data, NumNodes, Parameters, ...){
+computeElPT <- function(Data, NumNodes, Parameters, NodesPositions = NULL, Edges = NULL, ...){
 
   StartTime <- Sys.time()
 
@@ -382,33 +382,31 @@ computeElPT <- function(Data, NumNodes, Parameters, ...){
   RP <- NULL
   TrimRadius <- -1
 
+  # Checking for overwriting parameters 
+  
   AddPar <- list(...)
 
   if(length(AddPar)>0){
 
     print("Additional parameters found")
     print(AddPar)
-
-  }
-
-  if(length(AddPar)>0){
+    
     if(any(names(AddPar)=="EP")){
       EP <- AddPar[["EP"]]
-      print("EP set from user")
+      print("EP set by user")
     }
-
+    
     if(any(names(AddPar)=="RP")){
       RP <- AddPar[["RP"]]
-      print("RP set from user")
+      print("RP set by user")
     }
-
+    
     if(any(names(AddPar)=="TrimRadius")){
       TrimRadius <- AddPar[["TrimRadius"]]
-      print("TrimRadius set from user")
+      print("TrimRadius set by user")
     }
 
   }
-
 
   cat("Configuring engine .")
 
@@ -425,60 +423,79 @@ computeElPT <- function(Data, NumNodes, Parameters, ...){
 
   cat(".")
 
-  for (i in 1:length(Parameters$epochs)) {
-
-    Epoch <- .jnew(class = "vdaoengine/analysis/elmap/ElmapAlgorithmEpoch")
-
-    Epoch$grammarType <- Parameters$epochs[[i]]$grammartype
-
-    Epoch$EP <- .jfloat(Parameters$epochs[[i]]$ep)
-
-    if(!is.null(EP)){
-      if(EP[i]>0){
-        Epoch$EP <- .jfloat(EP[i])
-      }
+  Epoch <- .jnew(class = "vdaoengine/analysis/elmap/ElmapAlgorithmEpoch")
+  
+  # only the first epoch will be used 
+  
+  Epoch$grammarType <- Parameters$epochs[[1]]$grammartype
+  
+  Epoch$EP <- .jfloat(Parameters$epochs[[1]]$ep)
+  
+  if(!is.null(EP)){
+    if(EP>0){
+      Epoch$EP <- .jfloat(EP)
     }
-
-    Epoch$RP = .jfloat(Parameters$epochs[[i]]$rp)
-
-    if(!is.null(RP)){
-      if(RP[i]>0){
-        Epoch$RP <- .jfloat(RP[i])
-      }
-    }
-
-    Epoch$numberOfIterations <- as.integer(NumNodes[i])
-    Epoch$maxNumberOfIterationsForSLAU <- as.integer(Parameters$epochs[[i]]$numiterSLAU)
-    Epoch$epsConvergence <- .jfloat(Parameters$epochs[[i]]$eps)
-    Epoch$epsConvergenceSLAU <- .jfloat(Parameters$epochs[[i]]$epsSLAU)
-
-    if(!is.null(Parameters$epochs[[1]]$robust)){
-      Epoch$robust <- Parameters$epochs[[i]]$robust
-    }
-
-    if(!is.null(Parameters$epochs[[1]]$trimradius)){
-      Epoch$trimradius <- .jfloat(Parameters$epochs[[i]]$trimradius)
-    }
-
-    if(TrimRadius>0){
-      Epoch$robust = TRUE
-      Epoch$trimradius = TrimRadius[i]
-    }
-
-    Config$epochs$add(Epoch)
-
   }
-
+  
+  Epoch$RP = .jfloat(Parameters$epochs[[1]]$rp)
+  
+  if(!is.null(RP)){
+    if(RP>0){
+      Epoch$RP <- .jfloat(RP)
+    }
+  }
+  
+  Epoch$numberOfIterations <- as.integer(NumNodes)
+  Epoch$maxNumberOfIterationsForSLAU <- as.integer(Parameters$epochs[[1]]$numiterSLAU)
+  Epoch$epsConvergence <- .jfloat(Parameters$epochs[[1]]$eps)
+  Epoch$epsConvergenceSLAU <- .jfloat(Parameters$epochs[[1]]$epsSLAU)
+  
+  if(!is.null(Parameters$epochs[[1]]$robust)){
+    Epoch$robust <- Parameters$epochs[[1]]$robust
+  }
+  
+  if(!is.null(Parameters$epochs[[1]]$trimradius)){
+    Epoch$trimradius <- .jfloat(Parameters$epochs[[1]]$trimradius)
+  }
+  
+  if(TrimRadius>0){
+    Epoch$robust = TRUE
+    Epoch$trimradius = TrimRadius
+  }
+  
+  Config$epochs$add(Epoch)
   cat(".")
-
+  
   cpg <- .jnew(class = "vdaoengine/analysis/grammars/ComputePrincipalGraph")
-
+  cat(".")
+  
   cpg$config <- Config
-
   cat(".")
 
   cpg$setDataSetAsMassif(.jarray(.jfloat(data.matrix(Data)),dispatch=T))
   cat(".")
+  
+  if(!is.null(NodesPositions) & !is.null(Edges)){
+    
+    # if(!is.integer(Edges)){
+      # stop("Edges need to be a matrix of integers")
+    # }
+    
+    if(min(Edges) == 1){
+      Edges <- Edges - 1
+    }
+    
+    print("Data-dependent initialization")
+    
+    cpg$config$initStrategy = as.integer(-1)
+    
+    # .jcall(cpg, "V", "setPrimitiveGraphByNodesAndEdges", .jarray(.jfloat(data.matrix(NodesPositions)),dispatch=T), .jarray(matrix(as.integer(Edges), ncol = 2), dispatch=T))
+    
+    cpg$setPrimitiveGraphByNodesAndEdges(.jarray(.jfloat(data.matrix(NodesPositions)),dispatch=T),
+                                         .jarray(matrix(as.integer(Edges), ncol = 2), dispatch=T))
+  } else {
+    print("Empty initialization")
+  }
 
   print("")
   print("Running engine")
@@ -495,15 +512,19 @@ computeElPT <- function(Data, NumNodes, Parameters, ...){
 
   EndTime <- Sys.time()
 
-
+  if(min(Edges) == 0){
+    Edges <- Edges + 1
+  }
+  
+  NumNodes <- max(Edges)
+  
   StructuredReturn <- list()
-  StructuredReturn$Nodes <- NodePositions
+  StructuredReturn$Nodes <- matrix(as.double(NodePositions), nrow = NumNodes) 
   StructuredReturn$Edges <- Edges
   StructuredReturn$Report <- report
   StructuredReturn$EndTime <- EndTime
   StructuredReturn$StartTime <- StartTime
   StructuredReturn$NodeSize <- NodeSize
-
 
   return(StructuredReturn)
 }
@@ -527,7 +548,8 @@ computeElPT <- function(Data, NumNodes, Parameters, ...){
 #' @export
 #'
 #' @examples
-computeElasticPrincipalGraph <- function(Data, NumNodes, Method = NULL,
+computeElasticPrincipalGraph <- function(Data, NumNodes, NodesPositions = NULL, Edges = NULL,
+                                         Method = NULL, NodeStep = NULL,
                                          ReduceMethod = 'none', ReduceSize = 3, ...) {
 
 
@@ -581,11 +603,43 @@ computeElasticPrincipalGraph <- function(Data, NumNodes, Method = NULL,
   if(is.null(Method)){
     print('Please select the correct parametrization')
   } else {
-    Parameters <- do.call(Method, list())
-    PrintGraph <- do.call(computeElPT,
-                          append(list(Data = NewData, NumNodes = NumNodes, Parameters = Parameters),
-                                 ExtraArgs))
-    PrintGraph$Method <- Method
+    
+    PrintGraph <- list()
+    
+    if(is.null(NodeStep)){
+      NodeStep = NumNodes
+    }
+      
+    AllocatedNodes <- 0
+    Round <- 1
+    
+    while(AllocatedNodes < NumNodes){
+      
+      AddNodes = NodeStep
+      
+      if(AllocatedNodes + AddNodes > NumNodes){
+        AddNodes <- NumNodes - AllocatedNodes
+      }
+      
+     
+      
+      Parameters <- do.call(Method, list())
+      
+      PrintGraph[[Round]] <- do.call(computeElPT,
+                                     append(list(Data = NewData, NumNodes = AllocatedNodes + AddNodes, NodesPositions = NodesPositions,
+                                                 Edges = Edges, Parameters = Parameters),
+                                            ExtraArgs))
+      PrintGraph[[Round]]$Method <- Method
+      
+      NodesPositions <- PrintGraph[[Round]]$Nodes
+      Edges <- PrintGraph[[Round]]$Edges
+      
+      AllocatedNodes <- nrow(NodesPositions)
+      
+      Round <- Round + 1
+      
+    }
+    
     return(PrintGraph)
 
   }
