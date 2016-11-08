@@ -125,3 +125,15 @@
 # 
 # 
 # devtools::use_data(StageAssociation_Whit)
+# 
+# StageAssociation_Whit_G0 <- StageAssociation_Whit
+# StageAssociation_Whit_G0$Stages <- c("G0", StageAssociation_Whit$Stages)
+# StageAssociation_Whit_G0$S1_D <- unique(c(StageAssociation_Whit$S1_U, StageAssociation$S2_U, StageAssociation$S3_U, StageAssociation$S4_U))
+# StageAssociation_Whit_G0$S1_U <- NULL
+# StageAssociation_Whit_G0$S2_U <- StageAssociation_Whit$S1_U
+# StageAssociation_Whit_G0$S3_U <- StageAssociation_Whit$S2_U
+# StageAssociation_Whit_G0$S4_U <- StageAssociation_Whit$S3_U
+# StageAssociation_Whit_G0$S5_U <- StageAssociation_Whit$S4_U
+# 
+# 
+# devtools::use_data(StageAssociation_Whit_G0)

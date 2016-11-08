@@ -300,7 +300,7 @@ SmoothFilter <- function(CateVect, Weigth, Thr) {
 #' @export
 #'
 #' @examples
-FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05, Mode = 1) {
+FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
   
   NormStageMatrix <- StageMatrix
   
@@ -370,49 +370,16 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, QuantSel = .05, Mode = 1) {
   
   CombinedInfo <- NULL
   
-  for (i in 1: nrow(NormStageMatrix)) {
-    Penalities <- apply(Possibilities, 2, PathPenality, InitialStage = i)
-    Best <- which(Penalities == min(Penalities))
-    BestPossibilities <- Possibilities[, Best]
-    dim(BestPossibilities) <- c(nrow(NormStageMatrix), length(BestPossibilities)/nrow(NormStageMatrix))
-    
-    CombinedInfo <- cbind(CombinedInfo, rbind(rep(i, ncol(BestPossibilities)),
-                                              rep(min(Penalities), ncol(BestPossibilities)),
-                                              BestPossibilities)
+  for (i in 1:nrow(NormStageMatrix)) {
+    CombinedInfo <- cbind(CombinedInfo,
+                          rbind(rep(i, length(ToKeep)),
+                                apply(Possibilities, 2, PathPenality, InitialStage = i),
+                                1:length(ToKeep)
+                          )
     )
   }
   
-  if(!is.null(QuantSel)){
-    SelIdxs <- which(CombinedInfo[2,] <= quantile(CombinedInfo[2,], QuantSel))
-  } else {
-    SelIdxs <- NULL
-  }
-  
-  if(length(SelIdxs) == 0){
-    SelIdxs <- which.min(CombinedInfo[2,])
-  }
-  
-  SelInfo <- CombinedInfo[,SelIdxs]
-  dim(SelInfo) <- c(length(SelInfo)/length(SelIdxs), length(SelIdxs))
-
-  ChangeNodes <- NormStageMatrixIdx[SelInfo[-c(1:2),]]
-  dim(ChangeNodes) <- c(nrow(SelInfo)-2, length(ChangeNodes)/(nrow(SelInfo)-2))
-  
-  ExpandStages <- function(idx) {
-    
-    StageVect <- rep(SelInfo[1,idx], ncol(StageMatrix))
-    
-    for (i in 1:(nrow(ChangeNodes)-1)) {
-      StageVect[ChangeNodes[i,idx]:ChangeNodes[nrow(ChangeNodes),idx]] <- SelInfo[1,idx] + i
-    }
-    
-    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - nrow(ChangeNodes)
-    
-    return(StageVect)
-    
-  }
-  
-  return(list(Order = lapply(as.list(1:ncol(ChangeNodes)), ExpandStages), Penality = SelInfo[2,]))
+  return(list(Penality = CombinedInfo, Possibilities = Possibilities))
   
 }
 

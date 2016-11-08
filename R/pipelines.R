@@ -29,7 +29,7 @@
 #' @examples
 StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
                             StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 2, PercNorm = TRUE,
-                            MinWit = 0, ReStage = 100,
+                            MinWit = 0, nStages = 100,
                             PathOpt = "switch", GeneOpt = 10,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
@@ -65,8 +65,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
 
   
   print(paste(sum(OutExpr & OutCount), "Cells will be removed due to both filtering"))
-  print(paste(sum(OutExpr), "Cells will be removed due to gene count filtering"))
-  print(paste(sum(OutCount), "Cells will be removed due to read count filtering"))
+  print(paste(sum(OutExpr & !OutCount), "Cells will be removed due to gene count filtering"))
+  print(paste(sum(OutCount & !OutExpr), "Cells will be removed due to read count filtering"))
   print(paste(sum(!(OutExpr & OutCount)), "Cells will be used for analysis")) 
 
   Grouping <- Grouping[!(OutExpr & OutCount)]
@@ -225,242 +225,294 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   StagingAttempts <- list()
   
-  for(Count in 1:ReStage){
+  UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
+  
+  print(paste("Staging using the following reference path"))
+  print(UsedPath)
+  
+  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+  
+  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
+  
+  if(is.list(StageAssociation)){
     
-    UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
+    print("Gene/Stage information found. Trying to Optimize")
     
-    print(paste("Staging", Count, "using the following reference path"))
-    print(UsedPath)
+    StageMatU <- NULL
+    StageMatD <- NULL
+    GeneCount <- rep(0, length(StageAssociation$Stages))
     
-    NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+    CutOffVar <- NULL
     
-    NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
-    
-    
-    if(is.list(StageAssociation)){
-      
-      print("Gene/Stage information found. Trying to Optimize")
-      
-      StageMatU <- NULL
-      StageMatD <- NULL
-      GeneCount <- rep(0, length(StageAssociation$Stages))
-      
-      CutOffVar <- NULL
-      
-      if(exists("QVarCutOff", where=StageAssociation)){
-        CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), as.numeric(StageAssociation$QVarCutOff))
-      }
-      
-      print("Stage V.I - Associating peaks and valleys")
-      
-      for (Stage in 1:length(StageAssociation$Stages)) {
-        
-        if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
-          
-          StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
-          
-          AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
-          
-          if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
-            RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
-            dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
-                                                 length(AvailableGenes))
-            AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
-            print(paste("S", Stage, "_U: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
-          }
-          
-          if(length(AvailableGenes)>0){
-            
-            StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
-            dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
-            
-            SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
-            
-            SignStageMat[SignStageMat <= 0] <- NA
-            SignStageMat[SignStageMat > 0] <- Stage
-            
-            StageMatU <- rbind(StageMatU, SignStageMat)
-            GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
-          }
-          
-        }
-        
-        if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
-          
-          StageGenes <- unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE)
-          
-          AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
-          
-          if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
-            RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
-            dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
-                                                 length(AvailableGenes))
-            AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
-            print(paste("S", Stage, "_D: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
-          }
-          
-          if(length(AvailableGenes)>0){
-            StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
-            dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
-            SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
-            
-            SignStageMat[SignStageMat >= 0] <- NA
-            SignStageMat[SignStageMat < 0] <- Stage
-            
-            StageMatD <- rbind(StageMatD, SignStageMat)
-            GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
-          }
-          
-        }
-        
-      }
-      
-      
-      SummaryStageMat <- NULL
-      
-      for (Stage in 1:length(StageAssociation$Stages)) {
-        
-        StageCount <- rep(0, nPoints)
-        
-        if(!is.null(StageMatU)){
-          dim(StageMatU) <- c(length(StageMatU)/nPoints, nPoints)
-          StageCount <- StageCount + colSums(StageMatU == Stage, na.rm = TRUE)
-        }
-        
-        if(!is.null(StageMatD)){
-          dim(StageMatD) <- c(length(StageMatD)/nPoints, nPoints)
-          StageCount <- StageCount + colSums(StageMatD == Stage, na.rm = TRUE)
-        }
-        
-        SummaryStageMat <- rbind(SummaryStageMat, StageCount)
-        
-      }
-      
-      rownames(SummaryStageMat) <- StageAssociation$Stages
-      
-      print("Stage V.II - Maximising stage association")
-      
-      NodeSize <- unlist(lapply(lapply(TaxonList, is.finite), sum))
-      
-      NoNormSummaryStageMat <- SummaryStageMat
-      NoNormWeigth <- NodeSize^NodePower
-      
-      SummaryStageMat[SummaryStageMat<MinWit] <- 0
-      
-      if(PercNorm){
-        SummaryStageMat <- SummaryStageMat/GeneCount
-      }
-      
-      SummaryStageMat[is.nan(SummaryStageMat)] <- 0
-      
-      # print(dim(SummaryStageMat))
-      
-      tictoc::tic()
-      print("Direct staging")
-      Staging <- FitStagesCirc(StageMatrix = SummaryStageMat,
-                               NodePenalty = NodeSize^NodePower)
-      tictoc::toc()
-      
-      tictoc::tic()
-      print("Reverse staging")
-      StagingRev <- FitStagesCirc(StageMatrix = SummaryStageMat[, rev(1:ncol(SummaryStageMat))],
-                                  NodePenalty = rev(NodeSize)^NodePower)  
-      tictoc::toc()
-      
-      
-      if(mean(Staging$Penality) != 0 & mean(StagingRev$Penality) != 0){
-        PrThr <- mean(StagingRev$Penality)/(mean(Staging$Penality)+mean(StagingRev$Penality))
-      } else {
-        PrThr <- 0.5
-      }
-      
-      if(runif(1) < PrThr){
-        SelId <- sample(1:length(Staging$Penality), 1, FALSE, rank(1/Staging$Penality))
-        SelPenality <- Staging$Penality[[SelId]]
-        StagesOnNodes <- Staging$Order[[SelId]]
-      } else {
-        print("Path reversal")
-        SelId <- sample(1:length(StagingRev$Penality), 1, FALSE, rank(1/StagingRev$Penality))
-        SelPenality <- StagingRev$Penality[[SelId]]
-        StagesOnNodes <- StagingRev$Order[[SelId]]
-        UsedPath <- rev(UsedPath)
-      }
-      
-      for (i in 1:length(StagesOnNodes)) {
-        TestShift <- CircShift(StagesOnNodes, i-1)
-        if(TestShift[1] == min(StagesOnNodes) & TestShift[length(TestShift)] != min(StagesOnNodes)){
-          break
-        }
-      }
-      
-      UsedPath <- CircShift(UsedPath, i-1)
-      StagesOnPath <- CircShift(StagesOnNodes, i-1)
-      NoNormSummaryStageMat <- NoNormSummaryStageMat[, CircShift(1:ncol(NoNormSummaryStageMat), i-1)]
-      
-      StagingAttempts[[Count]] <- list(Penality = SelPenality, UsedPath = UsedPath, StagesOnPath = StagesOnPath, NoNormSummaryStageMat = NoNormSummaryStageMat)
-      
-    } else {
-      print("No staging information available. The defult path will be used")
-      print("Future updates will include behavioural reorganization")
-      
-      break()
+    if(exists("QVarCutOff", where=StageAssociation)){
+      CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), as.numeric(StageAssociation$QVarCutOff))
     }
+    
+    print("Stage V.I - Associating peaks and valleys")
+    
+    for (Stage in 1:length(StageAssociation$Stages)) {
+      
+      if(exists(paste("S", Stage, "_U", sep = ""), where=StageAssociation)) {
+        
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_U", sep = "")], use.names = FALSE)
+        
+        AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
+        
+        if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+          RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
+          dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
+                                               length(AvailableGenes))
+          AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
+          print(paste("S", Stage, "_U: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
+        }
+        
+        if(length(AvailableGenes)>0){
+          
+          StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
+          dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
+          
+          SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
+          
+          SignStageMat[SignStageMat <= 0] <- NA
+          SignStageMat[SignStageMat > 0] <- Stage
+          
+          StageMatU <- rbind(StageMatU, SignStageMat)
+          GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
+        }
+        
+      }
+      
+      if(exists(paste("S", Stage, "_D", sep = ""), where=StageAssociation)) {
+        
+        StageGenes <- unlist(StageAssociation[paste("S", Stage, "_D", sep = "")], use.names = FALSE)
+        
+        AvailableGenes <- intersect(StageGenes, colnames(NodeOnGenesOnPath))
+        
+        if(length(AvailableGenes)>0 & !is.null(CutOffVar)){
+          RestrictedExpressionMatrix <- NormExpressionMatrix[,AvailableGenes]
+          dim(RestrictedExpressionMatrix) <- c(length(RestrictedExpressionMatrix)/length(AvailableGenes),
+                                               length(AvailableGenes))
+          AvailableGenes <- AvailableGenes[apply(RestrictedExpressionMatrix, 2, var) > CutOffVar]
+          print(paste("S", Stage, "_D: ", length(AvailableGenes), " passed cutoff selection", sep = ""))
+        }
+        
+        if(length(AvailableGenes)>0){
+          StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
+          dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
+          SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
+          
+          SignStageMat[SignStageMat >= 0] <- NA
+          SignStageMat[SignStageMat < 0] <- Stage
+          
+          StageMatD <- rbind(StageMatD, SignStageMat)
+          GeneCount[Stage] <- GeneCount[Stage] + ncol(StageTracks)
+        }
+        
+      }
+      
+    }
+    
+    
+    SummaryStageMat <- NULL
+    
+    for (Stage in 1:length(StageAssociation$Stages)) {
+      
+      StageCount <- rep(0, nPoints)
+      
+      if(!is.null(StageMatU)){
+        dim(StageMatU) <- c(length(StageMatU)/nPoints, nPoints)
+        StageCount <- StageCount + colSums(StageMatU == Stage, na.rm = TRUE)
+      }
+      
+      if(!is.null(StageMatD)){
+        dim(StageMatD) <- c(length(StageMatD)/nPoints, nPoints)
+        StageCount <- StageCount + colSums(StageMatD == Stage, na.rm = TRUE)
+      }
+      
+      SummaryStageMat <- rbind(SummaryStageMat, StageCount)
+      
+    }
+    
+    rownames(SummaryStageMat) <- StageAssociation$Stages
+    
+    print("Stage V.II - Maximising stage association")
+    
+    NodeSize <- unlist(lapply(lapply(TaxonList, is.finite), sum))
+    
+    NoNormSummaryStageMat <- SummaryStageMat
+    NoNormWeigth <- NodeSize^NodePower
+    
+    SummaryStageMat[SummaryStageMat<MinWit] <- 0
+    
+    if(PercNorm){
+      SummaryStageMat <- SummaryStageMat/GeneCount
+    }
+    
+    SummaryStageMat[is.nan(SummaryStageMat)] <- 0
+    
+    print("The following staging matrix will be used")
+    print(SummaryStageMat)
+    
+    tictoc::tic()
+    print("Direct staging")
+    Staging <- FitStagesCirc(StageMatrix = SummaryStageMat,
+                             NodePenalty = NodeSize^NodePower)
+    tictoc::toc()
+    
+    tictoc::tic()
+    print("Reverse staging")
+    StagingRev <- FitStagesCirc(StageMatrix = SummaryStageMat[, rev(1:ncol(SummaryStageMat))],
+                                NodePenalty = rev(NodeSize)^NodePower)  
+    tictoc::toc()
+    
+    
+    AllPenality <- rbind(cbind(Staging$Penality, StagingRev$Penality), rep(1:2, each=ncol(Staging$Penality)))
+    
+    Idxs <- sample(x = 1:ncol(AllPenality), size = nStages, prob = max(AllPenality[2, ]) - AllPenality[2, ])
+    
+    Idxs <- unique(Idxs)
+    
+    SelPenality <- AllPenality[,Idxs]
+    
+    DirectPenality <- NULL
+    DirectChanges <- NULL
+    
+    if(sum(SelPenality[4,] == 1) > 0){
+    
+      ExpandStages <- function(idx) {
+        
+        ChangeNodes <- Staging$Possibilities[ , idx]
+        
+        StageVect <- rep(Staging$Penality[1, idx], ncol(SummaryStageMat))
+        
+        for (i in 1:(length(ChangeNodes)-1)) {
+          StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- Staging$Penality[1, idx] + i
+        }
+        
+        StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+        
+        return(StageVect)
+        
+      }
+      
+      DirectPenality <- SelPenality[2,SelPenality[4,]==1]
+      DirectChanges <- t(sapply(SelPenality[3,SelPenality[4,]==1], ExpandStages))
+      
+    }
+    
+    ReversePenality <- NULL
+    ReverseChanges <- NULL
+    
+    if(sum(SelPenality[4,] == 2) > 0){
+      
+      ExpandStages <- function(idx) {
+        
+        ChangeNodes <- StagingRev$Possibilities[ , idx]
+        
+        StageVect <- rep(StagingRev$Penality[1, idx], ncol(SummaryStageMat))
+        
+        for (i in 1:(length(ChangeNodes)-1)) {
+          StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- StagingRev$Penality[1, idx] + i
+        }
+        
+        StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+        
+        return(rev(StageVect))
+        
+      }
+      
+      ReversePenality <- SelPenality[2,SelPenality[4,]==1]
+      ReverseChanges <- t(sapply(SelPenality[3,SelPenality[4,]==2], ExpandStages))
+      
+    }
+    
+    AllStg <- rbind(DirectChanges, ReverseChanges[,rev(1:ncol(ReverseChanges))])
+    AllPen <- c(DirectPenality, ReversePenality)
+    colnames(AllStg) <- UsedPath
+    
+  } else {
+    
+    print("No staging information available. The defult path will be used")
+    print("Future updates will include behavioural reorganization")
     
   }
   
   print("Optimizing path")
   
-  VertexStageMatrix <- matrix(rep(0, length(StagingAttempts)*nPoints), ncol = nPoints)
-  colnames(VertexStageMatrix) <- StagingAttempts[[1]]$UsedPath
-  
-  for(i in 1:length(StagingAttempts)){
-    VertexStageMatrix[i,StagingAttempts[[i]]$UsedPath] <- StagingAttempts[[i]]$StagesOnPath
-  }
   
   CompactVertexStage <- NULL
   for(i in 1:length(StageAssociation$Stages)){
     CompactVertexStage <- rbind(CompactVertexStage,
-                                colSums(VertexStageMatrix==i))
+                                colSums(AllStg==i))
   }
   
   if(Interactive){
     barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)), las=2)
-    abline(h = ReStage/length(StageAssociation$Stages))
+    abline(h = nStages/length(StageAssociation$Stages))
     
     barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)), las=2)
-    abline(h = ReStage/length(StageAssociation$Stages))
+    abline(h = nStages/length(StageAssociation$Stages))
   }
   
-  CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage, QuantSel = NULL, NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
-  CollectiveBestFitReverse <- FitStagesCirc(StageMatrix = CompactVertexStage[,rev(1:ncol(CompactVertexStage))], QuantSel = NULL, NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
+  tictoc::tic()
+  CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage,
+                                     NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
+  CollectiveBestFitRev <- FitStagesCirc(StageMatrix = CompactVertexStage[, rev(1:ncol(CompactVertexStage))],
+                                     NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
+  tictoc::toc()
   
-  if(CollectiveBestFit$Penality <= CollectiveBestFitReverse$Penality){
-    UsedPath <- colnames(CompactVertexStage)
-    StagesOnNodes <- unlist(CollectiveBestFit$Order)
+  
+  if(min(CollectiveBestFit$Penality[2,]) <= min(CollectiveBestFitRev$Penality[2,])){
+    
+    SelPenvect <- CollectiveBestFit$Penality[,which.min(CollectiveBestFit$Penality[2, ])]
+    ChangeNodes <- CollectiveBestFit$Possibilities[,SelPenvect[3]]
+    
+    StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
+    for (i in 1:(length(ChangeNodes)-1)) {
+      StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+    }
+
+    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+    
   } else {
+    
+    SelPenvect <- CollectiveBestFitRev$Penality[,which.min(CollectiveBestFitRev$Penality[2, ])]
     UsedPath <- rev(colnames(CompactVertexStage))
-    StagesOnNodes <- unlist(rev(CollectiveBestFitReverse$Order))
+    ChangeNodes <- CollectiveBestFitRev$Possibilities[,SelPenvect[3]]
+    
+    StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
+    for (i in 1:(length(ChangeNodes)-1)) {
+      StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+    }
+    
+    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+    StageVect <- rev(StageVect)
+    
+    AllStg <- AllStg[, rev(1:ncol(AllStg))]
+    CompactVertexStage <- CompactVertexStage[, rev(1:ncol(CompactVertexStage))]
+
   }
   
-  for (i in 1:length(StagesOnNodes)) {
-    TestShift <- CircShift(StagesOnNodes, i-1)
-    if(TestShift[1] == min(StagesOnNodes) & TestShift[length(TestShift)] != min(StagesOnNodes)){
+  for (i in 1:length(StageVect)) {
+    TestShift <- CircShift(StageVect, i-1)
+    if(TestShift[1] == min(StageVect) & TestShift[length(TestShift)] != min(StageVect)){
       break
     }
   }
   
   UsedPath <- CircShift(UsedPath, i-1)
-  StagesOnPath <- CircShift(StagesOnNodes, i-1)
-  VertexStageMatrix <- VertexStageMatrix[,CircShift(1:ncol(VertexStageMatrix), i-1)]
+  StagesOnPath <- CircShift(StageVect, i-1)
+  
+  VertexStageMatrix <- AllStg[,CircShift(1:ncol(AllStg), i-1)]
   CompactVertexStage <- CompactVertexStage[,CircShift(1:ncol(CompactVertexStage), i-1)]
   
   
   if(Interactive){
     barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)), las=2)
-    abline(h = ReStage/length(StageAssociation$Stages))
+    abline(h = nStages/length(StageAssociation$Stages))
     
     barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)), las= 2)
-    abline(h = ReStage/length(StageAssociation$Stages))
+    abline(h = nStages/length(StageAssociation$Stages))
   }
   
   
@@ -509,11 +561,13 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes])
   colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage")
   
-
-  barplot(t(CellStagesMat[order(PathProjection$PositionOnPath),-length(StageAssociation$Stages)-1]),
-          horiz = TRUE, las=2, col=rainbow(length(StageAssociation$Stages)),
-          names.arg = StageAssociation$Stages[CellStagesMat[order(PathProjection$PositionOnPath),length(StageAssociation$Stages)+1]])
-  abline(v = ReStage/length(StageAssociation$Stages)/100)
+  if(Interactive){
+    barplot(t(CellStagesMat[order(PathProjection$PositionOnPath),-length(StageAssociation$Stages)-1]),
+            horiz = TRUE, las=2, col=rainbow(length(StageAssociation$Stages)),
+            names.arg = StageAssociation$Stages[CellStagesMat[order(PathProjection$PositionOnPath),length(StageAssociation$Stages)+1]])
+    abline(v = 100/length(StageAssociation$Stages)/100)
+  }
+  
   
   CellStages <- StageAssociation$Stages[CellStagesMat[,length(StageAssociation$Stages)+1]]
   
@@ -600,6 +654,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     
     # barplot(NoNormSummaryStageMat/GeneCount, beside = TRUE)
     
+    
     par(mfcol=c(1,2))
     
     barplot(table(DF.Plot$Stage, DF.Plot$Grouping), beside = TRUE, legend.text = levels(DF.Plot$Stage),
@@ -611,9 +666,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     par(mfcol=c(1,1))
     
   }
-  
-  
-  
   
   
   if(Interactive){
