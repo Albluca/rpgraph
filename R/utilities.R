@@ -339,7 +339,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
   Possibilities <- Possibilities[, ToKeep]
   dim(Possibilities) <- c(length(Possibilities)/length(ToKeep), length(ToKeep))
   
-  PathPenality <- function(ChangeNodes, InitialStage) {
+  PathPenality <- function(ChangeNodes, InitialStage, Mode) {
     
     Sphases <- rep(InitialStage, ncol(NormStageMatrix))
     
@@ -350,6 +350,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
     Sphases[Sphases>length(ChangeNodes)] <- Sphases[Sphases>length(ChangeNodes)] - length(ChangeNodes)
     
     if(Mode == 1){
+      # Squared distance from the maximum
       return(
         sum(
           NormNodePenalty*(apply(NormStageMatrix, 2, sum) - diag(NormStageMatrix[Sphases,]))
@@ -358,6 +359,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
     }
     
     if(Mode == 2){
+      # Sum of "off-stage" contributions
       return(
         sum(
           NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))
@@ -366,9 +368,21 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
     }
 
     if(Mode == 3){
+      # Sum binary difference from maximum
       return(
         sum(
           NormNodePenalty*(apply(NormStageMatrix, 2, which.max) != Sphases)
+        )
+      )
+    }
+    
+    if(Mode == 4){
+      # Sum binary difference from maximum
+      tDiff <- abs(apply(NormStageMatrix, 2, which.max) - Sphases)
+      tDiff[tDiff > nrow(NormStageMatrix)/2] <- nrow(NormStageMatrix) - tDiff[tDiff > nrow(NormStageMatrix)/2]
+      return(
+        sum(
+          NormNodePenalty*tDiff
         )
       )
     }
@@ -380,7 +394,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
   for (i in 1:nrow(NormStageMatrix)) {
     CombinedInfo <- cbind(CombinedInfo,
                           rbind(rep(i, length(ToKeep)),
-                                apply(Possibilities, 2, PathPenality, InitialStage = i),
+                                apply(Possibilities, 2, PathPenality, InitialStage = i, Mode = Mode),
                                 1:length(ToKeep)
                           )
     )
