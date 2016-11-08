@@ -360,11 +360,18 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
     if(Mode == 2){
       return(
         sum(
-          NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))^2
+          NormNodePenalty*(apply(NormStageMatrix, 2, max) - mapply("[[", apply(NormStageMatrix, 2, as.list), Sphases))
         )
       )
     }
 
+    if(Mode == 3){
+      return(
+        sum(
+          NormNodePenalty*(apply(NormStageMatrix, 2, which.max) != Sphases)
+        )
+      )
+    }
     
   }
   

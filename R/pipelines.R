@@ -27,10 +27,10 @@
 #' @export
 #'
 #' @examples
-StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
+StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNorm = FALSE,
                             StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 2, PercNorm = TRUE,
-                            MinWit = 0, nStages = 100,
-                            PathOpt = "switch", GeneOpt = 10,
+                            MinWit = 0, nStages = 100, StagingMode1 = 1, StagingMode2 = 1,
+                            PathOpt = "switch", GeneOpt = 10, RandPathSel = FALSE,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
                             Scaling = FALSE, nDim = NULL, nPoints = 20,
@@ -104,6 +104,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     NormExpressionMatrix <- log10(NormExpressionMatrix + 1)
   }
   
+  UnScaledNormExpressionMatrix <- NormExpressionMatrix
+  
+  if(QuantNorm){
+    Rname <- rownames(NormExpressionMatrix)
+    Cname <- colnames(NormExpressionMatrix)
+    NormExpressionMatrix <- preprocessCore::normalize.quantiles(NormExpressionMatrix)
+    rownames(NormExpressionMatrix) <- Rname
+    colnames(NormExpressionMatrix) <- Cname
+  }
+  
+  
   print("Plotting variance distribution (For reference only)")
 
   VarVect <- apply(NormExpressionMatrix, 2, var)
@@ -158,7 +169,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     print("Gene expression will be scaled")
   } 
   
-  NormExpressionMatrix <- scale(NormExpressionMatrix, Centering, Scaling)
+  
+  NormExpressionMatrix <- scale(x = NormExpressionMatrix, center = Centering, scale =  Scaling)
   
   print("Stage IV - PCA")
   
@@ -245,7 +257,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     CutOffVar <- NULL
     
     if(exists("QVarCutOff", where=StageAssociation)){
-      CutOffVar <- quantile(apply(NormExpressionMatrix, 2, var), as.numeric(StageAssociation$QVarCutOff))
+      CutOffVar <- quantile(apply(UnScaledNormExpressionMatrix, 2, var), as.numeric(StageAssociation$QVarCutOff))
     }
     
     print("Stage V.I - Associating peaks and valleys")
@@ -351,20 +363,22 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     SummaryStageMat[is.nan(SummaryStageMat)] <- 0
     
     print("The following staging matrix will be used")
+    colnames(SummaryStageMat) <- UsedPath
     print(SummaryStageMat)
     
     tictoc::tic()
     print("Direct staging")
     Staging <- FitStagesCirc(StageMatrix = SummaryStageMat,
-                             NodePenalty = NodeSize^NodePower)
+                             NodePenalty = NodeSize^NodePower,
+                             Mode = StagingMode1)
     tictoc::toc()
     
     tictoc::tic()
     print("Reverse staging")
     StagingRev <- FitStagesCirc(StageMatrix = SummaryStageMat[, rev(1:ncol(SummaryStageMat))],
-                                NodePenalty = rev(NodeSize)^NodePower)  
+                                NodePenalty = rev(NodeSize)^NodePower,
+                                Mode = StagingMode1)  
     tictoc::toc()
-    
     
     AllPenality <- rbind(cbind(Staging$Penality, StagingRev$Penality), rep(1:2, each=ncol(Staging$Penality)))
     
@@ -439,7 +453,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
   
   print("Optimizing path")
   
-  
   CompactVertexStage <- NULL
   for(i in 1:length(StageAssociation$Stages)){
     CompactVertexStage <- rbind(CompactVertexStage,
@@ -454,44 +467,60 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL,
     abline(h = nStages/length(StageAssociation$Stages))
   }
   
-  tictoc::tic()
-  CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage,
-                                     NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
-  CollectiveBestFitRev <- FitStagesCirc(StageMatrix = CompactVertexStage[, rev(1:ncol(CompactVertexStage))],
-                                     NodePenalty = rep(1, ncol(CompactVertexStage)), Mode = 1)
-  tictoc::toc()
   
-  
-  if(min(CollectiveBestFit$Penality[2,]) <= min(CollectiveBestFitRev$Penality[2,])){
+  if(RandPathSel){
+    tictoc::tic()
+    CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage,
+                                       NodePenalty = rep(1, ncol(CompactVertexStage)),
+                                       Mode = StagingMode2)
+    CollectiveBestFitRev <- FitStagesCirc(StageMatrix = CompactVertexStage[, rev(1:ncol(CompactVertexStage))],
+                                          NodePenalty = rep(1, ncol(CompactVertexStage)),
+                                          Mode = StagingMode2)
+    tictoc::toc()
     
-    SelPenvect <- CollectiveBestFit$Penality[,which.min(CollectiveBestFit$Penality[2, ])]
-    ChangeNodes <- CollectiveBestFit$Possibilities[,SelPenvect[3]]
     
-    StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
-    for (i in 1:(length(ChangeNodes)-1)) {
-      StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+    if(min(CollectiveBestFit$Penality[2,]) <= min(CollectiveBestFitRev$Penality[2,])){
+      
+      SelPenvect <- CollectiveBestFit$Penality[,which.min(CollectiveBestFit$Penality[2, ])]
+      ChangeNodes <- CollectiveBestFit$Possibilities[,SelPenvect[3]]
+      
+      StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
+      for (i in 1:(length(ChangeNodes)-1)) {
+        StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+      }
+      
+      StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+      
+    } else {
+      
+      SelPenvect <- CollectiveBestFitRev$Penality[,which.min(CollectiveBestFitRev$Penality[2, ])]
+      UsedPath <- rev(colnames(CompactVertexStage))
+      ChangeNodes <- CollectiveBestFitRev$Possibilities[,SelPenvect[3]]
+      
+      StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
+      for (i in 1:(length(ChangeNodes)-1)) {
+        StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+      }
+      
+      StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+      StageVect <- rev(StageVect)
+      
+      AllStg <- AllStg[, rev(1:ncol(AllStg))]
+      CompactVertexStage <- CompactVertexStage[, rev(1:ncol(CompactVertexStage))]
+      
     }
-
-    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
-    
   } else {
     
-    SelPenvect <- CollectiveBestFitRev$Penality[,which.min(CollectiveBestFitRev$Penality[2, ])]
-    UsedPath <- rev(colnames(CompactVertexStage))
-    ChangeNodes <- CollectiveBestFitRev$Possibilities[,SelPenvect[3]]
-    
-    StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
-    for (i in 1:(length(ChangeNodes)-1)) {
-      StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
+    if(min(ReversePenality) < min(DirectPenality)){
+      UsedPath <- rev(colnames(CompactVertexStage))
+      StageVect <- rev(AllStg[which.min(AllPen),])
+    } else {
+      UsedPath <- colnames(CompactVertexStage)
+      StageVect <- AllStg[which.min(AllPen),]
     }
     
-    StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
-    StageVect <- rev(StageVect)
-    
-    AllStg <- AllStg[, rev(1:ncol(AllStg))]
-    CompactVertexStage <- CompactVertexStage[, rev(1:ncol(CompactVertexStage))]
-
   }
+
   
   for (i in 1:length(StageVect)) {
     TestShift <- CircShift(StageVect, i-1)
