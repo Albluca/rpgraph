@@ -344,7 +344,7 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
     Sphases <- rep(InitialStage, ncol(NormStageMatrix))
     
     for (i in 1:(length(ChangeNodes)-1)) {
-      Sphases[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- InitialStage + i
+      Sphases[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- InitialStage + i
     }
     
     Sphases[Sphases>length(ChangeNodes)] <- Sphases[Sphases>length(ChangeNodes)] - length(ChangeNodes)

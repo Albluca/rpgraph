@@ -29,8 +29,8 @@
 #' @examples
 StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNorm = FALSE,
                             StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 2, PercNorm = TRUE,
-                            MinWit = 0, nStages = 100, StagingMode1 = 1, StagingMode2 = 1,
-                            PathOpt = "switch", GeneOpt = 10, RandPathSel = FALSE,
+                            MinWit = 0, nStages = 100, StagingMode = 4,
+                            PathOpt = "switch", GeneOpt = 10,
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
                             Scaling = FALSE, nDim = NULL, nPoints = 20,
@@ -216,8 +216,15 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
                Xlab = paste("PC1 (", signif(100*NormExpressionMatrixPCA$ExpVar[1], 4), "%)", sep=''),
                Ylab = paste("PC2 (", signif(100*NormExpressionMatrixPCA$ExpVar[2], 4), "%)", sep=''))
     
+    readline("Press any key")
+    
     # arrows(x0 = RotatedExpression[,1], y0 = RotatedExpression[,2],
     #        x1 = ProjPoints$PointsOnEdgesCoords[,1], y1 = ProjPoints$PointsOnEdgesCoords[,2], length = 0)
+    
+    PieNetInfo <- plotPieNet(Data = RotatedExpression, Results = Results[[1]], Categories = Grouping, Graph = Net,
+               TaxonList = TaxonList, NodeSizeMult = 6)
+    
+    legend(x = "center", legend = levels(Grouping), fill = PieNetInfo$ColInfo)
     
     readline("Press any key")
   
@@ -370,47 +377,53 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     print("Direct staging")
     Staging <- FitStagesCirc(StageMatrix = SummaryStageMat,
                              NodePenalty = NodeSize^NodePower,
-                             Mode = StagingMode1)
+                             Mode = StagingMode)
     tictoc::toc()
     
     tictoc::tic()
     print("Reverse staging")
     StagingRev <- FitStagesCirc(StageMatrix = SummaryStageMat[, rev(1:ncol(SummaryStageMat))],
                                 NodePenalty = rev(NodeSize)^NodePower,
-                                Mode = StagingMode1)  
+                                Mode = StagingMode)  
     tictoc::toc()
     
     AllPenality <- rbind(cbind(Staging$Penality, StagingRev$Penality), rep(1:2, each=ncol(Staging$Penality)))
     
-    Idxs <- sample(x = 1:ncol(AllPenality), size = nStages, prob = max(AllPenality[2, ]) - AllPenality[2, ])
+    # Idxs <- sample(x = 1:ncol(AllPenality), size = nStages, prob = max(AllPenality[2, ]) - AllPenality[2, ])
+    # Idxs <- unique(Idxs)
     
-    Idxs <- unique(Idxs)
+    # Idxs <- order(AllPenality[2, ])[1:nStages]
+    
+    Idxs <- which(AllPenality[2, ] == min(AllPenality[2, ]))
     
     SelPenality <- AllPenality[,Idxs]
+    dim(SelPenality) <- c(4, length(SelPenality)/4)
     
     DirectPenality <- NULL
     DirectChanges <- NULL
     
     if(sum(SelPenality[4,] == 1) > 0){
-    
+      
       ExpandStages <- function(idx) {
         
-        ChangeNodes <- Staging$Possibilities[ , idx]
+        ChangeNodes <- Staging$Possibilities[ , SelPenality[3, idx]]
         
-        StageVect <- rep(Staging$Penality[1, idx], ncol(SummaryStageMat))
+        StageVect <- rep(SelPenality[1, idx], ncol(SummaryStageMat))
         
         for (i in 1:(length(ChangeNodes)-1)) {
-          StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- Staging$Penality[1, idx] + i
+          StageVect[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- SelPenality[1, idx] + i
         }
         
-        StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+        StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)
         
         return(StageVect)
         
       }
       
-      DirectPenality <- SelPenality[2,SelPenality[4,]==1]
-      DirectChanges <- t(sapply(SelPenality[3,SelPenality[4,]==1], ExpandStages))
+      SelPenIdx <- which(SelPenality[4,]==1)
+      
+      DirectPenality <- SelPenality[2,SelPenIdx]
+      DirectChanges <- t(sapply(SelPenIdx, ExpandStages))
       
     }
     
@@ -421,27 +434,31 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
       
       ExpandStages <- function(idx) {
         
-        ChangeNodes <- StagingRev$Possibilities[ , idx]
+        ChangeNodes <- StagingRev$Possibilities[ , SelPenality[3, idx]]
         
-        StageVect <- rep(StagingRev$Penality[1, idx], ncol(SummaryStageMat))
+        StageVect <- rep(SelPenality[1, idx], ncol(SummaryStageMat))
         
         for (i in 1:(length(ChangeNodes)-1)) {
-          StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- StagingRev$Penality[1, idx] + i
+          StageVect[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- SelPenality[1, idx] + i
         }
         
-        StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
+        StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)
         
         return(rev(StageVect))
         
       }
       
-      ReversePenality <- SelPenality[2,SelPenality[4,]==1]
-      ReverseChanges <- t(sapply(SelPenality[3,SelPenality[4,]==2], ExpandStages))
+      SelPenIdx <- which(SelPenality[4,]==2)
+      
+      ReversePenality <- SelPenality[2,SelPenIdx]
+      ReverseChanges <- t(sapply(SelPenIdx, ExpandStages))
       
     }
     
-    AllStg <- rbind(DirectChanges, ReverseChanges[,rev(1:ncol(ReverseChanges))])
+    AllStg <- rbind(DirectChanges, ReverseChanges)
     AllPen <- c(DirectPenality, ReversePenality)
+    AllDir <- c(rep("Dir", length(DirectPenality)),
+                rep("Rev", length(ReversePenality)))
     colnames(AllStg) <- UsedPath
     
   } else {
@@ -460,67 +477,36 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   }
   
   if(Interactive){
-    barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)), las=2)
-    abline(h = nStages/length(StageAssociation$Stages))
+    barplot(CompactVertexStage, beside = FALSE, col = rainbow(length(StageAssociation$Stages)),
+            las=2, ylab = 'Number of staging attempts', main = "Techinical staging uncertainty")
     
-    barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)), las=2)
-    abline(h = nStages/length(StageAssociation$Stages))
+    barplot(CompactVertexStage, beside = TRUE, col = rainbow(length(StageAssociation$Stages)),
+            las=2, ylab = 'Number of staging attempts', main = "Techinical staging uncertainty")
   }
   
   
-  if(RandPathSel){
-    tictoc::tic()
-    CollectiveBestFit <- FitStagesCirc(StageMatrix = CompactVertexStage,
-                                       NodePenalty = rep(1, ncol(CompactVertexStage)),
-                                       Mode = StagingMode2)
-    CollectiveBestFitRev <- FitStagesCirc(StageMatrix = CompactVertexStage[, rev(1:ncol(CompactVertexStage))],
-                                          NodePenalty = rep(1, ncol(CompactVertexStage)),
-                                          Mode = StagingMode2)
-    tictoc::toc()
+  if(length(AllPen)>1){
+    print(paste(length(AllPen), "minima found"))
+    print("Selecting one at random")
     
+    SelIdx <- sample(1:nrow(AllStg), 1)
     
-    if(min(CollectiveBestFit$Penality[2,]) <= min(CollectiveBestFitRev$Penality[2,])){
-      
-      SelPenvect <- CollectiveBestFit$Penality[,which.min(CollectiveBestFit$Penality[2, ])]
-      ChangeNodes <- CollectiveBestFit$Possibilities[,SelPenvect[3]]
-      
-      StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
-      for (i in 1:(length(ChangeNodes)-1)) {
-        StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
-      }
-      
-      StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
-      
-    } else {
-      
-      SelPenvect <- CollectiveBestFitRev$Penality[,which.min(CollectiveBestFitRev$Penality[2, ])]
+    if(AllDir[SelIdx] == "Rev"){
       UsedPath <- rev(colnames(CompactVertexStage))
-      ChangeNodes <- CollectiveBestFitRev$Possibilities[,SelPenvect[3]]
-      
-      StageVect <- rep(SelPenvect[1], ncol(CompactVertexStage))
-      for (i in 1:(length(ChangeNodes)-1)) {
-        StageVect[ChangeNodes[i]:ChangeNodes[length(ChangeNodes)]] <- SelPenvect[1] + i
-      }
-      
-      StageVect[StageVect>nrow(ChangeNodes)] <- StageVect[StageVect>nrow(ChangeNodes)] - length(ChangeNodes)
-      StageVect <- rev(StageVect)
-      
-      AllStg <- AllStg[, rev(1:ncol(AllStg))]
-      CompactVertexStage <- CompactVertexStage[, rev(1:ncol(CompactVertexStage))]
-      
-    }
-  } else {
-    
-    if(min(ReversePenality) < min(DirectPenality)){
-      UsedPath <- rev(colnames(CompactVertexStage))
-      StageVect <- rev(AllStg[which.min(AllPen),])
+      StageVect <- rev(AllStg[SelIdx,])
     } else {
       UsedPath <- colnames(CompactVertexStage)
-      StageVect <- AllStg[which.min(AllPen),]
+      StageVect <- AllStg[SelIdx,]
     }
-    
+  } else {
+    if(AllDir == "Rev"){
+      UsedPath <- rev(colnames(CompactVertexStage))
+      StageVect <- rev(AllStg)
+    } else {
+      UsedPath <- colnames(CompactVertexStage)
+      StageVect <- AllStg
+    }
   }
-
   
   for (i in 1:length(StageVect)) {
     TestShift <- CircShift(StageVect, i-1)
@@ -532,8 +518,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   UsedPath <- CircShift(UsedPath, i-1)
   StagesOnPath <- CircShift(StageVect, i-1)
   
-  VertexStageMatrix <- AllStg[,CircShift(1:ncol(AllStg), i-1)]
-  CompactVertexStage <- CompactVertexStage[,CircShift(1:ncol(CompactVertexStage), i-1)]
+  VertexStageMatrix <- AllStg[,UsedPath]
+  CompactVertexStage <- CompactVertexStage[,UsedPath]
+  SummaryStageMat <- SummaryStageMat[,UsedPath]
   
   
   if(Interactive){
@@ -586,7 +573,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   CellOnNodes[CellOnNodes > nPoints] <- CellOnNodes[CellOnNodes > nPoints] - nPoints
   
-  CellStagesMat <- t((CompactVertexStage/colSums(CompactVertexStage))[, CellOnNodes])
+  CellStagesMat <- t(t(t(SummaryStageMat)/colSums(SummaryStageMat))[, CellOnNodes])
   CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes])
   colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage")
   
@@ -606,7 +593,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   DF.Plot <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen),
                    PathProjection$DistanceFromPath,
-                   CellStages, Grouping, Labels)
+                   CellStages, as.character(Grouping), Labels)
   colnames(DF.Plot) <- c("PseudoTime", "Distance", "Stage", "Grouping", "Labels")
   
   DF.Plot <- as.data.frame(DF.Plot)
