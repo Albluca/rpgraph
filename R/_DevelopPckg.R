@@ -137,3 +137,25 @@
 # 
 # 
 # devtools::use_data(StageAssociation_Whit_G0)
+# 
+# 
+# library(readr)
+# 
+# WHITFIELD_CELL_CYCLE_S <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_S.txt")
+# WHITFIELD_CELL_CYCLE_G1_S <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G1_S.txt")
+# WHITFIELD_CELL_CYCLE_G2_M <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G2_M.txt")
+# WHITFIELD_CELL_CYCLE_M_G1 <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_M_G1.txt")
+# WHITFIELD_CELL_CYCLE_G2 <- read_csv("/bioinfo/users/lalberga/Datasets/FromAndrei/WHITFIELD_CELL_CYCLE_G2.txt")
+# 
+# 
+# StageAssociation_Whit_Ext <- list(QVarCutOff = 0.7,
+#                               Stages = c("G1/S", "S", "G2", "G2/M", "M/G1"),
+#                               S1_U = WHITFIELD_CELL_CYCLE_G1_S[[1]],
+#                               S2_U = WHITFIELD_CELL_CYCLE_S[[1]],
+#                               S3_U = WHITFIELD_CELL_CYCLE_G2[[1]],
+#                               S4_U = WHITFIELD_CELL_CYCLE_G2_M[[1]],
+#                               S5_U = WHITFIELD_CELL_CYCLE_M_G1[[1]])
+# 
+# 
+# devtools::use_data(StageAssociation_Whit_Ext)
+# 

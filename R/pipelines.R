@@ -574,16 +574,15 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   CellOnNodes[CellOnNodes > nPoints] <- CellOnNodes[CellOnNodes > nPoints] - nPoints
   
   CellStagesMat <- t(t(t(SummaryStageMat)/colSums(SummaryStageMat))[, CellOnNodes])
-  CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes])
-  colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage")
+  CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes], Grouping)
+  colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage", "Group")
   
   if(Interactive){
-    barplot(t(CellStagesMat[order(PathProjection$PositionOnPath),-length(StageAssociation$Stages)-1]),
+    barplot(t(CellStagesMat[order(PathProjection$PositionOnPath),1:length(StageAssociation$Stages)]),
             horiz = TRUE, las=2, col=rainbow(length(StageAssociation$Stages)),
             names.arg = StageAssociation$Stages[CellStagesMat[order(PathProjection$PositionOnPath),length(StageAssociation$Stages)+1]])
     abline(v = 100/length(StageAssociation$Stages)/100)
   }
-  
   
   CellStages <- StageAssociation$Stages[CellStagesMat[,length(StageAssociation$Stages)+1]]
   
