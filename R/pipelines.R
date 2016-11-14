@@ -194,7 +194,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   ProjPoints <- projectPoints(Results = Results[[1]], Data = RotatedExpression, TaxonList=TaxonList,
                               UseR = TRUE,
-                              method = 'PCALin', Dims = NULL)
+                              method = 'PCALin', Dims = NULL, Debug = FALSE)
   
   Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL)
   

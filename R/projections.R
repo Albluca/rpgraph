@@ -12,7 +12,7 @@
 #' @export
 #'
 #' @examples
-projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = 'PCALin', Dims = NULL){
+projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method = 'PCALin', Dims = NULL, Debug = FALSE){
   
   if(is.null(Dims)){
     Dims <- ncol(Data)
@@ -51,25 +51,28 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
         SelPoints <- SelPoints[!is.na(SelPoints)]
         
         # This is probaly a terrible method, but it's rather quick and straightforward
-        
         # Compute the PCA of the two nodes (All the variance will be explained by the 1st component)
         
-        PCARet <- prcomp(rbind(C1, C2), retx = TRUE)
+        PCARet <- prcomp(rbind(C1, C2), retx = TRUE, center = FALSE, scale. = FALSE)
         
         P1Pos <- PCARet$x["C1","PC1"]
         P2Pos <- PCARet$x["C2","PC1"]
         
+        if(P1Pos < P2Pos){
+          SLen <- P2Pos-P1Pos
+        } else {
+          SLen <- P1Pos-P2Pos
+        }
         
         if(length(SelPoints)>0){
           RestDataMap <- Data[SelPoints,1:Dims]
           
-          
           # Use the rotation matrix obtained by the PCA to project the nodes.
           
           if(length(SelPoints)>1){
-            PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
+            PointPosFull <- t(t(RestDataMap)) %*% PCARet$rotation
           } else {
-            PointPosFull <- t(RestDataMap - PCARet$center) %*% PCARet$rotation
+            PointPosFull <- t(RestDataMap ) %*% PCARet$rotation
           }
           
           # The 1st component will allow me to hortogonally project the points on the lines
@@ -78,7 +81,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
           
           # Get the position on the line by reversing the PCA
           
-          PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])) + PCARet$center)
+          PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])))
           
           # Plotting stuff to debug
           
@@ -92,7 +95,12 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
           # arrows(x0 = RestDataMap[,1], y0 = RestDataMap[,2], x1 = PrjPoints[,1], y1 = PrjPoints[,2], length = 0)
           
           # Due to the high dimensionality of the system some poits will project outside fo the
-          # segment joining the two nodes. In this case the points are associqted with the nearesrt node.
+          # segment joining the two nodes. In this case the points are associated with the nearest node.
+          
+          if(Debug){
+            print(paste(P1Pos, P2Pos))
+            print(PointPos)
+          }
           
           if(P1Pos < P2Pos){
             PointPos <- (PointPos - P1Pos) / (P2Pos-P1Pos)
@@ -108,7 +116,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
           ElList <- list(Nodes = Nd,
                          PointsProjections = PointPos,
                          PointsIndices = SelPoints,
-                         SegmentDist = abs(P2Pos-P1Pos),
+                         SegmentDist = SLen,
                          ProjectedCoords = PrjPoints)
           
         } else {
@@ -116,7 +124,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
           ElList <- list(Nodes = Nd,
                          PointsProjections = NULL,
                          PointsIndices = NULL,
-                         SegmentDist = abs(P2Pos-P1Pos),
+                         SegmentDist = SLen,
                          ProjectedCoords = NULL)
           
         }
@@ -155,12 +163,23 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
         
         Inside <- DistsLists[[i]]$PointsProjections > 0 & DistsLists[[i]]$PointsProjections < 1
         
+        if(Debug){
+          print(Inside)
+        }
+        
         for (j in 1:length(DistsLists[[i]]$PointsIndices)) {
           if(Inside[j]){
-            # The point is inside a segment. It gets it coordinates only if
+            # The point is inside a segment. It should get a coordinate
+            
+            if(Debug){
+              print(paste(j, Inside[j]))
+            }
             
             if(is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
-              # 1) It has not been assigned to a segment before
+              # 1) It has not been assigned to a segment before. It gets its coordinate
+              if(Debug){
+                print(paste("Point", DistsLists[[i]]$PointsIndices[j], "assigned to edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
+              }
               onEdge[DistsLists[[i]]$PointsIndices[j]] <- 1
               PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
               RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
@@ -169,8 +188,11 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
                   sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
                   SegLen[length(SegLen)])
             } else {
-              # 2) It has not been assigned to a segment with a smaller distance
+              # 2) It has been assigned to a segment before. I need to check a few things
               if(onEdge[DistsLists[[i]]$PointsIndices[j]] == 0){
+                if(Debug){
+                  print(paste("Point", DistsLists[[i]]$PointsIndices[j], "reassigned from node to edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
+                }
                 # 2a) it's on a node. it gets its coordinate
                 onEdge[DistsLists[[i]]$PointsIndices[j]] <- 1
                 PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
@@ -186,6 +208,10 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
                 OldDist <- sqrt(sum((PosVector[DistsLists[[i]]$PointsIndices[j], ] -
                                        Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2))
                 if(NewDist<OldDist){
+                  if(Debug){
+                    print(paste("Point", DistsLists[[i]]$PointsIndices[j], "reassigned to edge", paste(DistsLists[[i]]$Nodes, collapse=' '),
+                                "from", paste(RelPosVector[DistsLists[[i]]$PointsIndices[j], c(2,3)], collapse=' ')))
+                  }
                   print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
                   PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
                   RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
@@ -197,15 +223,16 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
               }
             }
             
-            
-            
-            
             next()
           }
           
           if(!Inside[j] & is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
             # The point is not part of a different segments.
             # It gets the coordinate of a node
+            
+            if(Debug){
+              print(paste("Point", DistsLists[[i]]$PointsIndices[j], "assigned to a node of edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
+            }
             
             RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
               c(DistsLists[[i]]$PointsProjections[j],
@@ -214,10 +241,16 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
                 SegLen[length(SegLen)])
             
             if(DistsLists[[i]]$PointsProjections[j] == 0){
+              if(Debug){
+                print("Node 0")
+              }
               onEdge[DistsLists[[i]]$PointsIndices[j]] <- 0
               PosVector[DistsLists[[i]]$PointsIndices[j], ] <- Results$Nodes[DistsLists[[i]]$Nodes[1],1:Dims]
             }
             if(DistsLists[[i]]$PointsProjections[j] == 1){
+              if(Debug){
+                print("Node 1")
+              }
               onEdge[DistsLists[[i]]$PointsIndices[j]] <- 0
               PosVector[DistsLists[[i]]$PointsIndices[j], ] <- Results$Nodes[DistsLists[[i]]$Nodes[2],1:Dims]
             }
@@ -238,7 +271,7 @@ projectPoints <- function(Results, Data, TaxonList=NULL, UseR = TRUE, method = '
     
     if(method == 'Dist'){
       
-      print("Nothing to see here folks!")
+      print("This method has not been implemented yet!")
       
       # FullMat <- rbind(Results$Nodes[,1:Dims], Data[,1:Dims])
       # DistMat <- as.matrix(dist(FullMat))
@@ -344,7 +377,16 @@ OrderOnPath <- function(PrinGraph, Path, PointProjections){
     
     if(length(IdPtOnEdge)>1){
       SubInfo <- PointProjections$PointsOnEdgesDist[IdPtOnEdge,]
-      SortData <- sort(SubInfo[,1]*SubInfo[,5], index.return=TRUE)
+      
+      if(all(Path[c(i-1, i)] == PrinGraph$Edges[EdgId,])){
+        # Path adn edge in the principla graph have the same direction 
+        ToOrder <- SubInfo[,1]*SubInfo[,5]
+      } else {
+        # Path adn edge in the principla graph have the opposite direction 
+        ToOrder <- (1-SubInfo[,1])*SubInfo[,5]
+      }
+      
+      SortData <- sort(ToOrder, index.return=TRUE)
       
       PointPos[IdPtOnEdge[SortData$ix]] <- SortData$x + sum(Basedist)
       PointDist[IdPtOnEdge[SortData$ix]] <- SubInfo[SortData$ix,4]
@@ -353,7 +395,14 @@ OrderOnPath <- function(PrinGraph, Path, PointProjections){
     if(length(IdPtOnEdge)==1){
       SubInfo <- PointProjections$PointsOnEdgesDist[IdPtOnEdge,]
       
-      PointPos[IdPtOnEdge] <- SubInfo[1]*SubInfo[5] + sum(Basedist)
+      if(all(Path[c(i-1, i)] == PrinGraph$Edges[EdgId,])){
+        # Path adn edge in the principla graph have the same direction 
+        PointPos[IdPtOnEdge] <- SubInfo[1]*SubInfo[5] + sum(Basedist)
+      } else {
+        # Path adn edge in the principla graph have the opposite direction 
+        PointPos[IdPtOnEdge] <- (1-SubInfo[1])*SubInfo[5] + sum(Basedist)
+      }
+      
       PointDist[IdPtOnEdge] <- SubInfo[4]
     }
 
