@@ -346,7 +346,6 @@ Filter <- function(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCel
     colnames(NormExpressionMatrix) <- Cname
   }
   
-  
   if(!is.null(GeneSet)){
     SelGenes <- intersect(colnames(NormExpressionMatrix), GeneSet)
     
@@ -433,7 +432,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
                             MinWit = 0, StagingMode = 4,
                             PathOpt = "Genes.PV", GeneOpt = 10, 
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
-                            MinCellExp = 1, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
+                            MinCellExp = 2, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
                             Scaling = FALSE, nDim = NULL, nPoints = 20,
                             Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL,
                             Interactive = TRUE) {
@@ -1172,64 +1171,3 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
 
 }
   
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
