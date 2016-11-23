@@ -1,3 +1,404 @@
+
+#' Title
+#'
+#' @param CCList 
+#' @param StageAssociation 
+#' @param TopQ 
+#' @param LowQ 
+#' @param NodePower 
+#' @param PercNorm 
+#' @param MinWit 
+#' @param StagingMode 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ReStage <- function(CCList, StageAssociation, TopQ = .9, LowQ = .1, NodePower = 0, PercNorm = TRUE,
+                    MinWit = 0, StagingMode = 4, PathOpt = "Genes.PV") {
+  
+  # Path Selection ---------------------------------------------------------------
+  
+  print("Stage V - Path Selection")
+  
+  # Start by selecting the first available path.
+  
+  Pattern <- igraph::graph.ring(n = nrow(CCList$PrinGraph[[1]]$Nodes),
+                                directed = FALSE, mutual = FALSE, circular = FALSE)
+  
+  PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = CCList$Net, graph2 = Pattern)
+  
+  StagingAttempts <- list()
+  
+  UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
+  
+  print(paste("Staging using the following reference path"))
+  print(UsedPath)
+  
+  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+  
+  NodeOnGenesOnPath <- CCList$InvTransNodes[NumericPath,]
+  
+  Staged <- FALSE
+  
+  if(PathOpt == "Genes.PV" & is.list(StageAssociation)){
+    
+    NodeSize <- unlist(lapply(lapply(CCList$TaxonList, is.finite), sum))
+    
+    CutOffVar <- NULL
+    
+    if(exists("QVarCutOff", where=StageAssociation)){
+      CutOffVar <- quantile(apply(CCList$UnscExpressionData, 2, var), as.numeric(StageAssociation$QVarCutOff))
+    }
+    
+    StagingResults <- StagingByGenes(StageAssociation = StageAssociation, ExpressionMatrix = CCList$UnscExpressionData,
+                                     NormExpressionMatrix = CCList$ExpressionData, NodeOnGenesOnPath = NodeOnGenesOnPath,
+                                     UsedPath = UsedPath, NodeSize = NodeSize, NodePower = NodePower,
+                                     LowQ = LowQ, TopQ = TopQ, nPoints = nrow(CCList$PrinGraph[[1]]$Nodes), MinWit = MinWit,
+                                     PercNorm = PercNorm, StagingMode = StagingMode, CutOffVar = CutOffVar)
+    
+    # print(StagingResults)
+    
+    SummaryStageMat <- StagingResults$SummaryStageMat
+    
+    print("Optimizing path")
+    
+    CompactVertexStage <- NULL
+    for(i in 1:length(StageAssociation$Stages)){
+      CompactVertexStage <- rbind(CompactVertexStage,
+                                  colSums(StagingResults$AllStg==i))
+    }
+    
+    
+    if(length(StagingResults$AllPen)>1){
+      print(paste(length(StagingResults$AllPen), "minima found"))
+      print("Selecting one at random")
+      
+      SelIdx <- sample(1:nrow(StagingResults$AllStg), 1)
+      
+      if(StagingResults$AllDir[SelIdx] == "Rev"){
+        UsedPath <- rev(colnames(CompactVertexStage))
+        StageVect <- rev(StagingResults$AllStg[SelIdx,])
+      } else {
+        UsedPath <- colnames(CompactVertexStage)
+        StageVect <- StagingResults$AllStg[SelIdx,]
+      }
+    } else {
+      if(StagingResults$AllDir == "Rev"){
+        UsedPath <- rev(colnames(CompactVertexStage))
+        StageVect <- rev(StagingResults$AllStg)
+      } else {
+        UsedPath <- colnames(CompactVertexStage)
+        StageVect <- StagingResults$AllStg
+      }
+    }
+    
+    for (i in 1:length(StageVect)) {
+      TestShift <- CircShift(StageVect, i-1)
+      if(TestShift[1] == min(StageVect) & TestShift[length(TestShift)] != min(StageVect)){
+        break
+      }
+    }
+    
+    UsedPath <- CircShift(UsedPath, i-1)
+    StagesOnPath <- CircShift(StageVect, i-1)
+    
+    VertexStageMatrix <- StagingResults$AllStg[,UsedPath]
+    CompactVertexStage <- CompactVertexStage[,UsedPath]
+    SummaryStageMat <- SummaryStageMat[,UsedPath]
+    
+    print("Stage VI - Path Projection")
+    
+    print("The following path will be used")
+    print(UsedPath)
+    
+    print("The following staging has been inferred")
+    print(StageAssociation$Stages[StagesOnPath])
+    
+    NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+    
+    NumericPath <- c(NumericPath, NumericPath[1])
+    StagesOnPath <- c(StagesOnPath, StagesOnPath[1])
+    
+    Staged <- TRUE
+    
+  }
+  
+  
+  if(!Staged){
+    
+    SummaryStageMat <- NULL
+    StagesOnPath <- rep("Unassigned", nrow(CCList$PrinGraph[[1]]$Nodes))
+    
+    print("Staging information incompatible with current options")
+    print("The defult path will be used")
+    
+  }
+  
+  
+  
+  # Projecting on Path ---------------------------------------------------------------
+  
+  PathProjection <- OrderOnPath(PrinGraph = CCList$PrinGraph[[1]], Path = NumericPath, PointProjections = CCList$Projections)
+  
+  # Move cells from the end to the beginning
+  # Since floating point aritmetic is involved, I need to use a threshold for zero
+  
+  PathProjection$PositionOnPath[ abs(PathProjection$PositionOnPath - sum(PathProjection$PathLen)) < 1e-8 ] <- 0
+  
+  par(mfcol=c(1,1))
+  
+  CellOnNodes <- rep(NA, length(PathProjection$PositionOnPath))
+  CellStages <- rep("Unassigned", length(PathProjection$PositionOnPath))
+  GeneCount <- NULL
+  CellStagesMat <- NULL
+  
+  NodeSize <- unlist(lapply(lapply(CCList$TaxonList, is.finite), sum))
+  
+  if(PathOpt == "Genes.PV" & is.list(StageAssociation)){
+    for(i in 2:length(PathProjection$PathLen)){
+      CellOnNodes[PathProjection$PositionOnPath >= cumsum(PathProjection$PathLen)[i-1] &
+                    PathProjection$PositionOnPath < mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- i-1
+      CellOnNodes[PathProjection$PositionOnPath < cumsum(PathProjection$PathLen)[i] &
+                    PathProjection$PositionOnPath >= mean(cumsum(PathProjection$PathLen)[(i-1):i])] <- i
+    }
+    
+    
+    CellOnNodes[CellOnNodes > nrow(CCList$PrinGraph[[1]]$Nodes)] <- CellOnNodes[CellOnNodes > nrow(CCList$PrinGraph[[1]]$Nodes)] - nrow(CCList$PrinGraph[[1]]$Nodes)
+    
+    CellStagesMat <- t(t(t(SummaryStageMat)/colSums(SummaryStageMat))[, CellOnNodes])
+    CellStagesMat <- cbind(CellStagesMat, StagesOnPath[CellOnNodes], CCList$Grouping)
+    colnames(CellStagesMat) <- c(StageAssociation$Stages, "Stage", "Group")
+    
+    CellStages <- StageAssociation$Stages[CellStagesMat[,length(StageAssociation$Stages)+1]]
+    StagesOnPath <- StagesOnPath[-length(StagesOnPath)]
+    
+    
+    Labels <- rownames(CCList$PCAData)
+    
+    DF.Plot <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen),
+                     PathProjection$DistanceFromPath,
+                     CellStages, as.character(CCList$Grouping), Labels)
+    colnames(DF.Plot) <- c("PseudoTime", "Distance", "Stage", "Grouping", "Labels")
+    
+    DF.Plot <- as.data.frame(DF.Plot)
+    DF.Plot$PseudoTime <- as.numeric(as.character(DF.Plot$PseudoTime))
+    DF.Plot$Distance <- as.numeric(as.character(DF.Plot$Distance))
+    
+    # print(CellStages)
+    # print(StageAssociation$Stages)
+    
+    for(Ref in rev(StageAssociation$Stages)){
+      if(Ref %in% levels(DF.Plot$Stage)){
+        DF.Plot$Stage <- relevel(DF.Plot$Stage, Ref)
+      }
+    }
+    
+    AtBottom <- which(DF.Plot$PseudoTime == 0)
+    AtTop <- which(DF.Plot$PseudoTime == 1)
+    
+    print(table(DF.Plot$Grouping, DF.Plot$Stage))
+    
+    if(length(AtBottom) > 0){
+      BottomCells <- DF.Plot[AtBottom,]
+      BottomCells$PseudoTime <- 1
+      DF.Plot <- rbind(DF.Plot, BottomCells)
+    }
+    
+    if(length(AtTop) > 0){
+      TopCells <- DF.Plot[AtTop,]
+      TopCells$PseudoTime <- 0
+      DF.Plot <- rbind(DF.Plot, TopCells)
+    }
+    
+  }
+
+  RetList <- CCList
+  
+  RetList[["InferredStages"]] <- CellStages
+  RetList[["Path"]] <- UsedPath
+  RetList[["NumericPath"]] <- NumericPath
+  RetList[["PathProjection"]] <- PathProjection
+  RetList[["StagesOnPath"]] <- StagesOnPath
+  RetList[["StageWitnesses"]] <- SummaryStageMat
+  RetList[["StageWitnessesCount"]] <- GeneCount
+  RetList[["StageWitWeigh"]] <- NodeSize^NodePower
+  RetList[["CellsStagesAssociation"]] <- CellStagesMat
+
+  return(RetList)
+  
+}
+
+
+
+#' Title
+#'
+#' @param CCList 
+#' @param nPoints 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ChangeNodeNumber <- function(CCList, nPoints) {
+  
+  # Curve Fit ---------------------------------------------------------------
+  
+  print("Stage V - Curve fit")
+  
+  Results <- computeElasticPrincipalGraph(Data = CCList$PCAData, NumNodes = nPoints, Method = 'CircleConfiguration')
+  
+  TaxonList <- getTaxonMap(Results[[1]], CCList$PCAData, UseR = TRUE)
+  
+  ProjPoints <- projectPoints(Results = Results[[1]], Data = CCList$PCAData, TaxonList=TaxonList,
+                              UseR = TRUE,
+                              method = 'PCALin', Dims = NULL, Debug = FALSE)
+  
+  Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL)
+  
+  NodeOnGenes <- t(t(Results[[1]]$Nodes %*% t(CCList$PCAInfo$Comp)))
+  
+  RetList <- CCList
+  
+  RetList[["Net"]] <- Net
+  RetList[["PrinGraph"]] <- Results
+  RetList[["InvTransNodes"]] <- NodeOnGenes
+  RetList[["TaxonList"]] <- TaxonList
+  RetList[["Projections"]] <- ProjPoints
+  
+  RetList[["InferredStages"]] <- NULL
+  RetList[["Path"]] <- NULL
+  RetList[["NumericPath"]] <- NULL
+  RetList[["PathProjection"]] <- NULL
+  RetList[["StagesOnPath"]] <- NULL
+  RetList[["StageWitnesses"]] <- NULL
+  RetList[["StageWitnessesCount"]] <- NULL
+  RetList[["StageWitWeigh"]] <- NULL
+  RetList[["CellsStagesAssociation"]] <- NULL
+  
+  return(RetList)
+  
+}
+
+
+
+
+
+#' Title
+#'
+#' @param ExpressionMatrix 
+#' @param GeneDetectedFilter 
+#' @param GeneCountFilter 
+#' @param MinCellExp 
+#' @param LogTranform 
+#' @param QuantNorm 
+#' @param GeneSet 
+#' @param Centering 
+#' @param Scaling 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+Filter <- function(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCellExp, LogTranform,
+                   QuantNorm, GeneSet, Centering, Scaling, Grouping) {
+  
+  # Cell filtering ---------------------------------------------------------------
+  
+  print("Stage I - Cell filtering")
+  
+  OutExpr <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneDetectedFilter)
+  
+  OutCount <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneCountFilter)
+  
+  print(paste(sum(OutExpr & OutCount), "Cells will be removed due to both filtering"))
+  print(paste(sum(OutExpr & !OutCount), "Cells will be removed due to gene count filtering"))
+  print(paste(sum(OutCount & !OutExpr), "Cells will be removed due to read count filtering"))
+  print(paste(sum(!(OutExpr & OutCount)), "Cells will be used for analysis")) 
+  
+  Grouping <- Grouping[!(OutExpr & OutCount)]
+  NormExpressionMatrix <- ExpressionMatrix[!(OutExpr & OutCount),]
+  
+  # Gene filtering ---------------------------------------------------------------
+  
+  print("Stage II - Genes filtering")
+  
+  print(paste("Removing genes that are detected in less than", MinCellExp, "cell(s)"))
+  
+  GeneFilterBool <- apply(NormExpressionMatrix > 0, 2, sum) < MinCellExp
+  NormExpressionMatrix <- NormExpressionMatrix[, !GeneFilterBool]
+  
+  print(paste(sum(GeneFilterBool), "genes will be removed"))
+  print(paste(ncol(NormExpressionMatrix), "genes are available for the analysis"))
+  
+  if(LogTranform){
+    print("Transforming using pseudo counts (Log10(x+1))")
+    NormExpressionMatrix <- log10(NormExpressionMatrix + 1)
+  }
+  
+  UnScaledNormExpressionMatrix <- NormExpressionMatrix
+  
+  if(QuantNorm){
+    Rname <- rownames(NormExpressionMatrix)
+    Cname <- colnames(NormExpressionMatrix)
+    NormExpressionMatrix <- preprocessCore::normalize.quantiles(NormExpressionMatrix)
+    rownames(NormExpressionMatrix) <- Rname
+    colnames(NormExpressionMatrix) <- Cname
+  }
+  
+  
+  if(!is.null(GeneSet)){
+    SelGenes <- intersect(colnames(NormExpressionMatrix), GeneSet)
+    
+    print(paste(length(SelGenes), "genes selected for analysis"))
+    
+    if(length(SelGenes)==0){
+      return()
+    }
+    
+    NormExpressionMatrix <- NormExpressionMatrix[,SelGenes]
+    
+  }
+  
+  # Gene Scaling ---------------------------------------------------------------
+  
+  print("Stage III - Gene scaling")
+  
+  if(Centering){
+    print("Gene expression will be centered")
+  } 
+  
+  if(Scaling){
+    print("Gene expression will be scaled")
+  } 
+  
+  NormExpressionMatrix <- scale(x = NormExpressionMatrix, center = Centering, scale =  Scaling)
+  
+  print("Stage IV - PCA")
+  
+  if(is.null(nDim)){
+    nDim <- min(dim(NormExpressionMatrix))
+  }
+  
+  NormExpressionMatrixPCA <- SelectComputePCA(NormExpressionMatrix,
+                                              Components = nDim, Method = 'base-svd',
+                                              center = FALSE, scale. = FALSE)
+  
+  RotatedExpression <- NormExpressionMatrix %*% NormExpressionMatrixPCA$Comp
+  
+  return(list(ExpressionData = NormExpressionMatrix, UnscExpressionData = UnScaledNormExpressionMatrix,
+              PCAData = RotatedExpression,
+              PCAInfo = NormExpressionMatrixPCA, Grouping = Grouping, TaxonList = NULL,
+              InferredStages = NULL, PrinGraph = NULL, Projections = NULL, InvTransNodes = NULL,
+              Path = NULL, NumericPath = NULL, Net = NULL, PathProjection = NULL, StagesOnPath = NULL,
+              StageWitnesses = NULL, StageWitnessesCount = NULL, StageWitWeigh = NULL,
+              CellsStagesAssociation = NULL))
+  
+}
+
+
+
+
 # A function to standardize the Initial steps of the analysis
 
 #' Title
@@ -114,7 +515,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     colnames(NormExpressionMatrix) <- Cname
   }
   
-  
   print("Plotting variance distribution (For reference only)")
 
   VarVect <- apply(NormExpressionMatrix, 2, var)
@@ -138,7 +538,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     par(mfcol=c(1,1))
     
   }
-  
   
   if(!is.null(GeneSet)){
     SelGenes <- intersect(colnames(NormExpressionMatrix), GeneSet)
@@ -763,21 +1162,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   }
   
   if (Data.Return) {
-    
-    return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, Grouping = Grouping,
+    return(list(ExpressionData = NormExpressionMatrix, PCAData = RotatedExpression, PCAInfo = NormExpressionMatrixPCA,
+                Grouping = Grouping, UnscExpressionData = UnScaledNormExpressionMatrix,
                 InferredStages = CellStages, PrinGraph = Results, Projections = ProjPoints, InvTransNodes = NodeOnGenes,
                 Path = UsedPath, NumericPath = NumericPath, Net = Net, PathProjection = PathProjection, StagesOnPath = StagesOnPath,
                 StageWitnesses = SummaryStageMat, StageWitnessesCount = GeneCount, StageWitWeigh = NodeSize^NodePower,
-                CellsStagesAssociation = CellStagesMat))
+                CellsStagesAssociation = CellStagesMat, TaxonList = TaxonList))
     }
 
-    
 }
   
   
-
-
-
 
 
 

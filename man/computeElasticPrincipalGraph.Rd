@@ -4,8 +4,9 @@
 \alias{computeElasticPrincipalGraph}
 \title{Compute the elastic principal graph}
 \usage{
-computeElasticPrincipalGraph(Data, NumNodes, Method = NULL,
-  ReduceMethod = "none", ReduceSize = 3, ...)
+computeElasticPrincipalGraph(Data, NumNodes, NodesPositions = NULL,
+  Edges = NULL, Method = NULL, NodeStep = NULL, ReduceMethod = "none",
+  ReduceSize = 3, ...)
 }
 \arguments{
 \item{Data}{The datapoints to be used. Rows are expected to indicate the points and columes their dimensions}

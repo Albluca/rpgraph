@@ -4,7 +4,8 @@
 \alias{computeElPT}
 \title{Compute the the elastic principal graph}
 \usage{
-computeElPT(Data, NumNodes, Parameters, ...)
+computeElPT(Data, NumNodes, Parameters, NodesPositions = NULL, Edges = NULL,
+  ...)
 }
 \arguments{
 \item{Data}{The data points to be used to compute the graph}

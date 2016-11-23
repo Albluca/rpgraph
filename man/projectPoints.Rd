@@ -5,7 +5,7 @@
 \title{Project Points on the edges of the graph}
 \usage{
 projectPoints(Results, Data, TaxonList = NULL, UseR = TRUE,
-  method = "PCALin", Dims = NULL)
+  method = "PCALin", Dims = NULL, Debug = FALSE)
 }
 \arguments{
 \item{Results}{}
