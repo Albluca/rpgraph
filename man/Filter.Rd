@@ -5,7 +5,7 @@
 \title{Title}
 \usage{
 Filter(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCellExp,
-  LogTranform, QuantNorm, GeneSet, Centering, Scaling)
+  LogTranform, QuantNorm, GeneSet, Centering, Scaling, Grouping)
 }
 \arguments{
 \item{ExpressionMatrix}{}

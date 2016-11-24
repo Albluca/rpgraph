@@ -1170,4 +1170,98 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     }
 
 }
+
+
+
+
+#' Title
+#'
+#' @param CCStruct 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+MakeCCSummaryMatrix <- function(CCStruct) {
+  
+  pb <- txtProgressBar(min = 0, max = ncol(CCStruct$UnscExpressionData), initial = 0, style = 3)
+  
+  RunTests <- function(idx) {
+    
+    setTxtProgressBar(pb, idx)
+    
+    RowVect <- rep(NA, 15)
+    
+    StageCount <- table(factor(CCStruct$InferredStages, levels = c("G0", "G1", "S", "G2", "M")))
+    
+    if(all(StageCount > 3)){
+      RowVect[1] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages))$p.val
+    }
+    
+    if(StageCount["G0"] > 3){
+      RowVect[2] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages == "G0"))$p.val
+    }
+    
+    if(StageCount["G1"] > 3){
+      RowVect[3] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages == "G1"))$p.val
+    }
+   
+    if(StageCount["S"] > 3){
+      RowVect[4] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages == "S"))$p.val
+    }
+    
+    if(StageCount["G2"] > 3){
+      RowVect[5] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages == "G2"))$p.val
+    }
+    
+    if(StageCount["M"] > 3){
+      RowVect[6] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages == "M"))$p.val
+    }
+    
+    if(StageCount["G0"] + StageCount["G1"] > 3){
+      RowVect[7] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages %in% c("G0", "G1")))$p.val
+    }
+    
+    
+    if(StageCount["G1"] + StageCount["S"] > 3){
+      RowVect[8] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages %in% c("G1", "S")))$p.val
+    }
+    
+    
+    if(StageCount["S"] + StageCount["G2"] > 3){
+      RowVect[9] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages %in% c("S", "G2")))$p.val
+    }
+    
+    if(StageCount["G2"] + StageCount["M"] > 3){
+      RowVect[10] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages %in% c("G2", "M")))$p.val
+    }
+    
+    if(StageCount["M"] + StageCount["G0"] > 3){
+      RowVect[11] <- kruskal.test(CCStruct$UnscExpressionData[, idx], factor(CCStruct$InferredStages %in% c("M", "G0")))$p.val
+    }
+    
+    RowVect[12] <- var(CCStruct$UnscExpressionData[, idx])
+    RowVect[13] <- mean(CCStruct$UnscExpressionData[, idx])
+    
+    RowVect[14] <- IQR(CCStruct$UnscExpressionData[, idx])
+    RowVect[15] <- median(CCStruct$UnscExpressionData[, idx])
+    
+    return(RowVect)
+    
+  }
+  
+  SummaryTable <- sapply(1:ncol(CCStruct$UnscExpressionData), RunTests)
+  
+  SummaryTable <- t(SummaryTable)
+  
+  SummaryTable <- cbind(colnames(CCStruct$UnscExpressionData), SummaryTable)
+  colnames(SummaryTable) <- c("Gene", "KT all", "KT G0", "KT G1", "KT S", "KT G2", "KT M", "KT G0+G1", "KT G1+S", "KT S+G2", "KT G2+M", "KT M+G0",
+                              "Var", "Mean", "IQR", "Median")
+  
+  return(SummaryTable)
+  
+}
+
+
+
   
