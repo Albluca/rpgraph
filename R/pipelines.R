@@ -453,7 +453,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   OutExpr <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneDetectedFilter)
   
-  
   if(Interactive){
     hist(apply(ExpressionMatrix, 1, sum), main = "Reads per cell", xlab = "Reads count",
          freq = TRUE, ylab = "Number of cells")
@@ -463,7 +462,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   OutCount <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneCountFilter)
 
-  
   print(paste(sum(OutExpr & OutCount), "Cells will be removed due to both filtering"))
   print(paste(sum(OutExpr & !OutCount), "Cells will be removed due to gene count filtering"))
   print(paste(sum(OutCount & !OutExpr), "Cells will be removed due to read count filtering"))
@@ -471,6 +469,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
 
   Grouping <- Grouping[!(OutExpr & OutCount)]
   NormExpressionMatrix <- ExpressionMatrix[!(OutExpr & OutCount),]
+  
+  print(paste(length(Grouping), "grouping vect"))
+  print(paste(nrow(ExpressionMatrix), "expression matrix"))
   
   if(Interactive){
     readline("Press any key")
