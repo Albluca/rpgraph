@@ -439,6 +439,12 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   print(paste("Expression matrix contains", nrow(ExpressionMatrix), "cells and", ncol(ExpressionMatrix), "genes"))
   
+  if(length(Grouping) != nrow(ExpressionMatrix)){
+    stop("Grouping vector incompatible with expression matrix")
+  }
+  
+  
+  
   # Cell filtering ---------------------------------------------------------------
   
   print("Stage I - Cell filtering")
@@ -469,9 +475,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
 
   Grouping <- Grouping[!(OutExpr & OutCount)]
   NormExpressionMatrix <- ExpressionMatrix[!(OutExpr & OutCount),]
-  
-  print(paste(length(Grouping), "grouping vect"))
-  print(paste(nrow(ExpressionMatrix), "expression matrix"))
   
   if(Interactive){
     readline("Press any key")
