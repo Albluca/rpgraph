@@ -18,7 +18,6 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
     Dims <- ncol(Data)
   }
   
-  
   if(is.null(TaxonList)){
     print("TaxonList will be computed. Consider doing that separetedly")
     TaxonList <- getTaxonMap(Results = Results, Data = Data, UseR = TRUE)
@@ -94,7 +93,7 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
           
           # arrows(x0 = RestDataMap[,1], y0 = RestDataMap[,2], x1 = PrjPoints[,1], y1 = PrjPoints[,2], length = 0)
           
-          # Due to the high dimensionality of the system some poits will project outside fo the
+          # Due to the high dimensionality of the system some poits will project outside of the
           # segment joining the two nodes. In this case the points are associated with the nearest node.
           
           if(Debug){
@@ -203,10 +202,16 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
                     SegLen[length(SegLen)])
               } else {
                 # 2b) it's on a segment. I need to compare distances
-                NewDist <- sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] -
-                                       Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2))
-                OldDist <- sqrt(sum((PosVector[DistsLists[[i]]$PointsIndices[j], ] -
-                                       Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2))
+                NewDist <- sqrt(
+                  sum(
+                    (DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+                    )
+                  )
+                OldDist <- sqrt(
+                  sum(
+                    (PosVector[DistsLists[[i]]$PointsIndices[j], ] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+                    )
+                  )
                 if(NewDist<OldDist){
                   if(Debug){
                     print(paste("Point", DistsLists[[i]]$PointsIndices[j], "reassigned to edge", paste(DistsLists[[i]]$Nodes, collapse=' '),

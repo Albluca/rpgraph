@@ -817,7 +817,6 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     CellStages <- StageAssociation$Stages[CellStagesMat[,length(StageAssociation$Stages)+1]]
     StagesOnPath <- StagesOnPath[-length(StagesOnPath)]
     
-    
     Labels <- rownames(RotatedExpression)
     
     DF.Plot <- cbind(PathProjection$PositionOnPath/sum(PathProjection$PathLen),
@@ -838,8 +837,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
       }
     }
     
-    AtBottom <- which(DF.Plot$PseudoTime == 0)
-    AtTop <- which(DF.Plot$PseudoTime == 1)
+    # AtBottom <- which(DF.Plot$PseudoTime == 0)
+    # AtTop <- which(DF.Plot$PseudoTime == 1)
     
     print(table(DF.Plot$Grouping, DF.Plot$Stage))
     
@@ -847,18 +846,17 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
       gplots::heatmap.2(table(DF.Plot$Grouping, DF.Plot$Stage))
     }
     
-    if(length(AtBottom) > 0){
-      BottomCells <- DF.Plot[AtBottom,]
-      BottomCells$PseudoTime <- 1
-      DF.Plot <- rbind(DF.Plot, BottomCells)
-    }
+    # if(length(AtBottom) > 0){
+    #   BottomCells <- DF.Plot[AtBottom,]
+    #   BottomCells$PseudoTime <- 1
+    #   DF.Plot <- rbind(DF.Plot, BottomCells)
+    # }
     
-    if(length(AtTop) > 0){
-      TopCells <- DF.Plot[AtTop,]
-      TopCells$PseudoTime <- 0
-      DF.Plot <- rbind(DF.Plot, TopCells)
-    }
-    
+    # if(length(AtTop) > 0){
+    #   TopCells <- DF.Plot[AtTop,]
+    #   TopCells$PseudoTime <- 0
+    #   DF.Plot <- rbind(DF.Plot, TopCells)
+    # }
     
     if(Interactive){
       
@@ -913,9 +911,22 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     
   }
   
+  # Finetuning the positions depending on the staging of the 1st stage 
   
+  ToReposition <- which(CellOnNodes == 1 & PathProjection$PositionOnPath > sum(PathProjection$PathLen[-nPoints]))
   
-  
+  if(length(ToReposition)>0){
+    
+    # There are cells that are at the end and should be at the beginning
+    
+    AdjPar <- min(PathProjection$PositionOnPath[ToReposition] - sum(PathProjection$PathLen))
+    
+    # I'm going to shift down all of the projection structure by AdjPar. Note that the sign are reversed because AdjPar is negative
+    
+    PathProjection$PositionOnPath <- PathProjection$PositionOnPath - AdjPar
+    PathProjection$PathLen[2] <- PathProjection$PathLen - AdjPar
+    PathProjection$PathLen[nPoints + 1] <- PathProjection$PathLen[nPoints + 1] + AdjPar
+  }
   
   
   if(Interactive){
