@@ -717,8 +717,11 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
       }
     }
     
-    for (i in 1:length(StageVect)) {
-      TestShift <- CircShift(StageVect, i-1)
+    for(i in 1:length(StageVect)) {
+      TestShift <- CircShift(as.vector(StageVect), n = i-1)
+      print("Testing")
+      print(TestShift)
+      print(i-1)
       if(TestShift[1] == min(StageVect) & TestShift[length(TestShift)] != min(StageVect)){
         break
       }
