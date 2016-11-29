@@ -727,8 +727,8 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
       }
     }
     
-    UsedPath <- CircShift(UsedPath, i-1)
-    StagesOnPath <- CircShift(StageVect, i-1)
+    UsedPath <- CircShift(as.vector(UsedPath), i-1)
+    StagesOnPath <- CircShift(as.vector(StageVect), i-1)
     
     VertexStageMatrix <- StagingResults$AllStg[,UsedPath]
     CompactVertexStage <- CompactVertexStage[,UsedPath]
