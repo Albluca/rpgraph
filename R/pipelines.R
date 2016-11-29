@@ -913,7 +913,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   # Finetuning the positions depending on the staging of the 1st stage 
   
-  ToReposition <- which(CellOnNodes == 1 & PathProjection$PositionOnPath > sum(PathProjection$PathLen[-nPoints]))
+  print("Finetuning cell positions on the path")
+  
+  ToReposition <- which(CellOnNodes == 1 & PathProjection$PositionOnPath >= sum(PathProjection$PathLen[-nPoints]))
   
   if(length(ToReposition)>0){
     
@@ -923,8 +925,10 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     
     # I'm going to shift down all of the projection structure by AdjPar. Note that the sign are reversed because AdjPar is negative
     
+    PathProjection$PositionOnPath[ToReposition] <- PathProjection$PositionOnPath[ToReposition] - sum(PathProjection$PathLen)
+    
     PathProjection$PositionOnPath <- PathProjection$PositionOnPath - AdjPar
-    PathProjection$PathLen[2] <- PathProjection$PathLen - AdjPar
+    PathProjection$PathLen[2] <- PathProjection$PathLen[2] - AdjPar
     PathProjection$PathLen[nPoints + 1] <- PathProjection$PathLen[nPoints + 1] + AdjPar
   }
   
