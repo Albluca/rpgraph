@@ -177,8 +177,22 @@ StagingByGenes <- function(StageAssociation, ExpressionMatrix, NormExpressionMat
       
       StageVect <- rep(SelPenality[1, idx], ncol(SummaryStageMat))
       
+      tStart <- NA
+      tEnd <- NA
+      
       for (i in 1:(length(ChangeNodes)-1)) {
-        StageVect[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- SelPenality[1, idx] + i
+        
+        if(!is.na(ChangeNodes[i])){
+          tStart <- ChangeNodes[i]
+        }
+        
+        tEnd <- ChangeNodes[i+1]
+        
+        if(is.na(tStart) | is.na(tEnd)){
+          next()
+        }
+        
+        StageVect[tStart:(tEnd-1)] <- SelPenality[1, idx] + i
       }
       
       StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)
@@ -250,19 +264,37 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
   
   NormNodePenalty <- NodePenalty[ToAnalyze]
   
-  Possibilities <- combn(1:ncol(NormStageMatrix), nrow(NormStageMatrix))
+  Possibilities <- combn(c(1:ncol(NormStageMatrix), rep(NA, nrow(NormStageMatrix))), nrow(NormStageMatrix))
   
-  ToKeep <- !apply(Possibilities, 2, is.unsorted)
+  NoChange <- apply(is.na(Possibilities), 2, sum) == nrow(NormStageMatrix)
   
-  Possibilities <- Possibilities[, ToKeep]
-  dim(Possibilities) <- c(length(Possibilities)/length(ToKeep), length(ToKeep))
+  ToKeep <- (!apply(Possibilities, 2, is.unsorted, na.rm = TRUE)) &
+    (apply(!is.na(Possibilities), 2, sum) != 1) &
+    (!is.na(Possibilities[nrow(NormStageMatrix),]))
+    
+  Possibilities <- Possibilities[, ToKeep | NoChange]
+  dim(Possibilities) <- c(length(Possibilities)/(sum(ToKeep)+1), sum(ToKeep)+1)
   
   PathPenality <- function(ChangeNodes, InitialStage, Mode) {
     
     Sphases <- rep(InitialStage, ncol(NormStageMatrix))
     
+    tStart <- NA
+    tEnd <- NA
+    
     for (i in 1:(length(ChangeNodes)-1)) {
-      Sphases[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- InitialStage + i
+      
+      if(!is.na(ChangeNodes[i])){
+        tStart <- ChangeNodes[i]
+      }
+      
+      tEnd <- ChangeNodes[i+1]
+      
+      if(is.na(tStart) | is.na(tEnd)){
+        next()
+      }
+      
+      Sphases[tStart:(tEnd-1)] <- InitialStage + i
     }
     
     Sphases[Sphases>length(ChangeNodes)] <- Sphases[Sphases>length(ChangeNodes)] - length(ChangeNodes)
@@ -311,9 +343,9 @@ FitStagesCirc <- function(StageMatrix, NodePenalty, Mode = 1) {
   
   for (i in 1:nrow(NormStageMatrix)) {
     CombinedInfo <- cbind(CombinedInfo,
-                          rbind(rep(i, length(ToKeep)),
+                          rbind(rep(i, sum(ToKeep)+1),
                                 apply(Possibilities, 2, PathPenality, InitialStage = i, Mode = Mode),
-                                1:length(ToKeep)
+                                1:(sum(ToKeep)+1)
                           )
     )
   }

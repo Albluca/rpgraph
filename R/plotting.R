@@ -468,8 +468,8 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     ProjectionLines <- Col
   }
   
-  if(min(PrintGraph$Edges)==0){
-    PrintGraph$Edges = PrintGraph$Edges + 1
+  if(min(PrintGraph[[1]]$Edges)==0){
+    PrintGraph[[1]]$Edges = PrintGraph[[1]]$Edges + 1
   }
   
   if(Plot.ly){
@@ -480,7 +480,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
       rownames(PlotData1) <- paste("R_", 1:nrow(PlotData1), sep= '')
     }
     
-    PlotData2 <- PrintGraph$Nodes[,1:3]
+    PlotData2 <- PrintGraph[[1]]$Nodes[,1:3]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
     PlotData4 <- c(rep(.6, length(GroupsLab)), rep(1, nrow(PlotData2)))
@@ -507,11 +507,11 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
                zaxis = list(title = Zlab)))
     
     
-    for(i in 1:nrow(PrintGraph$Edges)){
+    for(i in 1:nrow(PrintGraph[[1]]$Edges)){
       
-      p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
-                           y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
-                           z = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],3],
+      p <- p %>% plotly::add_trace(x = PrintGraph[[1]]$Nodes[PrintGraph[[1]]$Edges[i,1:2],1],
+                           y = PrintGraph[[1]]$Nodes[PrintGraph$Edges[i,1:2],2],
+                           z = PrintGraph[[1]]$Nodes[PrintGraph$Edges[i,1:2],3],
                            color = PlotData$color[length(PlotData$color)], text = '', size = 1,
                            sizes = c(1, 10), mode="lines",
                            showlegend = FALSE)
@@ -580,17 +580,17 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     rgl::plot3d(Data[,1], Data[,2], Data[,3], col=Col,
            size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE) 
     
-    rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
+    rgl::text3d(PrintGraph[[1]]$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
     
-    rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
+    rgl::plot3d(PrintGraph[[1]]$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph[[1]]$NodeSize)),
            add = TRUE, alpha=0.3, col=CirCol)
     
     
     if(is.null(DirectionMat)){
-      for(i in 1:nrow(PrintGraph$Edges)){
+      for(i in 1:nrow(PrintGraph[[1]]$Edges)){
         
-        PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
-                         PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
+        PCoords <- rbind(PrintGraph[[1]]$Nodes[PrintGraph[[1]]$Edges[i,1],1:3],
+                         PrintGraph[[1]]$Nodes[PrintGraph[[1]]$Edges[i,2],1:3])
         
         rgl::plot3d(PCoords, type = 'l', add = TRUE, col=LineCol)
         
