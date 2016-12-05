@@ -57,10 +57,10 @@ Data <- simple_circle
 Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 40, Method = 'CircleConfiguration')
 ```
 
-Now `Results` contain the processed principal graph. Diagnostic information can be obtained using
+Now `Results` will be a list and the first element will contain the processed principal graph. Diagnostic information can be obtained using
 
 ```{r, fig.height=5, fig.width=5}
-plotMSDEnergyPlot(Results, Main = "Pincipal Circle", Cex.Main = 1)
+plotMSDEnergyPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1)
 ```
 
 to produce
@@ -70,7 +70,7 @@ to produce
 and
 
 ```{r, fig.height=5, fig.width=5}
-accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Mode = 5)
+accuracyComplexityPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1, Mode = 5)
 ```
 
 to produce
@@ -81,7 +81,7 @@ to produce
 It it also possible to zoom into a specific area of the accuracy/complexity plot by using the Xlims parameter.
 
 ```{r, fig.height=5, fig.width=5}
-accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
+accuracyComplexityPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
 ```
 
 ![](images/circle/AccCompCirc1.png)
@@ -89,7 +89,7 @@ accuracyComplexityPlot(Results, Main = "Pincipal Circle", Cex.Main = 1, Xlims = 
 Data can be plotted in 2D using the R built-in functions
 
 ```{r, fig.height=5, fig.width=5}
-plotData2D(Data = simple_circle, PrintGraph = Results,
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
@@ -98,7 +98,7 @@ plotData2D(Data = simple_circle, PrintGraph = Results,
 or plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
 
 ```{r, fig.height=5, fig.width=5}
-plotData2D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = rep(1, nrow(simple_circle)))
 ```
 
@@ -111,9 +111,9 @@ Data can also be plotted in 3D using the functionalities provided by the `rgl` p
 
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE}
-plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
+plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = FALSE,
            GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05,
-           Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
 which will produce an interactive 3d plot. A snapshot of this plot is displayed for reference
@@ -132,9 +132,9 @@ before invoking the `plotData3D` function.
 It is also possible to produce 3D plots using plot.ly.
 
 ```{r, fig.height=5, fig.width=5}
-plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
+plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = rep(1, nrow(simple_circle)),
-           Xlab = "Dimension 1", Ylab = "Dimension 2", Ylab = "Dimension 3")
+           Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
 The result of this command can be seen [here](https://plot.ly/~Alblucac/11/_1-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-graph-/)
@@ -144,10 +144,10 @@ Similarly to 2D, it is possible to export the plot to a web resource.
 To see how different populations distribute among the nodes of the graph by providing a population identifier to each point in the original data (The `Categories` vector). In the following example, three populations are randomly assigned.
 
 ```{r, fig.height=7, fig.width=7}
-Net <- ConstructGraph(Results = Results, DirectionMat = NULL, Thr = 0.05)
-TaxonList <- getTaxonMap(Results = Results, Data = Data)
+Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL, Thr = 0.05)
+TaxonList <- getTaxonMap(Results = Results[[1]], Data = Data)
 
-InfoData <- plotPieNet(Results = Results, Data = simple_circle, NodeSizeMult = 4,
+InfoData <- plotPieNet(Results = Results[[1]], Data = simple_circle, NodeSizeMult = 4,
                        Categories = sample(1:3, nrow(simple_circle), replace = TRUE),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
@@ -165,7 +165,7 @@ Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 20, Method = 'Cu
 ```
 
 ```{r, fig.height=5, fig.width=5}
-plotData2D(Data = simple_circle, PrintGraph = Results,
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
@@ -180,7 +180,7 @@ Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 40, Method = 'De
 ```
 
 ```{r, fig.height=5, fig.width=5}
-plotData2D(Data = simple_tree, PrintGraph = Results,
+plotData2D(Data = simple_tree, PrintGraph = Results[[1]],
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
