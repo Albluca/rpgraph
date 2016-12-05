@@ -52,7 +52,7 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
         # This is probaly a terrible method, but it's rather quick and straightforward
         # Compute the PCA of the two nodes (All the variance will be explained by the 1st component)
         
-        PCARet <- prcomp(rbind(C1, C2), retx = TRUE, center = FALSE, scale. = FALSE)
+        PCARet <- prcomp(rbind(C1, C2), retx = TRUE, center = TRUE, scale. = FALSE)
         
         P1Pos <- PCARet$x["C1","PC1"]
         P2Pos <- PCARet$x["C2","PC1"]
@@ -69,24 +69,35 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
           # Use the rotation matrix obtained by the PCA to project the nodes.
           
           if(length(SelPoints)>1){
-            PointPosFull <- t(t(RestDataMap)) %*% PCARet$rotation
+            PointPosFull <- t(t(RestDataMap) - PCARet$center) %*% PCARet$rotation
           } else {
-            PointPosFull <- t(RestDataMap ) %*% PCARet$rotation
+            PointPosFull <- t(RestDataMap - PCARet$center) %*% PCARet$rotation
           }
           
           # The 1st component will allow me to hortogonally project the points on the lines
           
-          PointPos <- PointPosFull[,"PC1"]
+          # PointPos <- PointPosFull[,"PC1"]
+          
+          PointPos <- PointPosFull
+          PointPos[, -1] <- 0
           
           # Get the position on the line by reversing the PCA
           
-          PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])))
+          # PrjPoints <- t(t(PointPos %*% t(PCARet$rotation[,1])))
+          
+          # t(t(pca$x %*% t(pca$rotation)) + pca$center)
+          
+          PrjPoints <- t(t(PointPos %*% t(PCARet$rotation)) + PCARet$center)
           
           # Plotting stuff to debug
           
           # plot(PrjPoints[,1:2])
           # Nodepoints <- t(t(PCARet$x[,"PC1"] %*% t(PCARet$rotation[,1])) + PCARet$center)
           # points(Nodepoints[,1:2], col='red')
+          
+          # scatterplot3d::scatterplot3d(rbind(PrjPoints[,1:3], C1[1:3], C2[1:3]), color = c(rep("black", nrow(PrjPoints)), "red", "red"))
+          # 
+          # rgl::plot3d(rbind(PrjPoints[,1:3], C1[1:3], C2[1:3]), col = c(rep("black", nrow(PrjPoints)), "red", "red"))
           
           # plot(PrjPoints[,1], PrjPoints[,2], col='red')
           # points(x = PCARet$x[,1], y = PCARet$x[,2])
@@ -168,14 +179,42 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
         
         for (j in 1:length(DistsLists[[i]]$PointsIndices)) {
           if(Inside[j]){
-            # The point is inside a segment. It should get a coordinate
+            # The point is inside a segment. I will compare distances anyway
             
             if(Debug){
               print(paste(j, Inside[j]))
             }
             
-            if(is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
-              # 1) It has not been assigned to a segment before. It gets its coordinate
+            # Has the point been assigned before ?
+            
+            Assign <- TRUE
+            
+            NewDist <- sqrt(
+              sum(
+                (DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+              )
+            )
+            
+            if(!is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
+              # There is a previous assignement. I need to check distances
+              # First of all I'm going to obtain the old distance
+              OldDist <- sqrt(
+                sum(
+                  (PosVector[DistsLists[[i]]$PointsIndices[j], ] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+                )
+              )
+              
+              if(NewDist>OldDist){
+                # New distance is larger I will not reassign the point
+                Assign <- FALSE
+              } else{
+                print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                NewDist <- OldDist
+              }
+              
+            }
+            
+            if(Assign){
               if(Debug){
                 print(paste("Point", DistsLists[[i]]$PointsIndices[j], "assigned to edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
               }
@@ -184,66 +223,50 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
               RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
                 c(DistsLists[[i]]$PointsProjections[j],
                   DistsLists[[i]]$Nodes,
-                  sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
+                  NewDist,
                   SegLen[length(SegLen)])
-            } else {
-              # 2) It has been assigned to a segment before. I need to check a few things
-              if(onEdge[DistsLists[[i]]$PointsIndices[j]] == 0){
-                if(Debug){
-                  print(paste("Point", DistsLists[[i]]$PointsIndices[j], "reassigned from node to edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
-                }
-                # 2a) it's on a node. it gets its coordinate
-                onEdge[DistsLists[[i]]$PointsIndices[j]] <- 1
-                PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
-                RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
-                  c(DistsLists[[i]]$PointsProjections[j],
-                    DistsLists[[i]]$Nodes,
-                    sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
-                    SegLen[length(SegLen)])
-              } else {
-                # 2b) it's on a segment. I need to compare distances
-                NewDist <- sqrt(
-                  sum(
-                    (DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
-                    )
-                  )
-                OldDist <- sqrt(
-                  sum(
-                    (PosVector[DistsLists[[i]]$PointsIndices[j], ] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
-                    )
-                  )
-                if(NewDist<OldDist){
-                  if(Debug){
-                    print(paste("Point", DistsLists[[i]]$PointsIndices[j], "reassigned to edge", paste(DistsLists[[i]]$Nodes, collapse=' '),
-                                "from", paste(RelPosVector[DistsLists[[i]]$PointsIndices[j], c(2,3)], collapse=' ')))
-                  }
-                  print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
-                  PosVector[DistsLists[[i]]$PointsIndices[j], ] <- DistsLists[[i]]$ProjectedCoords[j,]
-                  RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
-                    c(DistsLists[[i]]$PointsProjections[j],
-                      DistsLists[[i]]$Nodes,
-                      NewDist,
-                      SegLen[length(SegLen)])
-                }
-              }
             }
             
+            # I'm done with this point. On to the next one
             next()
           }
           
-          if(!Inside[j] & is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
-            # The point is not part of a different segments.
+          if(!Inside[j]){
+            # The point has not been projected on a segment.
             # It gets the coordinate of a node
             
             if(Debug){
-              print(paste("Point", DistsLists[[i]]$PointsIndices[j], "assigned to a node of edge", paste(DistsLists[[i]]$Nodes, collapse=' ')))
+              print(paste("Point", DistsLists[[i]]$PointsIndices[j], "assigned to node", paste(DistsLists[[i]]$Nodes, collapse=' ')))
             }
             
-            RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
-              c(DistsLists[[i]]$PointsProjections[j],
-                DistsLists[[i]]$Nodes,
-                sqrt(sum((DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2)),
-                SegLen[length(SegLen)])
+            # Has the point been assigned before ?
+            
+            Assign <- TRUE
+            
+            NewDist <- sqrt(
+              sum(
+                (DistsLists[[i]]$ProjectedCoords[j,] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+              )
+            )
+            
+            if(!is.na(onEdge[DistsLists[[i]]$PointsIndices[j]])){
+              # There is a previous assignement. I need to check distances
+              # First of all I'm going to obtain the old distance
+              OldDist <- sqrt(
+                sum(
+                  (PosVector[DistsLists[[i]]$PointsIndices[j], ] - Data[DistsLists[[i]]$PointsIndices[j],1:Dims])^2
+                )
+              )
+              
+              if(NewDist>OldDist){
+                # New distance is larger I will not reassign the point
+                Assign <- FALSE
+              } else{
+                print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                NewDist <- OldDist
+              }
+              
+            }
             
             if(DistsLists[[i]]$PointsProjections[j] == 0){
               if(Debug){
@@ -259,11 +282,19 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
               onEdge[DistsLists[[i]]$PointsIndices[j]] <- 0
               PosVector[DistsLists[[i]]$PointsIndices[j], ] <- Results$Nodes[DistsLists[[i]]$Nodes[2],1:Dims]
             }
+            
+            
+            RelPosVector[DistsLists[[i]]$PointsIndices[j], ] <-
+              c(DistsLists[[i]]$PointsProjections[j],
+                DistsLists[[i]]$Nodes,
+                NewDist,
+                SegLen[length(SegLen)])
+            
+            # I'm done. On to the next point (not really needed, just ofr simmetry)
             next()
           }
           
         }
-        
       }
       
       # for (j in 1:nrow(PosVector)) {

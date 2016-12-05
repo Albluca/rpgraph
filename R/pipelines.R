@@ -433,7 +433,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
                             PathOpt = "Genes.PV", GeneOpt = 10, 
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
                             MinCellExp = 2, VarFilter = 0, LogTranform = TRUE, Centering = FALSE,
-                            Scaling = FALSE, nDim = NULL, nPoints = 20,
+                            Scaling = FALSE, nDim = NULL, DimPrj = NULL, nPoints = 20,
                             Data.Return = FALSE, GeneToPlot = 10, ThrNumb = NULL,
                             Interactive = TRUE) {
   
@@ -596,7 +596,7 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   
   ProjPoints <- projectPoints(Results = Results[[1]], Data = RotatedExpression, TaxonList=TaxonList,
                               UseR = TRUE,
-                              method = 'PCALin', Dims = NULL, Debug = FALSE)
+                              method = 'PCALin', Dims = DimPrj, Debug = FALSE)
   
   Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL)
   
