@@ -483,7 +483,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     PlotData2 <- PrintGraph$Nodes[,1:3]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
-    PlotData4 <- c(rep(.2, length(GroupsLab)), rep(1, nrow(PlotData2)))
+    PlotData4 <- c(rep(NodeSizeMult, length(GroupsLab)), rep(1, nrow(PlotData2)))
     
     PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3, PlotData4)
     
