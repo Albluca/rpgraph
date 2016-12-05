@@ -25,7 +25,7 @@ in the R console. To take advantage of all the feature of the package, it is adv
 
 ```{r, eval=FALSE}
 library(devtools)
-install_github("gabraham/flashpca", dependencies=TRUE
+install_github("gabraham/flashpca", dependencies=TRUE)
 ```
 
 The other packages can be found on CRAN. Radial plots are produced using `ggplot2`.
@@ -155,13 +155,42 @@ resulting into
 
 ![](images/circle/PieChr.png)
 
+It is also possible a step-by-step construction of graphs by providing the `computeElasticPrincipalGraph` function with an initial matrix of vertices and edges between them. For example, create a principla circle with 10 nodes
+
+```{r}
+Data <- simple_circle
+
+Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 10, Method = 'CircleConfiguration')
+
+```
+
+```{r, fig.height=5, fig.width=5}
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Main = "10 Nodes",
+           GroupsLab = factor(rep(1, nrow(simple_circle))), Xlab = "Dimension 1", Ylab = "Dimension 2")
+```
+
+![](images/circle/Plot2D_10.png)
+        
+and then use the principal graph obtained as a starting point to construct a larger one, for example with 20 nodes:
+
+```{r}
+Results_Ext <- computeElasticPrincipalGraph(Data = Data, NumNodes = 20, Method = 'CircleConfiguration',
+                                         NodesPositions = Results[[1]]$Nodes, Edges = Results[[1]]$Edges)
+```
+
+```{r, fig.height=5, fig.width=5}
+plotData2D(Data = simple_circle, PrintGraph = Results_Ext[[1]], Main = "20 Nodes",
+           GroupsLab = factor(rep(1, nrow(simple_circle))), Xlab = "Dimension 1", Ylab = "Dimension 2")
+```
+
+![](images/circle/Plot2D_20.png)
+
 ## Example 2 - Curve
 
 ```{r}
 Data <- simple_circle
 
 Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 20, Method = 'CurveConfiguration')
-
 ```
 
 ```{r, fig.height=5, fig.width=5}
@@ -170,7 +199,7 @@ plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
 ```
 
 
-## Example 3 - tree
+## Example 3 - Tree
 
 ```{r}
 Data <- simple_tree
