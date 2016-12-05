@@ -90,7 +90,7 @@ Data can be plotted in 2D using the R built-in functions
 
 ```{r, fig.height=5, fig.width=5}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
-           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+           GroupsLab = factor(rep(1, nrow(simple_circle))), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
 ![](images/circle/Plot2D.png)
@@ -112,7 +112,7 @@ Data can also be plotted in 3D using the functionalities provided by the `rgl` p
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE}
 plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = FALSE,
-           GroupsLab = rep(1, nrow(simple_circle)), NodeSizeMult = 0.05,
+           GroupsLab = factor(rep(1, nrow(simple_circle))), NodeSizeMult = 0.05,
            Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
@@ -133,7 +133,7 @@ It is also possible to produce 3D plots using plot.ly.
 
 ```{r, fig.height=5, fig.width=5}
 plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
-           GroupsLab = rep(1, nrow(simple_circle)),
+           GroupsLab = factor(rep(1, nrow(simple_circle))),
            Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
 
@@ -148,7 +148,7 @@ Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL, Thr = 0.05)
 TaxonList <- getTaxonMap(Results = Results[[1]], Data = Data)
 
 InfoData <- plotPieNet(Results = Results[[1]], Data = simple_circle, NodeSizeMult = 4,
-                       Categories = sample(1:3, nrow(simple_circle), replace = TRUE),
+                       Categories = factor(sample(1:3, nrow(simple_circle), replace = TRUE)),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
 resulting into
