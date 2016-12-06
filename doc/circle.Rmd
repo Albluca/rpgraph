@@ -2,8 +2,9 @@
 title: "Using rpgraph to study principal circles"
 author: "Luca Albergante (luca.albergante@gmail.com)"
 date: "`r Sys.Date()`"
-always_allow_html: yes
-output: html_document
+output:
+  md_document:
+    variant: markdown_github
 ---
 
 This document describes how to produce a circular principal graph.
@@ -45,7 +46,7 @@ plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
 
 or plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
 
-```{r, fig.height=7, fig.width=7}
+```{r, fig.height=7, fig.width=7, eval=FALSE}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = factor(rep(1, nrow(simple_circle))), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
@@ -75,7 +76,7 @@ before invoking the `plotData3D` function and/or rebooting the system.
 
 It is also possible to produce 3D plots using plot.ly.
 
-```{r, fig.height=7, fig.width=7}
+```{r, fig.height=7, fig.width=7, eval=FALSE}
 plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = factor(rep(1, nrow(simple_circle))),
            Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
