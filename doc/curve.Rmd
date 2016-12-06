@@ -9,7 +9,7 @@ output:
 
 This document describes how to produce a principal curve. Note that some plots are not visible. This is due to Github not liking large html files.
 
-## Building a principal circle
+## Building a principal curve
 
 The `simple_circle` dataset included in the package describes points placed on a three dimensional circle and we can use it to test the usage of principal curves
 
