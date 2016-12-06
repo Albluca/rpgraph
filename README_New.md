@@ -54,18 +54,18 @@ before loading the library. These lines may need to get adjusted depending on th
 Basic functionalities
 ---------------------
 
-The basic functionality of rpgraph is provided by the `computeElasticPrincipalGraph` function, which can be used to cmpute a list of principal graphs. For each principal graph is then possible to obtain debug information (`plotMSDEnergyPlot` and `accuracyComplexityPlot`) ant to plot the result in 2 and 3 dimensions (`plotData2D`, `plotPieNet`, `plotData3D`). The principal graph can also be converted into a igraph network (`ConstructGraph`).
+The basic functionality of rpgraph is provided by the `computeElasticPrincipalGraph` function, which can be used to cmpute a list of principal graphs. For each principal graph is then possible to obtain debug information (`plotMSDEnergyPlot` and `accuracyComplexityPlot`) and to plot the result in 2 and 3 dimensions (`plotData2D`, `plotPieNet`, `plotData3D`). The principal graph can also be converted into a igraph network (`ConstructGraph`).
 
-The points a set of points can be projected on the principal graph with the same alout of dimensions in two different ways. Using `TaxonList` it is possible to obtains a list of points associated with each node of the graph, while using using `projectPoints` is it possible to project the points on the edges. Note taht, expecially in high dimensional spaces, it is possible tha a point is projected on an nodes instead of an edge. More details on this will be available in future updates.
+The points a set of points can be projected on the principal graph with the same number of dimensions in two different ways. Using `TaxonList` it is possible to obtains a list of points associated with each node of the graph, while using `projectPoints` is it possible to project the points on the edges. Note that, expecially in high dimensional spaces, it is possible tha a point is projected on an nodes instead of an edge. More details on this will be available in future updates.
 
 Once the points have been projected on the edges, it is possible to order them on a path using the fucntion `OrderOnPath`. This allows for the derivation of a *pseudo time* across the points.
 
 Examples
 --------
 
-The package contains a few example datasets that can be used to test its functionalities. Specific documents describe the derivation of principal curves, pringipal circles, and principal trees.
+The package contains a few example datasets that can be used to test its functionalities. Specific documents describe the derivation of principal curves, [pringipal circles](doc/circle.md), and principal trees.
 
 Biological applications
 -----------------------
 
-The package will provide functions that can be used to study biological processes with principal graphs. An interface to study cell cycle is currently being tested.
+The package will provide functions that can be used to study biological processes with principal graphs. An interface to study [cell cycle](doc/cellcycle.md) is currently being tested.
