@@ -63,7 +63,7 @@ Once the points have been projected on the edges, it is possible to order them o
 Examples
 --------
 
-The package contains a few example datasets that can be used to test its functionalities. Specific documents describe the derivation of principal curves, [pringipal circles](doc/circle.md), and principal trees.
+The package contains a few example datasets that can be used to test its functionalities. Specific documents describe the derivation of [principal curves](doc/curve.md), [pringipal circles](doc/circle.md), and [principal trees](doc/tree.md).
 
 Biological applications
 -----------------------
