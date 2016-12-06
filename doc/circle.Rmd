@@ -3,9 +3,7 @@ title: "Using rpgraph to study principal circles"
 author: "Luca Albergante (luca.albergante@gmail.com)"
 date: "`r Sys.Date()`"
 always_allow_html: yes
-output:
-  md_document:
-    variant: markdown_github
+output: html_document
 ---
 
 This document describes how to produce a circular principal graph.
@@ -22,32 +20,32 @@ Results <- computeElasticPrincipalGraph(Data = Data, NumNodes = 40, Method = 'Ci
 
 Now `Results` will be a list and the first element will contain the processed principal graph. Diagnostic information can be obtained using
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=7, fig.width=7}
 plotMSDEnergyPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1)
 ```
 
 and
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=7, fig.width=7}
 accuracyComplexityPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1, Mode = 5)
 ```
 
 It it also possible to zoom into a specific area of the accuracy/complexity plot by using the Xlims parameter.
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=7, fig.width=7}
 accuracyComplexityPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
 ```
 
 Data can be plotted in 2D using the R built-in functions
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=7, fig.width=7}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
            GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
 or plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=7, fig.width=7}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = factor(rep(1, nrow(simple_circle))), Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
@@ -59,10 +57,12 @@ The plotly graph can be exported on the web, for example on [plot.ly](http://plo
 Data can also be plotted in 3D using the functionalities provided by the `rgl` package
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE}
-plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = FALSE,
+plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = FALSE,
            GroupsLab = factor(rep(1, nrow(simple_circle))), NodeSizeMult = 0.05,
            Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
+
+The output of this command is not available on this web page due to the working of `rgl`.
 
 For `rgl` to work correctly on MacOS, a proper X11 environment need to be installed. The most common solution is the installation of [XQuartz](http://www.xquartz.org/). If the code crashes R, try using
 
@@ -75,8 +75,8 @@ before invoking the `plotData3D` function and/or rebooting the system.
 
 It is also possible to produce 3D plots using plot.ly.
 
-```{r, fig.height=5, fig.width=5, eval=FALSE}
-plotData3D(Data = simple_circle, PrintGraph = Results, Plot.ly = TRUE,
+```{r, fig.height=7, fig.width=7}
+plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
            GroupsLab = factor(rep(1, nrow(simple_circle))),
            Xlab = "Dimension 1", Ylab = "Dimension 2", Zlab = "Dimension 3")
 ```
@@ -85,11 +85,11 @@ Similarly to 2D, it is possible to export the plot to a web resource.
 
 To see how different populations distribute among the nodes of the graph by providing a population identifier to each point in the original data (The `Categories` vector). In the following example, three populations are randomly assigned.
 
-```{r, fig.height=7, fig.width=7, eval=FALSE}
-Net <- ConstructGraph(Results = Results, DirectionMat = NULL, Thr = 0.05)
-TaxonList <- getTaxonMap(Results = Results, Data = Data)
+```{r, fig.height=7, fig.width=7}
+Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL, Thr = 0.05)
+TaxonList <- getTaxonMap(Results = Results[[1]], Data = Data)
 
-InfoData <- plotPieNet(Results = Results, Data = simple_circle, NodeSizeMult = 4,
-                       Categories = factor(sample(1:3, nrow(simple_circle)), replace = TRUE),
+InfoData <- plotPieNet(Results = Results[[1]], Data = simple_circle, NodeSizeMult = 4,
+                       Categories = factor(sample(1:3, nrow(simple_circle), replace = TRUE)),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
