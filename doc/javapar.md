@@ -99,7 +99,7 @@ Results <- computeElasticPrincipalGraph(Data = simple_tree, NumNodes = 20, Metho
 ``` r
 plotData2D(Data = simple_tree, PrintGraph = Results[[1]] ,
            GroupsLab = rep(1, nrow(simple_tree)),
-           Main = "Pincipal tree (EP = 1 and RP = .001)",
+           Main = "Pincipal tree (EP = .2 and RP = .01)",
            Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
