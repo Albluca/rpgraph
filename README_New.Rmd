@@ -73,8 +73,17 @@ Once the points have been projected on the edges, it is possible to order them o
 
 ## Examples
 
-The package contains a few example datasets that can be used to test its functionalities. Specific documents describe the derivation of principal curves, [pringipal circles](doc/circle.md), and principal trees.
+The package contains a few example datasets that can be used to test its functionalities.
+
+Specific documents describe the derivation of [principal curves](doc/curve.md), [pringipal circles](doc/circle.md), and [principal trees](doc/tree.md).
+
+A tutorial on the step-by-step derivation of a graph is [available](doc/step.md).
+
+A few examples describing how the different topologies can be combined are [available as well](doc/mix.md).
+
+While the default construction parameters are often ok, it is also possible to change the behaviour of the java functions as documented [here](doc/javapar.md).
+
 
 ## Biological applications
 
-The package will provide functions that can be used to study biological processes with principal graphs. An interface to study [cell cycle](doc/cellcycle.md) is currently being tested.
+The package will provide functions that can be used to study biological processes with principal graphs. An interface to study cell cycle is currently being tested and will be available soon.

@@ -1,5 +1,5 @@
 ---
-title: "Using rpgraph to study principal circles"
+title: "Using rpgraph to study principal curves"
 author: "Luca Albergante (luca.albergante@gmail.com)"
 date: "`r Sys.Date()`"
 output:
