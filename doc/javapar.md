@@ -80,15 +80,15 @@ plotData2D(Data = simple_tree, PrintGraph = Results[[1]] ,
 ![](javapar_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 ``` r
-Results <- computeElasticPrincipalGraph(Data = simple_tree, NumNodes = 20, Method = 'DefaultPrincipalTreeConfiguration', EP = 1, RP = .001)
+Results <- computeElasticPrincipalGraph(Data = simple_tree, NumNodes = 20, Method = 'DefaultPrincipalTreeConfiguration', EP = .2, RP = .01)
 ```
 
     ## [1] "Additional parameters found"
     ## $EP
-    ## [1] 1
+    ## [1] 0.2
     ## 
     ## $RP
-    ## [1] 0.001
+    ## [1] 0.01
     ## 
     ## [1] "EP set by user"
     ## [1] "RP set by user"
