@@ -132,8 +132,8 @@ accuracyComplexityPlot <- function(PrintGraph, AdjFactor=1, Main = '', Cex.Main 
 #' @export
 #'
 #' @examples
-plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
-                       NodeSizeMult=1, Col=NULL, CirCol="black", ColLabels = NULL,
+plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, PlotProjections = FALSE, TaxonList = NULL,
+                       NodeSizeMult=1, Col=NULL, CirCol="black", ColLabels = NULL, ProjectionLines = NULL, OnEdgeProjections = NULL,
                        LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
                        Xlab = "PC1", Ylab = "PC2", Plot.ly = FALSE){
   
@@ -141,6 +141,10 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
   
   if(is.null(Col)){
     Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
+  }
+  
+  if(is.null(ProjectionLines)){
+    ProjectionLines <- Col
   }
   
   if(min(PrintGraph$Edges)==0){
@@ -202,9 +206,48 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
     
     text(PrintGraph$Nodes[,1:2], labels = 1:nrow(PrintGraph$Nodes), col = IdCol, pos = 2)
     
-  }
-  
+    if(PlotProjections == "onNodes"){
 
+      if(is.null(TaxonList)){
+        print("TaxonList will be computed. Consider do that separetedly")
+        TaxonList <- getTaxonMap(Results = PrintGraph, Data = Data)
+      }
+
+      for(i in 1:length(TaxonList)){
+
+        if(!is.na(TaxonList[[i]][1])){
+          for(j in 1:length(TaxonList[[i]])){
+            
+            arrows(x0 = PrintGraph$Nodes[i,1], y0 = PrintGraph$Nodes[i,2],
+                   x1 = Data[TaxonList[[i]][j],1], y1 = Data[TaxonList[[i]][j],2], angle = 0, length = 0, col = ProjectionLines[i])
+            
+          }
+        }
+
+      }
+
+    }
+    
+    if(PlotProjections == "onEdges"){
+      
+      if(is.null(OnEdgeProjections)){
+        print("Edge Projections will be computed. Consider do that separetedly")
+        OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
+                                           UseR = TRUE, method = "PCALin")
+      }
+      
+      
+      for(i in 1:length(OnEdgeProjections$OnEdge)){
+        
+        arrows(x0 = OnEdgeProjections$PointsOnEdgesCoords[i,1], y0 = OnEdgeProjections$PointsOnEdgesCoords[i,2],
+               x1 = Data[i,1], y1 = Data[i,2], angle = 0, length = 0, col = ProjectionLines[i])
+
+      }
+      
+    }
+    
+  }
+    
 }
 
 

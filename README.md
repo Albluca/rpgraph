@@ -1,12 +1,18 @@
 # rpgraph R package
 
+The package rpgraph allows constructing, manipulating and analysing principal graphs in R. The code is relies on the Java functions written by [Andrei Zynoviev](https://github.com/auranic) available in the java library [VDAOEngine](https://github.com/auranic/VDAOEngine). The R code interfaces with the java library via the [`rJava` package](https://www.rforge.net/rJava/). A MATLAB implementation of elastic principal graphs developed and mainteined by Andrei Zynoviev is available [here](https://github.com/auranic/Elastic-principal-graphs).
+
 ## An essential overview of elastic principal graphs
 
-[TO DO]
+For an overview of theory and bibliography behind principal graphs see [description provided by Andrei](https://github.com/auranic/Elastic-principal-graphs/wiki). Further details will be introduced in a future update
 
 ## rpgraph prerequisite and installation
 
-The package is currently under development and only available on GitHub. It relises on the Java code written by [Andrei Zynoviev](https://github.com/auranic) available in the java library [VDAOEngine](https://github.com/auranic/VDAOEngine). The R code interfaces with the java library via the [`rJava` package](https://www.rforge.net/rJava/). A MATLAB implementation of elastic principal graphs developed and mainteined by Andrei Zynoviev is available [here](https://github.com/auranic/Elastic-principal-graphs).
+The package is currently under development and only available on GitHub.
+
+
+
+
 
 A functional java virtual machine is necessary for the package to work correctly. It is advisable to install `rJava` from sources, **before** installing `rpgraph`. This can be done by typing
 

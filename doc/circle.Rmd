@@ -7,7 +7,7 @@ output:
     variant: markdown_github
 ---
 
-This document describes how to produce a circular principal graph.
+This document describes how to produce a circular principal graph. Note that some plots are not visibl. This is due to Github not liking large html files.
 
 ## Building a principal circle
 
@@ -54,6 +54,22 @@ plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
 This commands will produce a list of warnings, which can be ignored. Unfortunately there is not an easy way to fix it at this time.
 
 The plotly graph can be exported on the web, for example on [plot.ly](http://plot.ly) using the instruction provided [here](http://plot.ly/r/getting-started/).
+
+It is also possible to have the point ptojections plotted by specifying the correct value for the `PlotProjections` argument. For example it is possible to visualize projections on the nodes by setting `PlotProjections = "onNodes"`
+
+
+```{r, fig.height=7, fig.width=7}
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]], PlotProjections = "onNodes",
+           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+```
+
+and to visualize the projections on edges by typing `PlotProjections = "onEdges"`
+
+```{r, fig.height=7, fig.width=7}
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]], PlotProjections = "onEdges",
+           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+```
+
 
 Data can also be plotted in 3D using the functionalities provided by the `rgl` package
 
