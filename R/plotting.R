@@ -219,7 +219,7 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, PlotPr
           for(j in 1:length(TaxonList[[i]])){
             
             arrows(x0 = PrintGraph$Nodes[i,1], y0 = PrintGraph$Nodes[i,2],
-                   x1 = Data[TaxonList[[i]][j],1], y1 = Data[TaxonList[[i]][j],2], angle = 0, length = 0, col = ProjectionLines[i])
+                   x1 = Data[TaxonList[[i]][j],1], y1 = Data[TaxonList[[i]][j],2], angle = 0, length = 0, col = ProjectionLines[TaxonList[[i]][j]])
             
           }
         }

@@ -37,14 +37,16 @@ It it also possible to zoom into a specific area of the accuracy/complexity plot
 accuracyComplexityPlot(Results[[1]], Main = "Pincipal Circle", Cex.Main = 1, Xlims = c(.97, .98))
 ```
 
-Data can be plotted in 2D using the R built-in functions
+Data can be plotted in 2D using the R built-in functions. Using the optional argument `Col` it is also possible to assign different colors to the different points. Note that the `GroupsLab` is a mandatory argument that associate each point to a category. It must be a facror of length equal to the number of rows of the Data matrix.
 
 ```{r, fig.height=7, fig.width=7}
-plotData2D(Data = simple_circle, PrintGraph = Results[[1]],
-           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+plotData2D(Data = simple_circle, PrintGraph = Results[[1]] ,
+           GroupsLab = rep(1, nrow(simple_circle)), Col = rainbow(4)[sample(1:4, nrow(simple_circle), TRUE)],
+           Main = "Pincipal circle",
+           Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
-or plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
+2D plots can also be done with plotly, which produces an interactive plot. Using plotly interactivelly requires running the code in RStudio (does it?)
 
 ```{r, fig.height=7, fig.width=7, eval=FALSE}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
@@ -55,19 +57,23 @@ This commands will produce a list of warnings, which can be ignored. Unfortunate
 
 The plotly graph can be exported on the web, for example on [plot.ly](http://plot.ly) using the instruction provided [here](http://plot.ly/r/getting-started/).
 
-It is also possible to have the point ptojections plotted by specifying the correct value for the `PlotProjections` argument. For example it is possible to visualize projections on the nodes by setting `PlotProjections = "onNodes"`
+It is also possible to have the point ptojections plotted by specifying the correct value for the `PlotProjections` argument. For example it is possible to visualize projections on the nodes by setting `PlotProjections = "onNodes"`.
 
 
 ```{r, fig.height=7, fig.width=7}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]], PlotProjections = "onNodes",
-           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+           GroupsLab = rep(1, nrow(simple_circle)), Col = rainbow(4)[sample(1:4, nrow(simple_circle), TRUE)],
+           Main = "Pincipal circle with projections on nodes",
+           Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
 and to visualize the projections on edges by typing `PlotProjections = "onEdges"`
 
 ```{r, fig.height=7, fig.width=7}
 plotData2D(Data = simple_circle, PrintGraph = Results[[1]], PlotProjections = "onEdges",
-           GroupsLab = rep(1, nrow(simple_circle)), Xlab = "Dimension 1", Ylab = "Dimension 2")
+           GroupsLab = rep(1, nrow(simple_circle)), Col = rainbow(4)[sample(1:4, nrow(simple_circle), TRUE)],
+           Main = "Pincipal circle with projections on edges",
+           Xlab = "Dimension 1", Ylab = "Dimension 2")
 ```
 
 
@@ -100,7 +106,7 @@ plotData3D(Data = simple_circle, PrintGraph = Results[[1]], Plot.ly = TRUE,
 
 Similarly to 2D, it is possible to export the plot to a web resource.
 
-To see how different populations distribute among the nodes of the graph by providing a population identifier to each point in the original data (The `Categories` vector). In the following example, three populations are randomly assigned.
+To see how different populations distribute among the nodes of the graph by providing a population identifier to each point in the original data (The `Categories` factor). In the following example, three populations are randomly assigned.
 
 ```{r, fig.height=7, fig.width=7}
 Net <- ConstructGraph(Results = Results[[1]], DirectionMat = NULL, Thr = 0.05)
@@ -110,3 +116,10 @@ InfoData <- plotPieNet(Results = Results[[1]], Data = simple_circle, NodeSizeMul
                        Categories = factor(sample(1:3, nrow(simple_circle), replace = TRUE)),
            Graph = Net, TaxonList = TaxonList, LayOut = 'circle', Main = "Pincipal Circle")
 ```
+
+
+
+
+
+
+

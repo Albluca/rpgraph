@@ -208,7 +208,9 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
                 # New distance is larger I will not reassign the point
                 Assign <- FALSE
               } else{
-                print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                if(Debug){
+                  print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                }
                 NewDist <- OldDist
               }
               
@@ -262,7 +264,9 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
                 # New distance is larger I will not reassign the point
                 Assign <- FALSE
               } else{
-                print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                if(Debug){
+                  print(paste("Updating projection of point", DistsLists[[i]]$PointsIndices[j]))
+                }
                 NewDist <- OldDist
               }
               
