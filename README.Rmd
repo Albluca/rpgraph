@@ -77,9 +77,7 @@ The package contains a few example datasets that can be used to test its functio
 
 Specific documents describe the derivation of [principal curves](doc/curve.md), [pringipal circles](doc/circle.md), and [principal trees](doc/tree.md).
 
-A tutorial on the step-by-step derivation of a graph is [available](doc/step.md).
-
-A few examples describing how the different topologies can be combined are [available as well](doc/mix.md).
+Also available are a tutorial on the step-by-step derivation of a graph [available](doc/step.md), a few examples describing how the different topologies can be [combined](doc/mix.md), and a description of the [projection procedure](doc/proj.md).
 
 While the default construction parameters are often ok, it is also possible to change the behaviour of the java functions as documented [here](doc/javapar.md).
 
