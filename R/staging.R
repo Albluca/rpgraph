@@ -1,5 +1,5 @@
 StagingByGenes <- function(StageAssociation, ExpressionMatrix, NormExpressionMatrix,
-                           NodeOnGenesOnPath, UsedPath, NodeSize, NodePower, LowQ, TopQ,
+                           NodeOnGenesOnPath, UsedPath, NodeSize, NodePower, LowQ, TopQ, MaxExp, MinExp,
                            nPoints, MinWit, PercNorm, StagingMode, CutOffVar) {
   
   
@@ -32,7 +32,7 @@ StagingByGenes <- function(StageAssociation, ExpressionMatrix, NormExpressionMat
         StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
         dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
         
-        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ))
+        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, TopQ)) * sign(t(StageTracks) - MinExp)
         
         SignStageMat[SignStageMat <= 0] <- NA
         SignStageMat[SignStageMat > 0] <- Stage
@@ -60,7 +60,8 @@ StagingByGenes <- function(StageAssociation, ExpressionMatrix, NormExpressionMat
       if(length(AvailableGenes)>0){
         StageTracks <- NodeOnGenesOnPath[, AvailableGenes]
         dim(StageTracks) <- c(length(StageTracks)/length(AvailableGenes), length(AvailableGenes))
-        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ))
+        
+        SignStageMat <- sign(t(StageTracks) - apply(StageTracks, 2, quantile, LowQ)) * sign(t(StageTracks) - MaxExp)
         
         SignStageMat[SignStageMat >= 0] <- NA
         SignStageMat[SignStageMat < 0] <- Stage
@@ -143,14 +144,29 @@ StagingByGenes <- function(StageAssociation, ExpressionMatrix, NormExpressionMat
   
   if(sum(SelPenality[4,] == 1) > 0){
     
+    
     ExpandStages <- function(idx) {
       
       ChangeNodes <- Staging$Possibilities[ , SelPenality[3, idx]]
       
       StageVect <- rep(SelPenality[1, idx], ncol(SummaryStageMat))
       
+      tStart <- NA
+      tEnd <- NA
+      
       for (i in 1:(length(ChangeNodes)-1)) {
-        StageVect[ChangeNodes[i]:(ChangeNodes[i+1]-1)] <- SelPenality[1, idx] + i
+        
+        if(!is.na(ChangeNodes[i])){
+          tStart <- ChangeNodes[i]
+        }
+        
+        tEnd <- ChangeNodes[i+1]
+        
+        if(is.na(tStart) | is.na(tEnd)){
+          next()
+        }
+        
+        StageVect[tStart:(tEnd-1)] <- SelPenality[1, idx] + i
       }
       
       StageVect[StageVect>length(ChangeNodes)] <- StageVect[StageVect>length(ChangeNodes)] - length(ChangeNodes)

@@ -54,7 +54,8 @@ ReStage <- function(CCList, StageAssociation, TopQ = .9, LowQ = .1, NodePower = 
     StagingResults <- StagingByGenes(StageAssociation = StageAssociation, ExpressionMatrix = CCList$UnscExpressionData,
                                      NormExpressionMatrix = CCList$ExpressionData, NodeOnGenesOnPath = NodeOnGenesOnPath,
                                      UsedPath = UsedPath, NodeSize = NodeSize, NodePower = NodePower,
-                                     LowQ = LowQ, TopQ = TopQ, nPoints = nrow(CCList$PrinGraph[[1]]$Nodes), MinWit = MinWit,
+                                     LowQ = LowQ, TopQ = TopQ, MaxExp = MaxExp, MinExp = MinExp,
+                                     nPoints = nrow(CCList$PrinGraph[[1]]$Nodes), MinWit = MinWit,
                                      PercNorm = PercNorm, StagingMode = StagingMode, CutOffVar = CutOffVar)
     
     # print(StagingResults)
@@ -428,7 +429,9 @@ Filter <- function(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCel
 #'
 #' @examples
 StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNorm = FALSE,
-                            StageAssociation = NULL, TopQ = .9, LowQ = .1, NodePower = 0, PercNorm = TRUE,
+                            StageAssociation = NULL, TopQ = .9, LowQ = .1,
+                            MaxExp = NULL, MinExp = NULL,
+                            NodePower = 0, PercNorm = TRUE,
                             MinWit = 0, StagingMode = 4,
                             PathOpt = "Genes.PV", GeneOpt = 10, 
                             GeneDetectedFilter = 2.5, GeneCountFilter = 2.5,
@@ -503,9 +506,21 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
   print(paste(sum(GeneFilterBool), "genes will be removed"))
   print(paste(ncol(NormExpressionMatrix), "genes are available for the analysis"))
   
+  
+  if(is.null(MaxExp)){
+    MaxExp <- quantile(as.vector(NormExpressionMatrix), .75)
+  }
+  
+  if(is.null(MinExp)){
+    MinExp <- quantile(as.vector(NormExpressionMatrix), .25)
+  }
+  
+  
   if(LogTranform){
     print("Transforming using pseudo counts (Log10(x+1))")
     NormExpressionMatrix <- log10(NormExpressionMatrix + 1)
+    MaxExp <- log10(MaxExp+1)
+    MinExp <- log10(MinExp+1)
   }
   
   UnScaledNormExpressionMatrix <- NormExpressionMatrix
@@ -669,8 +684,9 @@ StudyCellCycles <- function(ExpressionMatrix, Grouping, GeneSet = NULL, QuantNor
     
     StagingResults <- StagingByGenes(StageAssociation = StageAssociation, ExpressionMatrix = UnScaledNormExpressionMatrix,
                                      NormExpressionMatrix = NormExpressionMatrix, NodeOnGenesOnPath = NodeOnGenesOnPath,
-                                     UsedPath = UsedPath, NodeSize = NodeSize, NodePower = NodePower,
-                                     LowQ = LowQ, TopQ = TopQ, nPoints = nPoints, MinWit = MinWit,
+                                     UsedPath = UsedPath, NodeSize = NodeSize, NodePower = NodePower, 
+                                     LowQ = LowQ, TopQ = TopQ, MaxExp = MaxExp, MinExp = MinExp,
+                                     nPoints = nPoints, MinWit = MinWit,
                                      PercNorm = PercNorm, StagingMode = StagingMode, CutOffVar = CutOffVar)
     
     print(StagingResults)
