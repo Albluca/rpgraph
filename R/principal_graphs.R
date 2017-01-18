@@ -502,7 +502,7 @@ computeElPT <- function(Data, NumNodes, Parameters, NodesPositions = NULL, Edges
 
   report <- read.delim(text = cpg$compute())
 
-  NodeSize <- cpg$graph$countNumberOfPointsProjected(.jcast(cpg$dataset, new.class = "/java/lang/String" ))
+  # NodeSize <- cpg$graph$countNumberOfPointsProjected(.jcast(cpg$dataset, new.class = "/java/lang/String" ))
 
   NodePositions <- cpg$graph$getNodePositions()
   NodePositions <- .jevalArray(NodePositions, simplify = TRUE)
@@ -524,7 +524,7 @@ computeElPT <- function(Data, NumNodes, Parameters, NodesPositions = NULL, Edges
   StructuredReturn$Report <- report
   StructuredReturn$EndTime <- EndTime
   StructuredReturn$StartTime <- StartTime
-  StructuredReturn$NodeSize <- NodeSize
+  # StructuredReturn$NodeSize <- NodeSize
 
   return(StructuredReturn)
 }
@@ -557,7 +557,7 @@ computeElasticPrincipalGraph <- function(Data, NumNodes, NodesPositions = NULL, 
 
   # Reduce dimensions?
 
-  RedDone <- FALSE
+  RedDone <- FALSE 
 
   if(ReduceMethod != 'none'){
 
