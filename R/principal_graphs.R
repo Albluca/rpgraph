@@ -500,14 +500,22 @@ computeElPT <- function(Data, NumNodes, Parameters, NodesPositions = NULL, Edges
   print("")
   print("Running engine")
 
+  cat(".")
   report <- read.delim(text = cpg$compute())
 
-  # NodeSize <- cpg$graph$countNumberOfPointsProjected(.jcast(cpg$dataset, new.class = "/java/lang/String" ))
-
+  cat(".")
+  NodeSize <- cpg$graph$countNumberOfPointsProjected(.jcast(cpg$dataset, new.class = "/java/lang/String" ))
+  
+  cat(".")
   NodePositions <- cpg$graph$getNodePositions()
+  
+  cat(".")
   NodePositions <- .jevalArray(NodePositions, simplify = TRUE)
 
+  cat(".")
   Edges <- cpg$graph$getEdgeTable()
+  
+  cat(".")
   Edges <- .jevalArray(Edges, simplify = TRUE)
 
   EndTime <- Sys.time()
@@ -524,7 +532,7 @@ computeElPT <- function(Data, NumNodes, Parameters, NodesPositions = NULL, Edges
   StructuredReturn$Report <- report
   StructuredReturn$EndTime <- EndTime
   StructuredReturn$StartTime <- StartTime
-  # StructuredReturn$NodeSize <- NodeSize
+  StructuredReturn$NodeSize <- NodeSize
 
   return(StructuredReturn)
 }
