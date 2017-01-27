@@ -817,7 +817,7 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
     Categories <- rep("NoG", nrow(Points))
   }
   
-  if(is.null(UsedPoints=NULL)){
+  if(is.null(UsedPoints)){
     RotatedData <- cbind(Points %*% PCAPrGraph$rotation[,1:2], rep(TRUE, nrow(Points)),
                          as.character(Categories))
   } else {
