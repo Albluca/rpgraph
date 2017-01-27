@@ -1,3 +1,9 @@
+################################################################################
+#
+# Accessory Cell Cycle Staging fucntions to alter previous stagings ------------------------------------------------------
+# The functions a still under development and currently not exported
+#
+################################################################################
 
 #' Title
 #'
@@ -11,7 +17,6 @@
 #' @param StagingMode 
 #'
 #' @return
-#' @export
 #'
 #' @examples
 ReStage <- function(CCList, StageAssociation, TopQ = .9, LowQ = .1, NodePower = 0, PercNorm = TRUE,
@@ -238,7 +243,6 @@ ReStage <- function(CCList, StageAssociation, TopQ = .9, LowQ = .1, NodePower = 
 #' @param nPoints 
 #'
 #' @return
-#' @export
 #'
 #' @examples
 ChangeNodeNumber <- function(CCList, nPoints) {
@@ -399,7 +403,26 @@ Filter <- function(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCel
 
 
 
-# A function to standardize the Initial steps of the analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Main Cell Cycle Staging ------------------------------------------------------
+#
+################################################################################
 
 #' Title
 #'
@@ -1301,5 +1324,484 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Function used to project cells on a circle or lasso ------------------------------------------------------
+#
+################################################################################
+
+
+#' Title
+#'
+#' @param DataSet 
+#' @param GeneSet 
+#' @param OutThr 
+#' @param VarThr 
+#' @param nNodes 
+#' @param Log 
+#' @param Categories 
+#' @param Filter 
+#' @param GraphType 
+#' @param PlanVarLimit 
+#' @param PlanVarLimitIC 
+#' @param MinBranDiff 
+#' @param LassoCircInit 
+#' @param ForceLasso 
+#' @param DipPVThr 
+#' @param MinProlCells 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' 
+ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
+                              Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
+                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25){
+  
+  if(is.null(PlanVarLimitIC)){
+    PlanVarLimitIC <- PlanVarLimit + .5*(1-PlanVarLimit)
+  }
+  
+  DataMat <- t(DataSet[rownames(DataSet) %in% GeneSet, ])
+  
+  DataMat <- DataMat[, apply(DataMat > 0, 2, sum) > 3]
+  
+  # hist(apply(DataMat > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
+  #        freq = TRUE, ylab = "Number of cells")
+  # 
+  # hist(apply(DataMat, 1, sum), main = "Reads per cell", xlab = "Reads count",
+  #        freq = TRUE, ylab = "Number of cells")
+  
+  # hist(apply(DataMat>0, 2, sum), main = "Transcripts per cell", xlab = "Reads count",
+  #          freq = TRUE, ylab = "Number of genes identified")
+  
+  if(Filter){
+    OutExpr <- scater::isOutlier(rowSums(DataMat>0), nmads = OutThr)
+    OutCount <- scater::isOutlier(rowSums(DataMat), nmads = OutThr)
+  } else {
+    OutExpr <- rep(FALSE, nrow(DataMat))
+    OutCount <- rep(FALSE, nrow(DataMat))
+  }
+  
+  if(Log){
+    DataMat <- log10(DataMat[!(OutExpr & OutCount),] + 1)
+  } else {
+    DataMat <- DataMat[!(OutExpr & OutCount),]
+  }
+  Categories <- Categories[!(OutExpr & OutCount)]
+  
+  PCAData <- prcomp(DataMat, retx = TRUE, center=FALSE, scale.=FALSE)
+  
+  if(Filter){
+    Centroid <- colMeans(PCAData$x)
+    
+    Dists <- as.matrix(dist(rbind(Centroid, PCAData$x)))
+    DistFromCent <- Dists[1,-1]
+    
+    PCAFil <- scater::isOutlier(DistFromCent, nmads = OutThr)
+  } else {
+    PCAFil <- rep(FALSE, nrow(DataMat))
+  }
+  
+  if(is.null(Categories)){
+    Categories <- factor(rep("NoG", sum(!PCAFil)))
+  } else {
+    Categories <- Categories[!PCAFil]
+  }
+  
+  DataMat <- DataMat[!PCAFil, ]
+  
+  RankedData <- apply(DataMat, 1, rank)
+  # MedianRank <- apply(RankedData, 2, median)
+  
+  # hist(MedianRank, main = "Gene expression ranking", xlab = "Median rank of gene expression by cell")
+  
+  print("Multimodality detected")
+  print("Estimating most likely proliferative cells")
+  
+  # print("performing k-means")
+  # KM <- kmeans(MedianRank, centers = c(min(MedianRank), max(MedianRank)))
+  # boxplot(MedianRank ~ KM$cluster, ylab = "Median rank of gene expression by cell", xlab = "Cluster ID")
+  # boxplot(MedianRank ~ Categories, ylab = "Median rank of gene expression by cell", xlab = "Category")
+  # 
+  # TB <- table(KM$cluster, Categories)
+  # barplot(TB/rowSums(TB), ylab = "Percentage of cells", xlab = "Category", beside = TRUE, legend.text = 1:2)
+  # 
+  # G0Cell <- which(KM$cluster == 1)
+  # NonG0Cell <- which(KM$cluster == 2)
+  
+  print("Finding most significant multimodality thr")
+  
+  CheckVals <- seq(from = .25, by=.025, to = .75)
+  DipPV <- NULL
+  
+  for(i in CheckVals){
+    print(paste("Looking for dip at", i))
+    DipPV <- c(DipPV, diptest::dip.test(apply(RankedData, 2, quantile, i),
+                                        simulate.p.value = TRUE, B = 5000)$p.value)
+    
+    if(DipPV[length(DipPV)] < DipPVThr){
+      hist(apply(RankedData, 2, quantile, i),
+           main = "Gene expression ranking",
+           xlab = paste("q", i, "of gene expression by cell"))
+    }
+  }
+  
+  
+  IDxs <- which(DipPV < DipPVThr)
+  Association <- NULL
+  
+  for(i in IDxs){
+    
+    print(paste("Using mixed gaussian model on q", CheckVals[i]))
+    
+    MixedModel <- try(mixtools::normalmixEM(apply(RankedData, 2, quantile, CheckVals[i]),
+                                            maxit = 1000, maxrestarts = 100), TRUE)
+    
+    if(!is.list(MixedModel)){
+      next()
+    }
+    
+    if(ncol(MixedModel$posterior) > 2){
+      print("Multiple populations detected, moving on ...")
+      next()
+    }
+    
+    print("Looking for quantile separation")
+    
+    QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
+    QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
+    
+    if( (min(QA) < min(QB) & max(QA) < min(QB)) |
+        (min(QB) < min(QA) & max(QB) < min(QA)) ){
+      
+      print("Quantile separation detected")
+      
+      Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
+      
+      boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+              main=paste(CheckVals[i], "Quantile separated"))
+    } else {
+      
+      boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+              main=paste(CheckVals[i], "Quantile non-separated"))
+      
+    }
+    
+  }
+  
+  
+  if(length(Association)>ncol(RankedData)){
+    NonG0Cell <-  which(apply(Association, 2, min) > .5)
+    G0Cell <-  which(apply(Association, 2, min) <= .5)
+  } else {
+    if(!is.null(Association)){
+      NonG0Cell <- which(Association > .5)
+      G0Cell <- which(Association <= .5)
+    } else {
+      NonG0Cell <- NULL
+      G0Cell <- NULL
+    }
+    
+  }
+  
+  if(!is.null(NonG0Cell)){
+    TB <- rbind(table(Categories[NonG0Cell]), table(Categories[G0Cell]))
+    barplot(TB/rowSums(TB), ylab = "Percentage of cells", xlab = "Category", beside = TRUE,
+            legend.text = c("Strongly Proliferative", "Not strongly proliferative"))
+  }
+  
+  if(length(NonG0Cell)>MinProlCells){
+    
+    print("Using strongly proliferative cells for initial fitting")
+    UseTree <- TRUE
+    
+  } else {
+    
+    print("Unable to find a sufficent number of strongly proliferative cells")
+    
+    NonG0Cell <- 1:nrow(DataMat)
+    UseTree <- FALSE
+    
+  }
+  
+  print("Transforming Data")
+  
+  PCAData <- prcomp(DataMat, retx = TRUE, center=FALSE, scale.=FALSE)
+  ExpVar <- PCAData$sdev^2/sum(PCAData$sdev^2)
+  
+  if(VarThr<1){
+    nDims <- min(which(cumsum(ExpVar) > VarThr))
+  } else {
+    nDims <- max(dim(PCAData$x))
+  }
+  
+  Data <- PCAData$x[, 1:nDims]
+  
+  
+  if(GraphType == 'Lasso') {
+    
+    print("Lasso fitting")
+    print("Fitting initial circle")
+    
+    # Step I - Construct the base circle
+    
+    BasicCircData <- computeElasticPrincipalGraph(Data = Data[NonG0Cell,], NumNodes = 4,
+                                                  Method = 'CircleConfiguration', NodeStep = 1)
+    
+    PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+    PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+    
+    UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes) - 1
+    
+    while(UsedNodes < LassoCircInit & PlanPerc > PlanVarLimitIC){
+      
+      print("Expanding initial circle")
+      
+      # Contiune to add node untill the circle remains planar
+      
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[NonG0Cell,],
+                                                                          NumNodes = UsedNodes + 1,
+                                                                          Method = 'CircleConfiguration',
+                                                                          NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                          Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
+      UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+      
+      PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+      PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+      
+    }
+    
+    if(UseTree | ForceLasso){
+      
+      print("Branching initial circle")
+      
+      # Step II - Construct the initial tree
+      
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data,
+                                                                          NumNodes = UsedNodes + 1,
+                                                                          Method = 'DefaultPrincipalTreeConfiguration',
+                                                                          NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                          Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
+      PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+      PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+      
+      UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes) - 1
+      
+      while(UsedNodes < nNodes & PlanPerc > PlanVarLimit){
+        
+        print("Keep Branching")
+        
+        # Step IIa - keep constructing trees
+        
+        BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data,
+                                                                            NumNodes = UsedNodes + 1,
+                                                                            Method = 'DefaultPrincipalTreeConfiguration',
+                                                                            NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                            Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+        
+        UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+        
+        PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+        PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+        
+        Net <- ConstructGraph(Results = BasicCircData[[length(BasicCircData)]], DirectionMat = NULL, Thr = NULL)
+        if(max(igraph::degree(Net))>2){
+          break()
+        }
+      }
+      
+    }
+    
+    # Step III - Using curves
+    
+    while(UsedNodes < nNodes & PlanPerc > PlanVarLimit){
+      
+      print("Extending circle and branches")
+      
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data,
+                                                                          NumNodes = nrow(BasicCircData[[length(BasicCircData)]]$Nodes)+1,
+                                                                          Method = 'CurveConfiguration',
+                                                                          NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                          Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
+      Net <- ConstructGraph(Results = BasicCircData[[length(BasicCircData)]], DirectionMat = NULL, Thr = NULL)
+      
+      PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+      PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+      
+      UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+      
+      if(sum(igraph::degree(Net)>2)>1){
+        
+        print("Multiple branches detected ... trying to select one")
+        
+        # There are two branhces, this is no good ...
+        # Look for the biggest circle
+        
+        CircSize <- 3
+        
+        while(CircSize < igraph::vcount(Net)){
+          
+          Template <- igraph::graph.ring(n = CircSize, directed = FALSE, mutual = FALSE, circular = TRUE)
+          
+          CircSize <- CircSize + 1
+          
+          CircleInData <- igraph::graph.get.subisomorphisms.vf2(Net, Template)
+          
+          if(length(CircleInData)>0){
+            # We found the cicle
+            
+            EndPoint <- igraph::V(Net)[igraph::degree(Net) == 1]
+            Branches <- igraph::V(Net)[igraph::degree(Net)>2]
+            DistMat <- igraph::distances(Net, EndPoint, Branches)
+            
+            BranchesLen <- apply(DistMat, 1, min)
+            
+            VertToRemove <- NULL
+            
+            if(max(BranchesLen[-which.max(BranchesLen)] - max(BranchesLen)) <= -MinBranDiff){
+              
+              print("Dominating brnach found ... pruning the shortest one")
+              
+              # There is a "dominating"" branch
+              ToKeep <- names(which.max(BranchesLen))
+              for(i in 1:nrow(DistMat)){
+                
+                Source <- rownames(DistMat)[i]
+                if(ToKeep == Source){
+                  next()
+                }
+                
+                Target <- names(which.min(DistMat[i,]))
+                VertToRemove <- c(VertToRemove, names(igraph::get.shortest.paths(Net, from = Target, to = Source)$vpath[[1]][-1]))
+              }
+              
+              PrunedStruct <- BasicCircData[[length(BasicCircData)]]
+              
+              NodesToRem <- as.integer(unlist(lapply(strsplit(VertToRemove, "V_"), "[[", 2)))
+              PrunedStruct$Nodes <- PrunedStruct$Nodes[-NodesToRem, ]
+              PrunedStruct$Edges <-
+                PrunedStruct$Edges[!(PrunedStruct$Edges[,1] %in% NodesToRem | PrunedStruct$Edges[,2] %in% NodesToRem), ]
+              
+              for(VerVal in 1:max(PrunedStruct$Edges)){
+                if(any(PrunedStruct$Edges == VerVal)){
+                  next()
+                } else {
+                  PrunedStruct$Edges[PrunedStruct$Edges>VerVal] <-
+                    PrunedStruct$Edges[PrunedStruct$Edges>VerVal] - 1
+                }
+                
+              }
+              
+              PrunedStruct$Method <- "ManualPruning"
+              
+              BasicCircData[[length(BasicCircData) + 1]] <- PrunedStruct
+              
+              PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+              PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+              
+              UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+              
+              break()
+              
+            }
+            
+            
+          }
+          
+          
+        }
+        
+      }
+      
+    }
+    
+    FitData <- BasicCircData
+  }
+  
+  CombData <- FitData[[length(FitData)]]
+  CombData$Report <- FitData[[1]]$Report
+  
+  for(i in 2:length(FitData)){
+    CombData$Report <- rbind(CombData$Report, FitData[[i]]$Report)
+  }
+  
+  Net <- list()
+  TaxonList <- list()
+  InfoData <- list()
+  ProjPoints <- list()
+  PCAPrGraph <- list()
+  
+  for(i in 1:length(FitData)){
+    
+    print(paste("Constructing accessory structures - round", i))
+    
+    Net[[i]] <- ConstructGraph(Results = FitData[[i]], DirectionMat = NULL, Thr = 0.05)
+    TaxonList[[i]] <- getTaxonMap(Results = FitData[[i]], Data = Data)
+    
+    ProjPoints[[i]] <- projectPoints(Results = FitData[[i]], Data = Data, TaxonList = TaxonList[[i]],
+                                     UseR = TRUE,
+                                     method = 'PCALin', Dims = nDims, Debug = FALSE)
+    
+    InfoData[[i]] <- plotPieNet(Results = FitData[[i]], Data = Data, NodeSizeMult = 4,
+                                Categories = Categories, PlotNet = FALSE,
+                                Graph = Net[[i]], TaxonList = TaxonList[[i]], LayOut =, Main = "Pincipal Circle")
+    
+    PCAPrGraph[[i]] <-  prcomp(FitData[[i]]$Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
+    
+    if(FitData[[i]]$Method == "CircleConfiguration"){
+      RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], 1:nrow(Data) %in% NonG0Cell,
+                           as.character(Categories))
+    } else {
+      RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], rep(TRUE, nrow(Data)),
+                           as.character(Categories))
+    }
+    
+    colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+    
+    RotatedData.DF <- data.frame(RotatedData)
+    RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
+    RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+    RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
+    
+    
+    p <- ggplot(data.frame(RotatedData.DF), aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + geom_point() +
+      geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = aes(x=PC1, y=PC2),
+                 inherit.aes = FALSE) +
+      labs(title = paste("Round", i)) + scale_alpha_discrete("Fitted", range = c(1, .1))
+    
+    for(j in 1:nrow(FitData[[i]]$Edges)){
+      p <- p + geom_path(data = data.frame(PCAPrGraph[[i]]$x[FitData[[i]]$Edges[j,],1:2]),
+                         mapping = aes(x = PC1, y = PC2), inherit.aes = FALSE)
+    }
+    
+    print(p)
+    
+  }
+  
+  
+  # legend("center", legend = levels(Categories), fill = InfoData$ColInfo[1:3], cex = 4)
+  
+  return(list(Data = Data, FiltExp = DataMat, Categories = Categories, PrinGraph = CombData,
+              IntGrahs = FitData, Net = Net, TaxonList = TaxonList, PCAData = PCAData,
+              nDims = nDims, ProjPoints = ProjPoints, PCAPrGraph = PCAPrGraph))
+}
 
   
