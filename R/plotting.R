@@ -313,7 +313,7 @@ computeMetroMapLayout <- function(PrintGraph){
 #'
 #' @examples
 plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL, LayOut = 'nicely', Main="",
-                       ScaleFunction = sqrt, NodeSizeMult = 1, ColCat = NULL,
+                       ScaleFunction = sqrt, NodeSizeMult = 1, ColCat = NULL, PlotNet = TRUE,
                        DirectionMat = NULL, Thr = 0.05, Arrow.size = .5, BiggestComponents = FALSE) {
 
   CatNames <- Categories
@@ -373,78 +373,80 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
   }
 
-
+  Indexes <- as.integer(factor(igraph::V(Net)$name, levels = paste("V_", 1:OrgNetSize, sep='')))
+  
   PieColList <- list()
 
   for(i in 1: length(TaxonCat)){
     PieColList[[i]] <- ColCat
   }
 
-
-  LayOutDONE <- FALSE
-
-  if(LayOut == 'metro'){
-    RestrNodes <- computeMetroMapLayout(Results)
-    LayOutDONE <- TRUE
-  }
-
-  if(LayOut == 'tree'){
-    RestrNodes <- igraph::layout_as_tree(graph = igraph::as.undirected(Net, mode = 'collapse'))
-    LayOutDONE <- TRUE
-  }
-
-  if(LayOut == 'circle'){
-    IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
-    Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
-    if(length(Iso)>0){
-      VerOrder <- igraph::V(Net)[Iso[[1]]]
-      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
-      LayOutDONE <- TRUE
-    } else {
-      Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
-      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = TRUE)
-      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
-      VerOrder <- igraph::V(Net1)[Iso[[1]]]
-      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+  if(PlotNet){
+    
+    LayOutDONE <- FALSE
+    
+    if(LayOut == 'metro'){
+      RestrNodes <- computeMetroMapLayout(Results)
       LayOutDONE <- TRUE
     }
-  }
-
-  if(LayOut == 'circle_line'){
-    IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
-    Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
-    if(length(Iso) > 0){
-      VerOrder <- igraph::V(Net)[Iso[[1]]]
-      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
-      LayOutDONE <- TRUE
-    } else {
-      Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
-      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = FALSE)
-      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
-      VerOrder <- igraph::V(Net1)[Iso[[1]]]
-      RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+    
+    if(LayOut == 'tree'){
+      RestrNodes <- igraph::layout_as_tree(graph = igraph::as.undirected(Net, mode = 'collapse'))
       LayOutDONE <- TRUE
     }
-
+    
+    if(LayOut == 'circle'){
+      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
+      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
+      if(length(Iso)>0){
+        VerOrder <- igraph::V(Net)[Iso[[1]]]
+        RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
+        LayOutDONE <- TRUE
+      } else {
+        Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
+        IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = TRUE)
+        Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
+        VerOrder <- igraph::V(Net1)[Iso[[1]]]
+        RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+        LayOutDONE <- TRUE
+      }
+    }
+    
+    if(LayOut == 'circle_line'){
+      IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
+      Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
+      if(length(Iso) > 0){
+        VerOrder <- igraph::V(Net)[Iso[[1]]]
+        RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder)
+        LayOutDONE <- TRUE
+      } else {
+        Net1 <- ConstructGraph(Results = Results, DirectionMat = NULL)
+        IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net1), directed = FALSE, circular = FALSE)
+        Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net1, mode = 'collapse'), IsoGaph)
+        VerOrder <- igraph::V(Net1)[Iso[[1]]]
+        RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
+        LayOutDONE <- TRUE
+      }
+      
+    }
+    
+    if(LayOut == 'nicely'){
+      RestrNodes <- igraph::layout_nicely(graph = Net)
+      LayOutDONE <- TRUE
+    }
+    
+    if(!LayOutDONE){
+      print(paste("LayOut =", LayOut, "unrecognised"))
+      return(NULL)
+    }
+    
+    igraph::plot.igraph(Net, layout = RestrNodes[,1:2], main = Main,
+                        vertex.shape="pie", vertex.pie.color = PieColList[Indexes],
+                        vertex.pie=TaxonCat[Indexes], vertex.pie.border = NA,
+                        vertex.size=NodeSizeMult*do.call(what = ScaleFunction, list(unlist(lapply(TaxonCatNoNone[Indexes], sum)))),
+                        edge.color = "black", edge.arrow.size = Arrow.size, vertex.label.dist = 0.7, vertex.label.color = "black")
+    
   }
-
-  if(LayOut == 'nicely'){
-    RestrNodes <- igraph::layout_nicely(graph = Net)
-    LayOutDONE <- TRUE
-  }
-
-  if(!LayOutDONE){
-    print(paste("LayOut =", LayOut, "unrecognised"))
-    return(NULL)
-  }
-
-  Indexes <- as.integer(factor(igraph::V(Net)$name, levels = paste("V_", 1:OrgNetSize, sep='')))
-
-  igraph::plot.igraph(Net, layout = RestrNodes[,1:2], main = Main,
-       vertex.shape="pie", vertex.pie.color = PieColList[Indexes],
-       vertex.pie=TaxonCat[Indexes], vertex.pie.border = NA,
-       vertex.size=NodeSizeMult*do.call(what = ScaleFunction, list(unlist(lapply(TaxonCatNoNone[Indexes], sum)))),
-       edge.color = "black", edge.arrow.size = Arrow.size, vertex.label.dist = 0.7, vertex.label.color = "black")
 
   CatReord <- TaxonCat[Indexes]
   CatReordMat <- NULL

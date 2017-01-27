@@ -285,7 +285,7 @@ makeGraph <- function(PrintGraph){
 #' the cells (as row number) that are associted with that particular vertex. The vector equal to NA indicates that no
 #' cells are associated with that vertex;
 #' @export
-getTaxonMap <- function(Results, Data, UseR = FALSE){
+getTaxonMap <- function(Results, Data, UseR = TRUE){
 
   if(UseR){
     
