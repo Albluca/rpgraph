@@ -832,14 +832,14 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
   RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
   RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
   
-  p <- ggplot::ggplot(data.frame(RotatedData.DF), ggplot::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot::geom_point() +
-    ggplot::geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = ggplot::aes(x=PC1, y=PC2),
+  p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot2::geom_point() +
+    ggplot2::geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2),
                        inherit.aes = FALSE) +
-    ggplot::labs(title = paste("Round", i)) + ggplot::scale_alpha_discrete("Fitted", range = c(1, .1))
+    ggplot2::labs(title = paste("Round", i)) + ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
   
   for(j in 1:nrow(Edges)){
-    p <- p + ggplot::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
-                               mapping = ggplot::aes(x = PC1, y = PC2), inherit.aes = FALSE)
+    p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
+                               mapping = ggplot2::aes(x = PC1, y = PC2), inherit.aes = FALSE)
   }
   
   print(p)
