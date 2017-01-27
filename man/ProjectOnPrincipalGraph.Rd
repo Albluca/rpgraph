@@ -5,7 +5,7 @@
 \title{Title}
 \usage{
 ProjectOnPrincipalGraph(Nodes, Edges, Points, UsedPoints = NULL,
-  Categories = NULL)
+  Categories = NULL, Title = "")
 }
 \arguments{
 \item{Nodes}{}

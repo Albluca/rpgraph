@@ -266,41 +266,77 @@ CompareNet <- function(G1, G2, RemNodes = 2, Tries = 10000, DoIso = FALSE) {
 
 # Extract a subpath from the graph ----------------------------------------
 
+
 #' Title
 #'
 #' @param Net 
+#' @param Structure 
+#' @param Circular 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-GetCiclePath <- function(Net) {
+GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
   
-  RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
-  
-  SubIsoProjList <- igraph::graph.get.subisomorphisms.vf2(Net, RefNet)
-  
-  PathsList <- list()
-  
-  for(i in 1:length(SubIsoProjList)){
+  if(Structure == 'auto'){
     
-    BasePath <- SubIsoProjList[[i]]$name
-    BasePath <- c(BasePath, BasePath[1])
+    print('Structure autodetection is not implemented yet')
     
-    PathsList[[i]] <- BasePath
+    return(NULL)
     
   }
   
-  return(PathsList)
+  if(Structure == 'circle'){
+    
+    RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
+    
+    SubIsoProjList <- igraph::graph.get.subisomorphisms.vf2(Net, RefNet)
+    
+    VerNumMat <- t(sapply(1:length(SubIsoProjList), FUN = function(i){unlist(lapply(strsplit(SubIsoProjList[[i]]$name, split = "V_"), "[[", 2))}))
+    VerNumMat <- VerNumMat[!duplicated(VerNumMat[,1]),]
+    
+    VerNameMat <- t(sapply(SubIsoProjList, names))
+    VerNameMat <- VerNameMat[!duplicated(VerNameMat[,1]),]
+    
+    if(Circular){
+      return(list(VertPath = cbind(VerNameMat, VerNameMat[,1]),
+                  VertNumb = cbind(VerNumMat, VerNumMat[,1])))
+    } else {
+      return(list(VertPath = VerNameMat, VertNumb = VerNumMat))
+    }
+    
+    
+    
+  }
   
-}
-
-
-GetLinearPath <- function(Net) {
-  
-}
-
-
-SampleLinearPath <- function(Net) {
+  if(Structure == 'lasso'){
+    
+    # The largest 
+    
+    RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
+    SubIsoProjList <- igraph::graph.get.subisomorphisms.vf2(Net, RefNet)
+    
+    StartNode_Name <- names(which(igraph::degree(Net)==1))
+    StartNode_Numb <- strsplit(StartNode_Name, "V_", TRUE)[[1]][2]
+    
+    WayNode_Name <- names(which(igraph::degree(Net)==3))
+    WayNode_Numb <- strsplit(WayNode_Name, "V_", TRUE)[[1]][2]
+    
+    VerNumMat <- t(sapply(1:length(SubIsoProjList), FUN = function(i){unlist(lapply(strsplit(SubIsoProjList[[i]]$name, split = "V_"), "[[", 2))}))
+    VerNumMat <- VerNumMat[VerNumMat[,1] == StartNode_Numb,]
+    
+    VerNameMat <- t(sapply(SubIsoProjList, names))
+    VerNameMat <- VerNameMat[VerNameMat[,1] == StartNode_Name,]
+    
+    if(Circular){
+      return(list(VertPath = cbind(VerNameMat, WayNode_Name),
+                VertNumb = cbind(VerNumMat, WayNode_Numb)))
+    } else {
+      return(list(VertPath = VerNameMat,
+                  VertNumb = VerNumMat))
+    }
+    
+  }
   
 }
