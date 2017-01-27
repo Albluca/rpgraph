@@ -1794,9 +1794,11 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
     # 
     # print(p)
     if(FitData[[i]]$Method == "CircleConfiguration"){
-      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NonG0Cell, Categories)
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NonG0Cell,
+                              Categories, Title= paste("Round", i))
     } else {
-      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NULL, Categories)
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NULL,
+                              Categories, Title= paste("Round", i))
     }
     
   }
