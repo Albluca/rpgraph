@@ -4,7 +4,7 @@
 \alias{getTaxonMap}
 \title{Project a set of datapoints onto the nodes of principal graph}
 \usage{
-getTaxonMap(Results, Data, UseR = FALSE)
+getTaxonMap(Results, Data, UseR = TRUE)
 }
 \arguments{
 \item{Data}{A matrix containing a set of points with the correct number of dimensions. Each row represent a point}

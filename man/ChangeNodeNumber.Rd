@@ -11,6 +11,9 @@ ChangeNodeNumber(CCList, nPoints)
 
 \item{nPoints}{}
 }
+\value{
+
+}
 \description{
 Title
 }

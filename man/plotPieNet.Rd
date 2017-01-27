@@ -6,8 +6,8 @@
 \usage{
 plotPieNet(Results, Data, Categories, Graph = NULL, TaxonList = NULL,
   LayOut = "nicely", Main = "", ScaleFunction = sqrt, NodeSizeMult = 1,
-  ColCat = NULL, DirectionMat = NULL, Thr = 0.05, Arrow.size = 0.5,
-  BiggestComponents = FALSE)
+  ColCat = NULL, PlotNet = TRUE, DirectionMat = NULL, Thr = 0.05,
+  Arrow.size = 0.5, BiggestComponents = FALSE)
 }
 \arguments{
 \item{Results}{}

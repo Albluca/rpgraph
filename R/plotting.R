@@ -797,6 +797,18 @@ PlotOnPath <- function(PathProjection, GroupsLab){
 
 
 
+#' Title
+#'
+#' @param Nodes 
+#' @param Edges 
+#' @param Points 
+#' @param UsedPoints 
+#' @param Categories 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL){
   
   PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = TRUE, scale. = TRUE)

@@ -5,9 +5,11 @@
 \title{Title}
 \usage{
 plotData2D(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
-  NodeSizeMult = 1, Col = NULL, CirCol = "black", ColLabels = NULL,
-  LineCol = "black", IdCol = "blue", Main = "", Cex.Main = 0.7,
-  Xlab = "PC1", Ylab = "PC2", Plot.ly = FALSE)
+  PlotProjections = FALSE, TaxonList = NULL, NodeSizeMult = 1,
+  Col = NULL, CirCol = "black", ColLabels = NULL,
+  ProjectionLines = NULL, OnEdgeProjections = NULL, LineCol = "black",
+  IdCol = "blue", Main = "", Cex.Main = 0.7, Xlab = "PC1",
+  Ylab = "PC2", Plot.ly = FALSE)
 }
 \arguments{
 \item{Data}{}

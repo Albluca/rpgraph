@@ -24,6 +24,9 @@ ReStage(CCList, StageAssociation, TopQ = 0.9, LowQ = 0.1, NodePower = 0,
 
 \item{StagingMode}{}
 }
+\value{
+
+}
 \description{
 Title
 }
