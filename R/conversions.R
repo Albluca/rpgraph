@@ -2,7 +2,7 @@
 #'
 #' @param SourceOrganism Source organism (currently either "human" or "mouse")
 #' @param TargetOrganism Target organism (currently either "human" or "mouse")
-#' @param Genes Vector of strings containing gene names
+#' @param Genes Vector of strings containing gene names. NAs can be present and will be removed
 #' @param SourceTypes Type of gene names used as input (currently either "Names" or "Ensembl"). Default is "Names".
 #' @param TargetTypes Type of gene names to be returned (currently either "Names" or "Ensembl"). Default is "Names". 
 #' @param HomologyLevel minimal level of homology (1 by default)
