@@ -804,12 +804,20 @@ PlotOnPath <- function(PathProjection, GroupsLab){
 #' @param Points 
 #' @param UsedPoints 
 #' @param Categories 
+#' @param Title 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL, Title=''){
+ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL, Title='',
+                                    PCACenter = TRUE){
+  
+  if(PCACenter){
+    ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
+    Centers <- attr(ScaledNodes, "scaled:center")
+    Nodes <- ScaledNodes
+  }
   
   PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
   VarExp <- PCAPrGraph$sdev[1:2]^2/sum(PCAPrGraph$sdev^2)
@@ -818,11 +826,17 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
     Categories <- rep("NoG", nrow(Points))
   }
   
+  if(PCACenter){
+    Points <- scale(Points, center = Centers, scale = FALSE)
+  }
+  
+  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:2]
+  
   if(is.null(UsedPoints)){
-    RotatedData <- cbind(Points %*% PCAPrGraph$rotation[,1:2], rep(TRUE, nrow(Points)),
+    RotatedData <- cbind(RotatedPoints, rep(TRUE, nrow(Points)),
                          as.character(Categories))
   } else {
-    RotatedData <- cbind(Points %*% PCAPrGraph$rotation[,1:2], 1:nrow(Points) %in% UsedPoints,
+    RotatedData <- cbind(RotatedPoints, 1:nrow(Points) %in% UsedPoints,
                          as.character(Categories))
   }
   
