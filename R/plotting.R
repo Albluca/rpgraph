@@ -775,3 +775,62 @@ PlotOnPath <- function(PathProjection, GroupsLab){
   
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL){
+  
+  PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = TRUE, scale. = TRUE)
+  
+  if(is.null(Categories)){
+    Categories <- rep("NoG", nrow(Points))
+  }
+  
+  if(is.null(UsedPoints=NULL)){
+    RotatedData <- cbind(Points %*% PCAPrGraph$rotation[,1:2], rep(TRUE, nrow(Points)),
+                         as.character(Categories))
+  } else {
+    RotatedData <- cbind(Points %*% PCAPrGraph$rotation[,1:2], 1:nrow(Points) %in% UsedPoints,
+                         as.character(Categories))
+  }
+  
+  colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+  
+  RotatedData.DF <- data.frame(RotatedData)
+  RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
+  RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+  RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
+  
+  p <- ggplot::ggplot(data.frame(RotatedData.DF), ggplot::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot::geom_point() +
+    ggplot::geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = ggplot::aes(x=PC1, y=PC2),
+                       inherit.aes = FALSE) +
+    ggplot::labs(title = paste("Round", i)) + ggplot::scale_alpha_discrete("Fitted", range = c(1, .1))
+  
+  for(j in 1:nrow(Edges)){
+    p <- p + ggplot::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
+                               mapping = ggplot::aes(x = PC1, y = PC2), inherit.aes = FALSE)
+  }
+  
+  print(p)
+  
+}
+

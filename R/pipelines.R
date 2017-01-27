@@ -1766,33 +1766,38 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
     
     PCAPrGraph[[i]] <-  prcomp(FitData[[i]]$Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
     
+    # if(FitData[[i]]$Method == "CircleConfiguration"){
+    #   RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], 1:nrow(Data) %in% NonG0Cell,
+    #                        as.character(Categories))
+    # } else {
+    #   RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], rep(TRUE, nrow(Data)),
+    #                        as.character(Categories))
+    # }
+    # 
+    # colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+    # 
+    # RotatedData.DF <- data.frame(RotatedData)
+    # RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
+    # RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+    # RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
+    # 
+    # 
+    # p <- ggplot(data.frame(RotatedData.DF), aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + geom_point() +
+    #   geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = aes(x=PC1, y=PC2),
+    #              inherit.aes = FALSE) +
+    #   labs(title = paste("Round", i)) + scale_alpha_discrete("Fitted", range = c(1, .1))
+    # 
+    # for(j in 1:nrow(FitData[[i]]$Edges)){
+    #   p <- p + geom_path(data = data.frame(PCAPrGraph[[i]]$x[FitData[[i]]$Edges[j,],1:2]),
+    #                      mapping = aes(x = PC1, y = PC2), inherit.aes = FALSE)
+    # }
+    # 
+    # print(p)
     if(FitData[[i]]$Method == "CircleConfiguration"){
-      RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], 1:nrow(Data) %in% NonG0Cell,
-                           as.character(Categories))
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NonG0Cell, Categories)
     } else {
-      RotatedData <- cbind(Data %*% PCAPrGraph[[i]]$rotation[,1:2], rep(TRUE, nrow(Data)),
-                           as.character(Categories))
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NULL, Categories)
     }
-    
-    colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
-    
-    RotatedData.DF <- data.frame(RotatedData)
-    RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
-    RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
-    RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
-    
-    
-    p <- ggplot(data.frame(RotatedData.DF), aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + geom_point() +
-      geom_point(data = data.frame(PCAPrGraph[[i]]$x[,1:2]), mapping = aes(x=PC1, y=PC2),
-                 inherit.aes = FALSE) +
-      labs(title = paste("Round", i)) + scale_alpha_discrete("Fitted", range = c(1, .1))
-    
-    for(j in 1:nrow(FitData[[i]]$Edges)){
-      p <- p + geom_path(data = data.frame(PCAPrGraph[[i]]$x[FitData[[i]]$Edges[j,],1:2]),
-                         mapping = aes(x = PC1, y = PC2), inherit.aes = FALSE)
-    }
-    
-    print(p)
     
   }
   
@@ -1805,3 +1810,291 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
 }
 
   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Wht is this doing??? ------------------------------------------------------
+#
+################################################################################
+
+
+BinGenExp <- function(ProjData, Quant, NumericPath) {
+  
+  NodeOnGenes <- ProjData$PrinGraph[[1]]$Nodes %*% t(ProjData$PCAData$rotation[,1:ProjData$nDims])
+  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
+  
+  NormGeneOnPath <- t(NodeOnGenesOnPath) - apply(NodeOnGenesOnPath, 2, min)
+  NormGeneOnPath <- NormGeneOnPath /  apply(NormGeneOnPath, 1, max)
+  
+  BinaryMat <- NULL
+  
+  for(i in 1:nrow(NormGeneOnPath)){
+    BinaryMat <- rbind(BinaryMat,
+                       as.integer(cut(NormGeneOnPath[i,], c(-1, quantile(NormGeneOnPath[i,], Quant), 2)))
+    )
+  }
+  
+  rownames(BinaryMat) <- rownames(NormGeneOnPath)
+  BinaryMat <- BinaryMat - 1
+  
+  ToKeep <- which(rowSums(BinaryMat>0)>0)
+  
+  AllGeneNames <- rownames(BinaryMat)
+  AllGeneNames <- AllGeneNames[ToKeep]
+  
+  BinaryMat <- BinaryMat[ToKeep,]
+  
+  Uni <- NULL
+  Multi <- NULL
+  
+  for(i in 1:nrow(BinaryMat)){
+    isUni <- FALSE
+    if(all(BinaryMat[i,min(which(BinaryMat[i,]==1)):max(which(BinaryMat[i,]==1))] == 1)){
+      isUni <- TRUE
+    }
+    if(all(BinaryMat[i,min(which(BinaryMat[i,]==0)):max(which(BinaryMat[i,]==0))] == 0)){
+      isUni <- TRUE
+    }
+    
+    if(isUni){
+      Uni <- c(Uni, i)
+    } else {
+      Multi <- c(Multi, i)
+    }
+  }
+  
+  BinaryMat.Uni <- BinaryMat[Uni,-nNodes-1]
+  BinaryMat.Uni[BinaryMat.Uni == 0] <- NA
+  
+  if(length(Uni)>1){
+    BinaryMat.Uni <- BinaryMat.Uni[order(apply(t(BinaryMat.Uni)*1:nNodes, 2, min, na.rm=TRUE)),]
+    BinaryMat.Uni[is.na(BinaryMat.Uni)]  <- 0
+    HC <- hclust(dist(x = BinaryMat.Uni, method = "bin"))
+    Groups <- cutree(HC, h = 0)
+  } else {
+    BinaryMat.Uni[is.na(BinaryMat.Uni)]  <- 0
+    Groups <- rep(1, nrow(BinaryMat.Uni))
+  }
+  
+  names(Groups) <- 1:length(Groups)
+  
+  BinaryMat.Uni.Unique <- BinaryMat.Uni[as.integer(names(Groups[!duplicated(Groups)])),]
+  
+  dim(BinaryMat.Uni.Unique) <- c(length(BinaryMat.Uni.Unique)/nNodes, nNodes)
+  
+  rownames(BinaryMat.Uni.Unique) <- paste("G", Groups[names(Groups[!duplicated(Groups)])], sep = "")
+  
+  # barplot(table(Groups))
+  
+  BinaryMat.Uni.Unique[BinaryMat.Uni.Unique == 0] <- NA
+  
+  if(length(Multi)>1){
+    BinaryMat.Uni.Unique <- BinaryMat.Uni.Unique[order(apply(t(BinaryMat.Uni.Unique)*1:nNodes, 2, min, na.rm=TRUE)),]
+  }
+  BinaryMat.Uni.Unique[is.na(BinaryMat.Uni.Unique)]  <- 0
+  
+  BinaryMat.Multi <- BinaryMat[Multi,-nNodes-1]
+  BinaryMat.Multi[BinaryMat.Multi == 0] <- NA
+  if(length(Multi)>1){
+    BinaryMat.Multi <- BinaryMat.Multi[order(apply(t(BinaryMat.Multi)*1:nNodes, 2, min, na.rm=TRUE)),]
+  }
+  BinaryMat.Multi[is.na(BinaryMat.Multi)]  <- 0
+  
+  return(list(Groups = Groups, UniMat = BinaryMat.Uni,
+              MultiMat = BinaryMat.Multi, UniMatUnique = BinaryMat.Uni.Unique,
+              NodeOnGenesOnPath = NodeOnGenesOnPath, NormGeneOnPath = NormGeneOnPath))
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Wht is this doing??? ------------------------------------------------------
+#
+################################################################################
+
+
+
+FilterPeaksIter <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Quant, Categories=NULL, MaxCount=20){
+  
+  BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
+                                    GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
+                                    Categories=Categories, Filter = TRUE)
+  
+  PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
+  PlanVar <- cumsum(PCACircVar/sum(PCACircVar))[2]
+  
+  Pattern <- igraph::graph.ring(n = nNodes, directed = FALSE, mutual = FALSE, circular = FALSE)
+  PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = BaseAnalysis$Net, graph2 = Pattern)
+  
+  
+  UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
+  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
+  
+  
+  NumericPath <- c(NumericPath, NumericPath[1])
+  
+  PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph[[1]], Path = NumericPath,
+                                PointProjections = BaseAnalysis$ProjPoints)
+  
+  ExpMats <- BinGenExp(ProjData = BaseAnalysis, Quant = Quant, NumericPath)
+  
+  FiltGenes <- GeneSet
+  
+  rCount <- 0
+  
+  RemovedGenes <- NULL
+  
+  while(length(setdiff(FiltGenes, rownames(ExpMats$UniMat))) > 0){
+    
+    RemovedGenes <- c(RemovedGenes, length(setdiff(FiltGenes, rownames(ExpMats$UniMat))))
+    
+    rCount <- rCount + 1
+    
+    FiltGenes <- rownames(ExpMats$UniMat)
+    
+    BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
+                                      GeneSet = FiltGenes, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
+                                      Categories=Categories, Filter = FALSE)
+    ExpMats <- BinGenExp(ProjData = BaseAnalysis, Quant = Quant, NumericPath)
+    
+    if(rCount > MaxCount){
+      break
+    }
+    
+    
+    PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
+    CircVar = cumsum(PCACircVar/sum(PCACircVar))[2]
+    
+    return(list(FiltGenes = FiltGenes, StructData = BaseAnalysis, CircVar = CircVar, Repetitions = rCount))
+    
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Wht is this doing??? ------------------------------------------------------
+#
+################################################################################
+
+
+FilterVarIter <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, VarTestThr, Categories=NULL, MaxCount=20){
+  
+  BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
+                                    GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
+                                    Categories=Categories, Filter = TRUE)
+  
+  CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+  
+  for(i in 1:nNodes){
+    CellVertexAssociation[BaseAnalysis$TaxonList[[i]]] <- i
+  }
+  
+  NodeOnGenes <- BaseAnalysis$PrinGraph[[1]]$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+  
+  MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
+  DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
+  
+  CombinedMat <- cbind(DiffExpData, BaseAnalysis$FiltExp)
+  
+  VarDiff <- apply(CombinedMat, 2, function(x) {var.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
+                                                         alternative = "greater")$p.value} )
+  KeepGenes <- names(which(VarDiff<VarTestThr))
+  
+  for(rCount in 1:MaxCount){
+    
+    GeneSet <- KeepGenes
+    
+    BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
+                                      GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
+                                      Categories=Categorie, Filter = TRUE)
+    
+    CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+    
+    for(i in 1:nNodes){
+      CellVertexAssociation[BaseAnalysis$TaxonList[[i]]] <- i
+    }
+    
+    NodeOnGenes <- BaseAnalysis$PrinGraph[[1]]$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+    
+    MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
+    DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
+    
+    CombinedMat <- cbind(DiffExpData, BaseAnalysis$FiltExp)
+    
+    VarDiff <- apply(CombinedMat, 2, function(x) {var.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
+                                                           alternative = "greater")$p.value} )
+    KeepGenes <- names(which(VarDiff<VarTestThr))
+    
+    if(length(setdiff(GeneSet, KeepGenes)) == 0){
+      break()
+    }
+    
+  }
+  
+  PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
+  CircVar = cumsum(PCACircVar/sum(PCACircVar))[2]
+  
+  return(list(FiltGenes = KeepGenes, StructData = BaseAnalysis, CircVar = CircVar, Repetitions = rCount))
+  
+}
+
+
+
