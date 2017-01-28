@@ -1760,9 +1760,16 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
                                      UseR = TRUE,
                                      method = 'PCALin', Dims = nDims, Debug = FALSE)
     
-    InfoData[[i]] <- plotPieNet(Results = FitData[[i]], Data = Data, NodeSizeMult = 4,
-                                Categories = Categories, PlotNet = FALSE,
-                                Graph = Net[[i]], TaxonList = TaxonList[[i]], LayOut =, Main = "Pincipal Circle")
+    if(i != length(FitData)){
+      InfoData[[i]] <- plotPieNet(Results = FitData[[i]], Data = Data, NodeSizeMult = 4,
+                                  Categories = Categories, PlotNet = FALSE,
+                                  Graph = Net[[i]], TaxonList = TaxonList[[i]], LayOut =, Main = "Pincipal Circle")
+    } else {
+      InfoData[[i]] <- plotPieNet(Results = FitData[[i]], Data = Data, NodeSizeMult = 4,
+                                  Categories = Categories, PlotNet = TRUE,
+                                  Graph = Net[[i]], TaxonList = TaxonList[[i]], LayOut =, Main = "Pincipal Circle")
+    }
+    
     
     PCAPrGraph[[i]] <-  prcomp(FitData[[i]]$Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
     
