@@ -1370,7 +1370,7 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 #' 
 ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
-                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25){
+                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE){
   
   if(is.null(PlanVarLimitIC)){
     PlanVarLimitIC <- PlanVarLimit + .5*(1-PlanVarLimit)
@@ -1404,7 +1404,7 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
   }
   Categories <- Categories[!(OutExpr & OutCount)]
   
-  PCAData <- prcomp(DataMat, retx = TRUE, center=FALSE, scale.=FALSE)
+  PCAData <- prcomp(DataMat, retx = TRUE, center = PCACenter, scale. = FALSE)
   
   if(Filter){
     Centroid <- colMeans(PCAData$x)
@@ -1794,11 +1794,13 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
     # 
     # print(p)
     if(FitData[[i]]$Method == "CircleConfiguration"){
-      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NonG0Cell,
-                              Categories, Title= paste("Round", i))
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
+                              UsedPoints = NonG0Cell, Categories = Categories, Title= paste("Round", i),
+                              PCACenter = PCAProjCenter)
     } else {
-      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data, UsedPoints = NULL,
-                              Categories, Title= paste("Round", i))
+      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
+                              UsedPoints = NULL, Categories = Categories, Title= paste("Round", i),
+                              PCACenter = PCAProjCenter)
     }
     
   }
