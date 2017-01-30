@@ -1379,6 +1379,10 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   DataMat <- t(DataSet)
   
+  if(is.null(Categories)){
+    Categories <- factor(rep("NoG", nrow(DataMat)))
+  }
+  
   if(!is.null(GeneSet)){
     DataMat <- DataMat[, colnames(DataMat) %in% GeneSet]
   }
@@ -1407,6 +1411,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   } else {
     DataMat <- DataMat[!(OutExpr & OutCount),]
   }
+  
   Categories <- Categories[!(OutExpr & OutCount)]
   
   PCAData <- prcomp(DataMat, retx = TRUE, center = PCACenter, scale. = FALSE)
@@ -1422,13 +1427,8 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     PCAFil <- rep(FALSE, nrow(DataMat))
   }
   
-  if(is.null(Categories)){
-    Categories <- factor(rep("NoG", sum(!PCAFil)))
-  } else {
-    Categories <- Categories[!PCAFil]
-  }
-  
   DataMat <- DataMat[!PCAFil, ]
+  Categories <- Categories[!PCAFil]
   
   RankedData <- apply(DataMat, 1, rank)
   # MedianRank <- apply(RankedData, 2, median)
