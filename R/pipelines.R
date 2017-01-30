@@ -1368,15 +1368,20 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 #'
 #' @examples
 #' 
-ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
+ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
-                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE){
+                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
+                              PlotDebug = FALSE){
   
   if(is.null(PlanVarLimitIC)){
     PlanVarLimitIC <- PlanVarLimit + .5*(1-PlanVarLimit)
   }
   
-  DataMat <- t(DataSet[rownames(DataSet) %in% GeneSet, ])
+  DataMat <- t(DataSet)
+  
+  if(!is.null(GeneSet)){
+    DataMat <- DataMat[, colnames(DataMat) %in% GeneSet]
+  }
   
   DataMat <- DataMat[, apply(DataMat > 0, 2, sum) > 3]
   
@@ -1455,9 +1460,12 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
                                         simulate.p.value = TRUE, B = 5000)$p.value)
     
     if(DipPV[length(DipPV)] < DipPVThr){
-      hist(apply(RankedData, 2, quantile, i),
-           main = "Gene expression ranking",
-           xlab = paste("q", i, "of gene expression by cell"))
+      if(PlotDebug){
+        hist(apply(RankedData, 2, quantile, i),
+             main = "Gene expression ranking",
+             xlab = paste("q", i, "of gene expression by cell"))
+      }
+      
     }
   }
   
@@ -1481,6 +1489,11 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
       next()
     }
     
+    if(ncol(MixedModel$posterior) == 1){
+      print("Only one population detected, moving on ...")
+      next()
+    }
+    
     print("Looking for quantile separation")
     
     QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
@@ -1493,12 +1506,15 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
       
       Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
       
-      boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-              main=paste(CheckVals[i], "Quantile separated"))
+      if(PlotDebug){
+        boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+                main=paste(CheckVals[i], "Quantile separated"))
+      }
     } else {
-      
-      boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-              main=paste(CheckVals[i], "Quantile non-separated"))
+      if(PlotDebug){
+        boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+                main=paste(CheckVals[i], "Quantile non-separated"))
+      }
       
     }
     

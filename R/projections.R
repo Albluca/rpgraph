@@ -473,7 +473,7 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
 #' @examples
 OrderOnPath <- function(PrinGraph, Path, PointProjections){
   
-  # Check that the path is conencted in the principal graph
+  # Check that the path start from 1
   
   if(min(PrinGraph$Edges)==0){
     PrinGraph$Edges <- PrinGraph$Edges + 1
