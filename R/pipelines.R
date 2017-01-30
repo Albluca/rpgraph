@@ -1736,6 +1736,72 @@ ProjectAndCompute <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TR
     FitData <- BasicCircData
   }
   
+  
+  
+  
+  
+  
+  
+  if(GraphType == 'Circle') {
+    
+    print("Circle fitting")
+    print("Fitting initial circle")
+    
+    # Step I - Construct the base circle
+    
+    BasicCircData <- computeElasticPrincipalGraph(Data = Data[NonG0Cell,], NumNodes = 4,
+                                                  Method = 'CircleConfiguration', NodeStep = 1)
+    
+    PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+    PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+    
+    UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes) - 1
+    
+    while(UsedNodes < LassoCircInit & PlanPerc > PlanVarLimitIC){
+      
+      print("Expanding initial circle")
+      
+      # Contiune to add node untill the circle remains planar
+      
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[NonG0Cell,],
+                                                                          NumNodes = UsedNodes + 1,
+                                                                          Method = 'CircleConfiguration',
+                                                                          NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                          Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
+      UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+      
+      PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+      PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+      
+    }
+    
+    # Step II - Using curves
+    
+    while(UsedNodes < nNodes & PlanPerc > PlanVarLimit){
+      
+      print("Extending circle")
+      
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data,
+                                                                          NumNodes = nrow(BasicCircData[[length(BasicCircData)]]$Nodes)+1,
+                                                                          Method = 'CurveConfiguration',
+                                                                          NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
+                                                                          Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
+      Net <- ConstructGraph(Results = BasicCircData[[length(BasicCircData)]], DirectionMat = NULL, Thr = NULL)
+      
+      PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
+      PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
+      
+      UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+      
+    }
+    
+    FitData <- BasicCircData
+  }
+  
+  
+  
   CombData <- FitData[[length(FitData)]]
   CombData$Report <- FitData[[1]]$Report
   
