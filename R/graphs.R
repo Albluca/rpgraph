@@ -339,4 +339,22 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
   }
   
+  
+  if(Structure == 'tail'){
+    
+    # The largest 
+    
+    StartNode_Name <- names(which(igraph::degree(Net)==1))
+    StartNode_Numb <- strsplit(StartNode_Name, "V_", TRUE)[[1]][2]
+    
+    EndNode_Name <- names(which(igraph::degree(Net)==3))
+    EndNode_Numb <- strsplit(EndNode_Name, "V_", TRUE)[[1]][2]
+    
+    VerNameMat <- names(igraph::get.shortest.paths(graph = Net, from = StartNode_Name, to = EndNode_Name)$vpath[[1]])
+    VerNumMat <- unlist(lapply(strsplit(VerNameMat, "V_", TRUE), "[[", 2), use.names = FALSE)
+    
+    return(list(VertPath = VerNameMat, VertNumb = VerNumMat))
+    
+  }
+  
 }
