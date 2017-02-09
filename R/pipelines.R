@@ -1499,6 +1499,11 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
     QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
     
+    if(any(is.na(QA)) | any(is.na(QB))){
+      print("Too few cells in at least one population, moving on ...")
+      next()
+    }
+    
     if( (min(QA) < min(QB) & max(QA) < min(QB)) |
         (min(QB) < min(QA) & max(QB) < min(QA)) ){
       
@@ -1953,7 +1958,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' @export
 #'
 #' @examples
-DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 'lasso', FullExpression, LoesSpan = .1) {
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'lasso', FullExpression, LoesSpan = .1) {
   
   if(Mode == "VarPC"){
     print("Selecting genes with the smallest fluctuations aroud the principal curve")
@@ -1966,10 +1971,35 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
       CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
     
-    NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+    NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
     
-    MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
-    DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
+    # MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
+    # DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
+    
+    SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){t(BaseAnalysis$FiltExp[x,])})
+    
+    if(ExtMode == 1){
+      DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - NodeOnGenes[,as.numeric(names(SplitData)[i])]})
+      DiffData <- lapply(DiffData, function(x){if(dim(x)[1] ==1) return(t(x)) else return(x)})
+      
+      DistComb <- do.call(cbind, DiffData)
+      
+      StatData <- apply(abs(DistComb), 1, median)/apply(NodeOnGenes[,as.numeric(names(SplitData))], 1, median)
+    }
+    
+    
+    if(ExtMode == 2){
+      IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
+      
+      IQRComb <- do.call(cbind, IQRData)
+      
+      IQRoMed <- IQRComb/NodeOnGenes[,as.numeric(names(SplitData))]
+      IQRoMed[!is.finite(IQRoMed)] <- NA
+      
+      StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+      
+    }
+
     
     # CombinedMat <- cbind(DiffExpData, scale(BaseAnalysis$FiltExp, center = TRUE))
     # 
@@ -1979,7 +2009,8 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
     
     # hist( abs(apply(DiffExpData, 2, median)) / apply(MatrixExpansion, 2, median) )
     
-    KeepGenes <- names(which(abs(apply(DiffExpData, 2, median)) / apply(MatrixExpansion, 2, median) < DistillThr))
+    KeepGenes <- names(which(StatData < DistillThr))
+    KeepGenes <- KeepGenes[!is.na(KeepGenes)]
     
     return(KeepGenes)
     
@@ -2077,20 +2108,38 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
     
     FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
     
-    pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
     
-    StatData <- lapply(as.list(1:nrow(FullExpression)), function(i){
-      setTxtProgressBar(pb, value = i)
+    if(ExtMode == 1){
       
-      AGG <- aggregate(unlist(FullExpression[i,]), by=list(CellVertexAssociation), mean)
+      MeanData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else rowMeans(x)})
       
-      Means <- AGG[, 2]
-      names(Means) <- paste(AGG[, 1])
+      DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
       
-      Dists <- Means[paste(CellVertexAssociation)] - unlist(FullExpression[1,])
+      DistComb <- do.call(cbind, DiffData)
+      MeanComb <- do.call(cbind, MeanData)
       
-      return(median(abs(Dists))/median(Means))
-    })
+      StatData <- apply(abs(DistComb), 1, median)/apply(MeanComb, 1, median)
+      
+    }
+    
+    
+    if(ExtMode == 2){
+      
+      IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
+      MedianData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else apply(x, 1, median)})
+      
+      IQRComb <- do.call(cbind, IQRData)
+      MedianComb <- do.call(cbind, MedianData)
+      
+      IQRoMed <- IQRComb/MedianComb
+      IQRoMed[!is.finite(IQRoMed)] <- NA
+      
+      StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+      
+    }
+    
+    
     
     # print("Fitting loess smoothers")
     # 
@@ -2122,7 +2171,8 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
     # PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
     # names(PVVect) <- rownames(FullExpression)
     
-    KeepGenes <- rownames(FullExpression)[StatData > DistillThr]
+    KeepGenes <- rownames(FullExpression)[StatData < DistillThr]
+    KeepGenes <- KeepGenes[!is.na(KeepGenes)]
     
     return(KeepGenes)
     
