@@ -1971,11 +1971,15 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
     MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
     DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
     
-    CombinedMat <- cbind(DiffExpData, scale(BaseAnalysis$FiltExp, center = TRUE))
+    # CombinedMat <- cbind(DiffExpData, scale(BaseAnalysis$FiltExp, center = TRUE))
+    # 
+    # VarDiff <- apply(CombinedMat, 2, function(x) {wilcox.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
+    #                                                        alternative = "less")$p.value} )
+    # KeepGenes <- names(which(VarDiff<DistillThr))
     
-    VarDiff <- apply(CombinedMat, 2, function(x) {wilcox.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
-                                                           alternative = "less")$p.value} )
-    KeepGenes <- names(which(VarDiff<DistillThr))
+    # hist( abs(apply(DiffExpData, 2, median)) / apply(MatrixExpansion, 2, median) )
+    
+    KeepGenes <- names(which(abs(apply(DiffExpData, 2, median)) / apply(MatrixExpansion, 2, median) < DistillThr))
     
     return(KeepGenes)
     
@@ -2049,41 +2053,64 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
   if(Mode == "VarALL"){
     print("Selecting genes with the smallest fluctuations aroud a smoother")
     
-    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
-                               Structure = Topo, Circular = TRUE)
+    # AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+    #                            Structure = Topo, Circular = TRUE)
+    # 
+    # ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+    # 
+    # if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+    #   PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+    # } else {
+    #   PathToUse <- AllPaths$VertNumb
+    # }
+    # 
+    # PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
+    # TotPathLen <- sum(PathProjection$PathLen)
     
-    ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+    CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
     
-    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
-      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
-    } else {
-      PathToUse <- AllPaths$VertNumb
+    nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+    
+    for(i in 1:nNodes){
+      CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
     
-    PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
-    TotPathLen <- sum(PathProjection$PathLen)
-      
     FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
-    
-    print("Fitting loess smoothers")
     
     pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
     
-    AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+    StatData <- lapply(as.list(1:nrow(FullExpression)), function(i){
       setTxtProgressBar(pb, value = i)
-      return(loess(unlist(FullExpression[i,]) ~ PathProjection$PositionOnPath, span = LoesSpan))
+      
+      AGG <- aggregate(unlist(FullExpression[i,]), by=list(CellVertexAssociation), mean)
+      
+      Means <- AGG[, 2]
+      names(Means) <- paste(AGG[, 1])
+      
+      Dists <- Means[paste(CellVertexAssociation)] - unlist(FullExpression[1,])
+      
+      return(median(abs(Dists))/median(Means))
     })
-     
-    AllResiduals <- lapply(lapply(AllSmooth, "[[", "residuals"), var)
     
-    print("Testing the distribution of the residuals")
-    
-    pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
-    
-    AllWT <- lapply(as.list(1:nrow(FullExpression)), function(i){
-      setTxtProgressBar(pb1, value = i)
-      wilcox.test(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])), AllSmooth[[i]]$residuals, alternative = "greater" )
-    })
+    # print("Fitting loess smoothers")
+    # 
+    # pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    # 
+    # AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+    #   setTxtProgressBar(pb, value = i)
+    #   return(loess(unlist(FullExpression[i,]) ~ PathProjection$PositionOnPath, span = LoesSpan))
+    # })
+    #  
+    # AllResiduals <- lapply(lapply(AllSmooth, "[[", "residuals"), var)
+    # 
+    # print("Testing the distribution of the residuals")
+    # 
+    # pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    # 
+    # AllWT <- lapply(as.list(1:nrow(FullExpression)), function(i){
+    #   setTxtProgressBar(pb1, value = i)
+    #   wilcox.test(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])), AllSmooth[[i]]$residuals, alternative = "greater" )
+    # })
     
     # AllMedRat <- lapply(as.list(1:nrow(FullExpression)), function(i){
     #   setTxtProgressBar(pb1, value = i)
@@ -2092,10 +2119,10 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
 
     # AllWT <- AllPV
     
-    PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
-    names(PVVect) <- rownames(FullExpression)
+    # PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
+    # names(PVVect) <- rownames(FullExpression)
     
-    KeepGenes <- names(which(PVVect<DistillThr))
+    KeepGenes <- rownames(FullExpression)[StatData > DistillThr]
     
     return(KeepGenes)
     
