@@ -1371,7 +1371,7 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
                               ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
-                              PlotDebug = FALSE){
+                              PlotDebug = FALSE, PlotIntermediate = FALSE){
   
   if(is.null(PlanVarLimitIC)){
     PlanVarLimitIC <- PlanVarLimit + .5*(1-PlanVarLimit)
@@ -1882,11 +1882,20 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     # }
     # 
     # print(p)
-    if(FitData[[i]]$Method == "CircleConfiguration"){
-      ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
-                              UsedPoints = NonG0Cell, Categories = Categories, Title= paste("Round", i),
-                              PCACenter = PCAProjCenter)
-    } else {
+    
+    if(PlotIntermediate & i != length(FitData)){
+      if(FitData[[i]]$Method == "CircleConfiguration" & GraphType == 'Lasso'){
+        ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
+                                UsedPoints = NonG0Cell, Categories = Categories, Title= paste("Round", i),
+                                PCACenter = PCAProjCenter)
+      } else {
+        ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
+                                UsedPoints = NULL, Categories = Categories, Title= paste("Round", i),
+                                PCACenter = PCAProjCenter)
+      }
+    } 
+    
+    if(i == length(FitData)){
       ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
                               UsedPoints = NULL, Categories = Categories, Title= paste("Round", i),
                               PCACenter = PCAProjCenter)
@@ -1920,274 +1929,265 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 
 
 
-
-
-
 ################################################################################
 #
-# Wht is this doing??? ------------------------------------------------------
+# SelectGene ------------------------------------------------------
 #
 ################################################################################
 
-
-BinGenExp <- function(ProjData, Quant, NumericPath) {
+#' Title
+#'
+#' @param OrderedExpression 
+#' @param Mode 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 'lasso', FullExpression, LoesSpan = .1) {
   
-  NodeOnGenes <- ProjData$PrinGraph[[1]]$Nodes %*% t(ProjData$PCAData$rotation[,1:ProjData$nDims])
-  NodeOnGenesOnPath <- NodeOnGenes[NumericPath,]
-  
-  NormGeneOnPath <- t(NodeOnGenesOnPath) - apply(NodeOnGenesOnPath, 2, min)
-  NormGeneOnPath <- NormGeneOnPath /  apply(NormGeneOnPath, 1, max)
-  
-  BinaryMat <- NULL
-  
-  for(i in 1:nrow(NormGeneOnPath)){
-    BinaryMat <- rbind(BinaryMat,
-                       as.integer(cut(NormGeneOnPath[i,], c(-1, quantile(NormGeneOnPath[i,], Quant), 2)))
-    )
-  }
-  
-  rownames(BinaryMat) <- rownames(NormGeneOnPath)
-  BinaryMat <- BinaryMat - 1
-  
-  ToKeep <- which(rowSums(BinaryMat>0)>0)
-  
-  AllGeneNames <- rownames(BinaryMat)
-  AllGeneNames <- AllGeneNames[ToKeep]
-  
-  BinaryMat <- BinaryMat[ToKeep,]
-  
-  Uni <- NULL
-  Multi <- NULL
-  
-  for(i in 1:nrow(BinaryMat)){
-    isUni <- FALSE
-    if(all(BinaryMat[i,min(which(BinaryMat[i,]==1)):max(which(BinaryMat[i,]==1))] == 1)){
-      isUni <- TRUE
-    }
-    if(all(BinaryMat[i,min(which(BinaryMat[i,]==0)):max(which(BinaryMat[i,]==0))] == 0)){
-      isUni <- TRUE
-    }
-    
-    if(isUni){
-      Uni <- c(Uni, i)
-    } else {
-      Multi <- c(Multi, i)
-    }
-  }
-  
-  BinaryMat.Uni <- BinaryMat[Uni,-nNodes-1]
-  BinaryMat.Uni[BinaryMat.Uni == 0] <- NA
-  
-  if(length(Uni)>1){
-    BinaryMat.Uni <- BinaryMat.Uni[order(apply(t(BinaryMat.Uni)*1:nNodes, 2, min, na.rm=TRUE)),]
-    BinaryMat.Uni[is.na(BinaryMat.Uni)]  <- 0
-    HC <- hclust(dist(x = BinaryMat.Uni, method = "bin"))
-    Groups <- cutree(HC, h = 0)
-  } else {
-    BinaryMat.Uni[is.na(BinaryMat.Uni)]  <- 0
-    Groups <- rep(1, nrow(BinaryMat.Uni))
-  }
-  
-  names(Groups) <- 1:length(Groups)
-  
-  BinaryMat.Uni.Unique <- BinaryMat.Uni[as.integer(names(Groups[!duplicated(Groups)])),]
-  
-  dim(BinaryMat.Uni.Unique) <- c(length(BinaryMat.Uni.Unique)/nNodes, nNodes)
-  
-  rownames(BinaryMat.Uni.Unique) <- paste("G", Groups[names(Groups[!duplicated(Groups)])], sep = "")
-  
-  # barplot(table(Groups))
-  
-  BinaryMat.Uni.Unique[BinaryMat.Uni.Unique == 0] <- NA
-  
-  if(length(Multi)>1){
-    BinaryMat.Uni.Unique <- BinaryMat.Uni.Unique[order(apply(t(BinaryMat.Uni.Unique)*1:nNodes, 2, min, na.rm=TRUE)),]
-  }
-  BinaryMat.Uni.Unique[is.na(BinaryMat.Uni.Unique)]  <- 0
-  
-  BinaryMat.Multi <- BinaryMat[Multi,-nNodes-1]
-  BinaryMat.Multi[BinaryMat.Multi == 0] <- NA
-  if(length(Multi)>1){
-    BinaryMat.Multi <- BinaryMat.Multi[order(apply(t(BinaryMat.Multi)*1:nNodes, 2, min, na.rm=TRUE)),]
-  }
-  BinaryMat.Multi[is.na(BinaryMat.Multi)]  <- 0
-  
-  return(list(Groups = Groups, UniMat = BinaryMat.Uni,
-              MultiMat = BinaryMat.Multi, UniMatUnique = BinaryMat.Uni.Unique,
-              NodeOnGenesOnPath = NodeOnGenesOnPath, NormGeneOnPath = NormGeneOnPath))
-  
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-################################################################################
-#
-# Wht is this doing??? ------------------------------------------------------
-#
-################################################################################
-
-
-
-FilterPeaksIter <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, Quant, Categories=NULL, MaxCount=20){
-  
-  BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
-                                    GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
-                                    Categories=Categories, Filter = TRUE)
-  
-  PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
-  PlanVar <- cumsum(PCACircVar/sum(PCACircVar))[2]
-  
-  Pattern <- igraph::graph.ring(n = nNodes, directed = FALSE, mutual = FALSE, circular = FALSE)
-  PossiblePaths <- igraph::graph.get.subisomorphisms.vf2(graph1 = BaseAnalysis$Net, graph2 = Pattern)
-  
-  
-  UsedPath <- PossiblePaths[[sample(1:length(PossiblePaths), 1)]]$name
-  NumericPath <- as.numeric(unlist(lapply(strsplit(UsedPath, "V_"), "[[", 2)))
-  
-  
-  NumericPath <- c(NumericPath, NumericPath[1])
-  
-  PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph[[1]], Path = NumericPath,
-                                PointProjections = BaseAnalysis$ProjPoints)
-  
-  ExpMats <- BinGenExp(ProjData = BaseAnalysis, Quant = Quant, NumericPath)
-  
-  FiltGenes <- GeneSet
-  
-  rCount <- 0
-  
-  RemovedGenes <- NULL
-  
-  while(length(setdiff(FiltGenes, rownames(ExpMats$UniMat))) > 0){
-    
-    RemovedGenes <- c(RemovedGenes, length(setdiff(FiltGenes, rownames(ExpMats$UniMat))))
-    
-    rCount <- rCount + 1
-    
-    FiltGenes <- rownames(ExpMats$UniMat)
-    
-    BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
-                                      GeneSet = FiltGenes, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
-                                      Categories=Categories, Filter = FALSE)
-    ExpMats <- BinGenExp(ProjData = BaseAnalysis, Quant = Quant, NumericPath)
-    
-    if(rCount > MaxCount){
-      break
-    }
-    
-    
-    PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
-    CircVar = cumsum(PCACircVar/sum(PCACircVar))[2]
-    
-    return(list(FiltGenes = FiltGenes, StructData = BaseAnalysis, CircVar = CircVar, Repetitions = rCount))
-    
-  }
-  
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-################################################################################
-#
-# Wht is this doing??? ------------------------------------------------------
-#
-################################################################################
-
-
-FilterVarIter <- function(DataSet, GeneSet, OutThr, VarThr, nNodes, VarTestThr, Categories=NULL, MaxCount=20){
-  
-  BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
-                                    GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
-                                    Categories=Categories, Filter = TRUE)
-  
-  CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
-  
-  for(i in 1:nNodes){
-    CellVertexAssociation[BaseAnalysis$TaxonList[[i]]] <- i
-  }
-  
-  NodeOnGenes <- BaseAnalysis$PrinGraph[[1]]$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
-  
-  MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
-  DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
-  
-  CombinedMat <- cbind(DiffExpData, BaseAnalysis$FiltExp)
-  
-  VarDiff <- apply(CombinedMat, 2, function(x) {var.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
-                                                         alternative = "greater")$p.value} )
-  KeepGenes <- names(which(VarDiff<VarTestThr))
-  
-  for(rCount in 1:MaxCount){
-    
-    GeneSet <- KeepGenes
-    
-    BaseAnalysis <- ProjectAndCompute(DataSet = DataSet,
-                                      GeneSet = GeneSet, OutThr = OutThr, VarThr = VarThr, nNodes = nNodes,
-                                      Categories=Categorie, Filter = TRUE)
+  if(Mode = "VarPC"){
+    print("Selecting genes with the smallest fluctuations aroud the principal curve")
     
     CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
     
+    nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+    
     for(i in 1:nNodes){
-      CellVertexAssociation[BaseAnalysis$TaxonList[[i]]] <- i
+      CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
     
-    NodeOnGenes <- BaseAnalysis$PrinGraph[[1]]$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+    NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
     
     MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
     DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
     
-    CombinedMat <- cbind(DiffExpData, BaseAnalysis$FiltExp)
+    CombinedMat <- cbind(DiffExpData, scale(BaseAnalysis$FiltExp, center = TRUE))
     
-    VarDiff <- apply(CombinedMat, 2, function(x) {var.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
-                                                           alternative = "greater")$p.value} )
-    KeepGenes <- names(which(VarDiff<VarTestThr))
+    VarDiff <- apply(CombinedMat, 2, function(x) {wilcox.test(x[1:(length(x)/2)], x[((length(x)/2)+1):length(x)],
+                                                           alternative = "less")$p.value} )
+    KeepGenes <- names(which(VarDiff<DistillThr))
     
-    if(length(setdiff(GeneSet, KeepGenes)) == 0){
-      break()
-    }
+    return(KeepGenes)
+    
+    # par(mfcol=c(3,3))
+    # 
+    # for(i in 1:length(KeepGenes)) boxplot(list(DiffExpData[, KeepGenes[i]],
+    #                                            scale(BaseAnalysis$FiltExp[, KeepGenes[i]], center = TRUE)))
     
   }
   
-  PCACircVar <- prcomp(BaseAnalysis$PrinGraph[[1]]$Nodes)$sdev^2
-  CircVar = cumsum(PCACircVar/sum(PCACircVar))[2]
   
-  return(list(FiltGenes = KeepGenes, StructData = BaseAnalysis, CircVar = CircVar, Repetitions = rCount))
+  if(Mode = "PeakPC"){
+    print("Selecting genes with more defined single peaks it the principal curve")
+    
+    CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+    
+    nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+    
+    for(i in 1:nNodes){
+      CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
+    }
+    
+    NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+    
+    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+                               Structure = Topo, Circular = TRUE)
+    
+    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+    } else {
+      PathToUse <- AllPaths$VertNumb
+    }
+    
+    if(Topo == 'lasso'){
+      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
+      PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
+    }
+    
+    NodeOnGenes <- NodeOnGenes[as.integer(PathToUse),]
+    
+    BinMat <- t(NodeOnGenes) >= apply(NodeOnGenes, 2, quantile, DistillThr)
+    
+    BinMat <- BinMat[rowSums(BinMat)>0, ]
+    
+    Uni <- NULL
+    Multi <- NULL
+    
+    for(i in 1:nrow(BinMat)){
+      isUni <- FALSE
+      if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
+        isUni <- TRUE
+      }
+      if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
+        isUni <- TRUE
+      }
+      
+      if(isUni){
+        Uni <- c(Uni, i)
+      } else {
+        Multi <- c(Multi, i)
+      }
+    }
+    
+    # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
+    
+    KeepGenes <- rownames(BinMat)[Uni]
+    
+    return(KeepGenes)
+    
+  }
+  
+  if(Mode = "VarALL"){
+    print("Selecting genes with the smallest fluctuations aroud a smoother")
+    
+    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+                               Structure = Topo, Circular = TRUE)
+    
+    ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+    
+    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+    } else {
+      PathToUse <- AllPaths$VertNumb
+    }
+    
+    PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
+    TotPathLen <- sum(PathProjection$PathLen)
+      
+    FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
+    
+    print("Fitting loess smoothers")
+    
+    pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    
+    AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+      setTxtProgressBar(pb, value = i)
+      return(loess(unlist(FullExpression[i,]) ~ PathProjection$PositionOnPath, span = LoesSpan))
+    })
+     
+    AllResiduals <- lapply(lapply(AllSmooth, "[[", "residuals"), var)
+    
+    print("Testing the distribution of the residuals")
+    
+    pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    
+    AllWT <- lapply(as.list(1:nrow(FullExpression)), function(i){
+      setTxtProgressBar(pb1, value = i)
+      wilcox.test(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])), AllSmooth[[i]]$residuals, alternative = "greater" )
+    })
+    
+    # AllMedRat <- lapply(as.list(1:nrow(FullExpression)), function(i){
+    #   setTxtProgressBar(pb1, value = i)
+    #   median(AllSmooth[[i]]$residuals) - median(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])))
+    # })
+
+    # AllWT <- AllPV
+    
+    PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
+    names(PVVect) <- rownames(FullExpression)
+    
+    KeepGenes <- names(which(PVVect<DistillThr))
+    
+    return(KeepGenes)
+    
+    # i <- 10
+    # 
+    # boxplot(list(
+    #   (unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]) - mean(unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]))),
+    #   AllSmooth[[order(PVVect, decreasing = FALSE)[i]]]$residuals
+    # ), main = sort(PVVect)[i])
+
+  }
+  
+  
+  if(Mode = "PeakALL"){
+    print("Selecting genes with more defined single peaks in the smoother")
+    
+    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+                               Structure = Topo, Circular = TRUE)
+    
+    ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+    
+    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+    } else {
+      PathToUse <- AllPaths$VertNumb
+    }
+    
+    if(Topo == 'lasso'){
+      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
+      PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
+    }
+    
+    PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
+    TotPathLen <- sum(PathProjection$PathLen)
+    
+    FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
+    
+    print("Fitting loess smoothers")
+    
+    pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    
+    X <- PathProjection$PositionOnPath
+    X[X == 0 | X == TotPathLen] <- 0
+    OutPath <- is.na(PathProjection$PositionOnPath)
+    X <- X[!OutPath]
+    X <- c(X-TotPathLen, X, X+TotPathLen)
+    
+    AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+      setTxtProgressBar(pb, value = i)
+
+      Y <- unlist(FullExpression[i,!OutPath])
+      Y <- c(Y, Y, Y)
+      
+      return(loess(Y ~ X, span = LoesSpan))
+    })
+    
+    print("Obtaining smoothed values")
+    
+    pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    
+    AllPos <- cumsum(PathProjection$PathLen)
+    
+    SmootherData <- sapply(as.list(1:length(AllSmooth)), function(i) {
+      setTxtProgressBar(pb1, value = i)
+      predict(AllSmooth[[i]], newdata = data.frame(X=AllPos))
+    })
+    
+    colnames(SmootherData) <- rownames(FullExpression)
+    
+    BinMat <- t(SmootherData) >= apply(SmootherData, 2, quantile, DistillThr)
+    
+    BinMat <- BinMat[rowSums(BinMat)>0 & rowSums(BinMat)<ncol(BinMat), ]
+    
+    Uni <- NULL
+    Multi <- NULL
+    
+    for(i in 1:nrow(BinMat)){
+      isUni <- FALSE
+      if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
+        isUni <- TRUE
+      }
+      if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
+        isUni <- TRUE
+      }
+      
+      if(isUni){
+        Uni <- c(Uni, i)
+      } else {
+        Multi <- c(Multi, i)
+      }
+    }
+    
+    # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
+    
+    KeepGenes <- rownames(BinMat)[Uni]
+    
+    return(KeepGenes)
+    
+  }
+  
+  
   
 }
-
-
-
