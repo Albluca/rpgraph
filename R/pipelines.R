@@ -2051,7 +2051,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-4, Topo = 
   }
   
   if(Mode == "VarALL"){
-    print("Selecting genes with the smallest fluctuations aroud a smoother")
+    print("Selecting genes with the smallest fluctuations")
     
     # AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
     #                            Structure = Topo, Circular = TRUE)
