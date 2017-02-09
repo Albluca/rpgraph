@@ -45,4 +45,3 @@ plotData2D(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
 \description{
 Title
 }
-

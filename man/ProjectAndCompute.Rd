@@ -4,11 +4,12 @@
 \alias{ProjectAndCompute}
 \title{Title}
 \usage{
-ProjectAndCompute(DataSet, GeneSet, OutThr, VarThr, nNodes, Log = TRUE,
-  Categories = NULL, Filter = TRUE, GraphType = "Lasso",
+ProjectAndCompute(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes,
+  Log = TRUE, Categories = NULL, Filter = TRUE, GraphType = "Lasso",
   PlanVarLimit = 0.9, PlanVarLimitIC = NULL, MinBranDiff = 2,
   LassoCircInit = 8, ForceLasso = FALSE, DipPVThr = 0.001,
-  MinProlCells = 25)
+  MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
+  PlotDebug = FALSE, PlotIntermediate = FALSE)
 }
 \arguments{
 \item{DataSet}{}
@@ -49,4 +50,3 @@ Title
 \examples{
 
 }
-

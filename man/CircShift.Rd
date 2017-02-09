@@ -14,4 +14,3 @@ CircShift(x, n = 1)
 \description{
 Title
 }
-

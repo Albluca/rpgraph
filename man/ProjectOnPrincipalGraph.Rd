@@ -5,7 +5,7 @@
 \title{Title}
 \usage{
 ProjectOnPrincipalGraph(Nodes, Edges, Points, UsedPoints = NULL,
-  Categories = NULL, Title = "")
+  Categories = NULL, Title = "", PCACenter = TRUE)
 }
 \arguments{
 \item{Nodes}{}
@@ -17,8 +17,9 @@ ProjectOnPrincipalGraph(Nodes, Edges, Points, UsedPoints = NULL,
 \item{UsedPoints}{}
 
 \item{Categories}{}
+
+\item{Title}{}
 }
 \description{
 Title
 }
-

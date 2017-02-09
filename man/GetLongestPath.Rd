@@ -16,4 +16,3 @@ GetLongestPath(Net, Structure = "auto", Circular = TRUE)
 \description{
 Title
 }
-

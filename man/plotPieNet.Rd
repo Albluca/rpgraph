@@ -41,4 +41,3 @@ plotPieNet(Results, Data, Categories, Graph = NULL, TaxonList = NULL,
 \description{
 Title
 }
-

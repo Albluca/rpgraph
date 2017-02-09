@@ -16,4 +16,3 @@ OrderOnPath(PrinGraph, Path, PointProjections)
 \description{
 Title
 }
-

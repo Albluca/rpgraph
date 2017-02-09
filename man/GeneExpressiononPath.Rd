@@ -25,4 +25,3 @@ GeneExpressiononPath(ExpressionData, TransfData, CellClass = NULL, PrinGraph,
 \description{
 Title
 }
-

@@ -27,4 +27,3 @@ CategoriesOnPath(TransfData, CellClass, PrinGraph, Projections, Path = "ask",
 \description{
 Title
 }
-

@@ -14,4 +14,3 @@ PlotOnPath(PathProjection, GroupsLab)
 \description{
 Title
 }
-

@@ -29,4 +29,3 @@ Filter(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCellExp,
 \description{
 Title
 }
-

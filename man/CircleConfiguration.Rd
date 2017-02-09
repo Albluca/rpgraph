@@ -12,4 +12,3 @@ A parameter set that can be used to construct a circular principal graph
 \description{
 This is an internal function and should not be accessed directly by the user.
 }
-

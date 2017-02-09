@@ -28,4 +28,3 @@ Compute the PCA for a given numeric matrix usig different methodologies
 add(1, 1)
 add(10, 1)
 }
-

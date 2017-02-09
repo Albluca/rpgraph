@@ -57,4 +57,3 @@ StudyCellCycles(ExpressionMatrix, Grouping, GeneSet = NULL,
 \description{
 Title
 }
-

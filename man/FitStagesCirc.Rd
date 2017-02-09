@@ -14,4 +14,3 @@ FitStagesCirc(StageMatrix, NodePenalty, Mode = 1)
 \description{
 Title
 }
-

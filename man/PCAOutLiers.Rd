@@ -21,4 +21,3 @@ PCAOutLiers(DataMatrix, PCAMat = NULL, Dimensions, PCAMode = "base-svd",
 \description{
 Title
 }
-

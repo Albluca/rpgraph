@@ -20,4 +20,3 @@ CheckAndGetPath(Results, Data, Categories, Graph, Path, PathType, Circular)
 \description{
 Title
 }
-

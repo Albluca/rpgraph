@@ -27,4 +27,3 @@ A list describing the principal elastic graph
 \description{
 Compute the elastic principal graph
 }
-

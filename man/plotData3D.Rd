@@ -55,4 +55,3 @@ plotData3D(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt,
 \description{
 Plot dqta in 3 dimensions
 }
-

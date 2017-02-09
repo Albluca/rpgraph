@@ -18,4 +18,3 @@ DistanceStatistics(ExpressionMatrix, NodeOnGenes, NodePos, CellPos)
 \description{
 Title
 }
-

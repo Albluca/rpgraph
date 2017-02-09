@@ -23,4 +23,3 @@ A list describing the principal elastic graph
 The function depends on a working JVM with the VDAOEngine.jar library in the libpath.
 This is an internal function and should not be accessed directly by the user.
 }
-

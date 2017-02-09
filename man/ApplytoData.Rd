@@ -14,4 +14,3 @@ ApplytoData(Data, PCAData)
 \description{
 Title
 }
-

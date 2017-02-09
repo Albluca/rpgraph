@@ -14,4 +14,3 @@ CircCor(XVect, YVect, method = "pearson")
 \description{
 Title
 }
-

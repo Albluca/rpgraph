@@ -21,4 +21,3 @@ projectPoints(Results, Data, TaxonList = NULL, UseR = TRUE,
 \description{
 Project Points on the edges of the graph
 }
-

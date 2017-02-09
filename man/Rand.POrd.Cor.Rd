@@ -18,4 +18,3 @@ Rand.POrd.Cor(OrdVect, Vect1, Vect2, Round)
 \description{
 Sample correlation with partial order
 }
-

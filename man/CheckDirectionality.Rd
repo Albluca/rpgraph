@@ -19,4 +19,3 @@ CheckDirectionality(Data, Results, OrderClass, TaxonList = NULL,
 \description{
 Title
 }
-

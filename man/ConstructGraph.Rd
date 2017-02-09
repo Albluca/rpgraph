@@ -16,4 +16,3 @@ ConstructGraph(Results, DirectionMat = NULL, Thr = 0.05)
 \description{
 Title
 }
-

@@ -16,4 +16,3 @@ plotMSDEnergyPlot(PrintGraph, Main = "", Cex.Main = 0.7)
 \description{
 Title
 }
-
