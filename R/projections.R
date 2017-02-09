@@ -379,7 +379,7 @@ projectPoints <- function(Results, Data, TaxonList = NULL, UseR = TRUE, method =
                 NewDist,
                 SegLen[length(SegLen)])
             
-            # I'm done. On to the next point (not really needed, just ofr simmetry)
+            # I'm done. On to the next point (not really needed, just for simmetry)
             next()
           }
           
