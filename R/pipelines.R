@@ -1958,7 +1958,14 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' @export
 #'
 #' @examples
-DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'lasso', FullExpression, LoesSpan = .1) {
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'lasso', 
+                        FullExpression, Log = FALSE) {
+  
+  if(Log){
+    FullExpression <- log10(FullExpression + 1)
+  } else {
+    FullExpression <- FullExpression
+  }
   
   if(Mode == "VarPC"){
     print("Selecting genes with the smallest fluctuations aroud the principal curve")
@@ -2012,6 +2019,8 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     KeepGenes <- names(which(StatData < DistillThr))
     KeepGenes <- KeepGenes[!is.na(KeepGenes)]
     
+    print(length(KeepGenes), "genes selected")
+    
     return(KeepGenes)
     
     # par(mfcol=c(3,3))
@@ -2021,65 +2030,65 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     
   }
   
-  if(Mode == "PeakPC"){
-    print("Selecting genes with more defined single peaks on the principal curve")
-    
-    CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
-    
-    nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
-    
-    for(i in 1:nNodes){
-      CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
-    }
-    
-    NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
-    
-    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
-                               Structure = Topo, Circular = TRUE)
-    
-    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
-      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
-    } else {
-      PathToUse <- AllPaths$VertNumb
-    }
-    
-    if(Topo == 'lasso'){
-      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
-      PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
-    }
-    
-    NodeOnGenes <- NodeOnGenes[as.integer(PathToUse),]
-    
-    BinMat <- t(NodeOnGenes) >= apply(NodeOnGenes, 2, quantile, DistillThr)
-    
-    BinMat <- BinMat[rowSums(BinMat)>0, ]
-    
-    Uni <- NULL
-    Multi <- NULL
-    
-    for(i in 1:nrow(BinMat)){
-      isUni <- FALSE
-      if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
-        isUni <- TRUE
-      }
-      if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
-        isUni <- TRUE
-      }
-      
-      if(isUni){
-        Uni <- c(Uni, i)
-      } else {
-        Multi <- c(Multi, i)
-      }
-    }
-    
-    # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
-    
-    KeepGenes <- rownames(BinMat)[Uni]
-    
-    return(KeepGenes)
-    
-  }
+  # if(Mode == "PeakPC"){
+  #   print("Selecting genes with more defined single peaks on the principal curve")
+  #   
+  #   CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+  #   
+  #   nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+  #   
+  #   for(i in 1:nNodes){
+  #     CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
+  #   }
+  #   
+  #   NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
+  #   
+  #   AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+  #                              Structure = Topo, Circular = TRUE)
+  #   
+  #   if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+  #     PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+  #   } else {
+  #     PathToUse <- AllPaths$VertNumb
+  #   }
+  #   
+  #   if(Topo == 'Lasso'){
+  #     Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
+  #     PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
+  #   }
+  #   
+  #   NodeOnGenes <- NodeOnGenes[as.integer(PathToUse),]
+  #   
+  #   BinMat <- t(NodeOnGenes) >= apply(NodeOnGenes, 2, quantile, DistillThr)
+  #   
+  #   BinMat <- BinMat[rowSums(BinMat)>0, ]
+  #   
+  #   Uni <- NULL
+  #   Multi <- NULL
+  #   
+  #   for(i in 1:nrow(BinMat)){
+  #     isUni <- FALSE
+  #     if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
+  #       isUni <- TRUE
+  #     }
+  #     if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
+  #       isUni <- TRUE
+  #     }
+  #     
+  #     if(isUni){
+  #       Uni <- c(Uni, i)
+  #     } else {
+  #       Multi <- c(Multi, i)
+  #     }
+  #   }
+  #   
+  #   # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
+  #   
+  #   KeepGenes <- rownames(BinMat)[Uni]
+  #   
+  #   return(KeepGenes)
+  #   
+  # }
   
   if(Mode == "VarALL"){
     print("Selecting genes with the smallest fluctuations")
@@ -2098,6 +2107,8 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     # PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
     # TotPathLen <- sum(PathProjection$PathLen)
     
+    
+    # Find association of cells to nodes of the PG
     CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
     
     nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
@@ -2106,25 +2117,51 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
     
+    # Only look at cells that are present in the principal graph structure
     FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
     
+    # Split the data according to their assocaition to the different nodes
     SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
+    
+    # Only consider nodes with at least three cells projected
+    ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
+    SplitData <- SplitData[ToUse]
     
     if(ExtMode == 1){
       
-      MeanData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else rowMeans(x)})
+      # Get the gene mean for each node
+      MeanData <- lapply(SplitData, function(x){rowMeans(x)})
       
+      # Get the difference between the data and the mean
       DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
       
+      # Put all together into matrices
       DistComb <- do.call(cbind, DiffData)
       MeanComb <- do.call(cbind, MeanData)
       
-      StatData <- apply(abs(DistComb), 1, median)/apply(MeanComb, 1, median)
+      StatData <- apply(abs(DistComb)/MeanComb, 1, mean)
       
     }
     
     
     if(ExtMode == 2){
+      
+      # Get the gene mean for each node
+      MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+      
+      # Get the variance of the data
+      VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
+      
+      # Put all together into matrices
+      VarData <- do.call(cbind, VarData)
+      MeanComb <- do.call(cbind, MeanData)
+      
+      StatData <- apply(VarData/MeanComb, 1, mean)
+      
+    }
+    
+    
+    if(ExtMode == 3){
       
       IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
       MedianData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else apply(x, 1, median)})
@@ -2185,91 +2222,200 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 
   }
   
-  if(Mode == "PeakALL"){
-    print("Selecting genes with more defined single peaks in the smoother")
-    
-    AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
-                               Structure = Topo, Circular = TRUE)
-    
-    ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
-    
-    if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
-      PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
-    } else {
-      PathToUse <- AllPaths$VertNumb
-    }
-    
-    if(Topo == 'lasso'){
-      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
-      PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
-    }
-    
-    PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
-    TotPathLen <- sum(PathProjection$PathLen)
-    
-    FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
-    
-    print("Fitting loess smoothers")
-    
-    pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
-    
-    X <- PathProjection$PositionOnPath
-    X[X == 0 | X == TotPathLen] <- 0
-    OutPath <- is.na(PathProjection$PositionOnPath)
-    X <- X[!OutPath]
-    X <- c(X-TotPathLen, X, X+TotPathLen)
-    
-    AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
-      setTxtProgressBar(pb, value = i)
+  # if(Mode == "PeakALL"){
+  #   print("Selecting genes with more defined single peaks in the smoother")
+  #   
+  #   AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+  #                              Structure = Topo, Circular = TRUE)
+  #   
+  #   ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+  #   
+  #   if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+  #     PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+  #   } else {
+  #     PathToUse <- AllPaths$VertNumb
+  #   }
+  #   
+  #   if(Topo == 'Lasso'){
+  #     Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
+  #     PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
+  #   }
+  #   
+  #   # PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
+  #   # TotPathLen <- sum(PathProjection$PathLen)
+  #   
+  #   FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
+  #   
+  #   CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+  #   
+  #   nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+  #   
+  #   for(i in 1:nNodes){
+  #     CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
+  #   }
+  #   
+  #   SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
+  #   MeanData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else rowMeans(x)})
+  #   MeanComb <- do.call(cbind, MeanData)
+  #   
+  #   ReordedMeans <- MeanComb[,PathToUse[PathToUse %in% colnames(MeanComb)]]
+  #   
+  #   BinMat <- ReordedMeans >= apply(ReordedMeans, 1, quantile, DistillThr)
+  #   
+  #   # print("Fitting loess smoothers")
+  #   # 
+  #   # pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+  #   # 
+  #   # X <- PathProjection$PositionOnPath
+  #   # X[X == 0 | X == TotPathLen] <- 0
+  #   # OutPath <- is.na(PathProjection$PositionOnPath)
+  #   # X <- X[!OutPath]
+  #   # X <- c(X-TotPathLen, X, X+TotPathLen)
+  #   # 
+  #   # AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+  #   #   setTxtProgressBar(pb, value = i)
+  #   # 
+  #   #   Y <- unlist(FullExpression[i,!OutPath])
+  #   #   Y <- c(Y, Y, Y)
+  #   #   
+  #   #   return(loess(Y ~ X, span = LoesSpan))
+  #   # })
+  #   # 
+  #   # print("Obtaining smoothed values")
+  #   # 
+  #   # pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+  #   # 
+  #   # AllPos <- cumsum(PathProjection$PathLen)
+  #   # 
+  #   # SmootherData <- sapply(as.list(1:length(AllSmooth)), function(i) {
+  #   #   setTxtProgressBar(pb1, value = i)
+  #   #   predict(AllSmooth[[i]], newdata = data.frame(X=AllPos))
+  #   # })
+  #   # 
+  #   # colnames(SmootherData) <- rownames(FullExpression)
+  # 
+  #   # BinMat <- t(SmootherData) >= apply(SmootherData, 2, quantile, DistillThr)
+  #   
+  #   BinMat <- BinMat[rowSums(BinMat)>0 & rowSums(BinMat)<ncol(BinMat), ]
+  #   
+  #   Uni <- NULL
+  #   Multi <- NULL
+  #   UniBroad <- NULL
+  #   
+  #   for(i in 1:nrow(BinMat)){
+  #     isUni <- FALSE
+  #     if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
+  #       isUni <- TRUE
+  #     }
+  #     if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
+  #       isUni <- TRUE
+  #     }
+  #     
+  #     if(isUni){
+  #       Uni <- c(Uni, i)
+  #       UniBroad <- c(UniBroad, sum(BinMat[i,]))
+  #     } else {
+  #       Multi <- c(Multi, i)
+  #     }
+  #   }
+  #   
+  #   # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
+  #   
+  #   KeepGenes <- rownames(BinMat)[Uni[UniBroad <= RatioPeaks*ncol(BinMat)]]
+  #   
+  #   return(KeepGenes)
+  #   
+  # }
+  
+}
 
-      Y <- unlist(FullExpression[i,!OutPath])
-      Y <- c(Y, Y, Y)
-      
-      return(loess(Y ~ X, span = LoesSpan))
-    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# Converge on genes ------------------------------------------------------
+#
+################################################################################
+
+
+#' Title
+#'
+#' @param ExpData 
+#' @param StartGeneSet 
+#' @param Mode 
+#' @param DistillThr 
+#' @param ExtMode 
+#' @param StopCrit 
+#' @param OutThr 
+#' @param nNodes 
+#' @param VarThr 
+#' @param Categories 
+#' @param GraphType 
+#' @param PlanVarLimit 
+#' @param PlanVarLimitIC 
+#' @param ForceLasso 
+#' @param LassoCircInit 
+#' @param MinBranDiff 
+#' @param Log 
+#' @param Filter 
+#' @param MinProlCells 
+#' @param DipPVThr 
+#' @param PCACenter 
+#' @param PCAProjCenter 
+#' @param PlotIntermediate 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99,
+                            OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL,
+                            GraphType = 'Circle', PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
+                            LassoCircInit = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
+                            DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE) {
+  
+  StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = StartGeneSet, OutThr = OutThr, nNodes = nNodes,
+                                         VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
+                                         PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
+                                         MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                         PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate)
+  
+  FilteredGenes <- StartGeneSet
+  Converged <- FALSE
+  
+  while(!Converged){
     
-    print("Obtaining smoothed values")
+    OldFiltered <- FilteredGenes
     
-    pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+    FilteredGenes <- DistillGene(BaseAnalysis = StartStruct,
+                                 Mode = Mode, DistillThr = DistillThr, ExtMode = ExtMode,
+                                 Topo = GraphType, FullExpression = ExpData, Log = Log)
     
-    AllPos <- cumsum(PathProjection$PathLen)
+    GeneNumber <- c(GeneNumber, length(FilteredGenes))
     
-    SmootherData <- sapply(as.list(1:length(AllSmooth)), function(i) {
-      setTxtProgressBar(pb1, value = i)
-      predict(AllSmooth[[i]], newdata = data.frame(X=AllPos))
-    })
-    
-    colnames(SmootherData) <- rownames(FullExpression)
-    
-    BinMat <- t(SmootherData) >= apply(SmootherData, 2, quantile, DistillThr)
-    
-    BinMat <- BinMat[rowSums(BinMat)>0 & rowSums(BinMat)<ncol(BinMat), ]
-    
-    Uni <- NULL
-    Multi <- NULL
-    
-    for(i in 1:nrow(BinMat)){
-      isUni <- FALSE
-      if(all(BinMat[i,min(which(BinMat[i,])):max(which(BinMat[i,]))])){
-        isUni <- TRUE
-      }
-      if(all(!BinMat[i,min(which(!BinMat[i,])):max(which(!BinMat[i,]))])){
-        isUni <- TRUE
-      }
-      
-      if(isUni){
-        Uni <- c(Uni, i)
-      } else {
-        Multi <- c(Multi, i)
-      }
+    if(length(intersect(FilteredGenes, OldFiltered))/length(OldFiltered) > StopCrit){
+      return(FilteredGenes)
     }
     
-    # gplots::heatmap.2(1*(BinMat), Colv = FALSE, dendrogram = 'row')
-    
-    KeepGenes <- rownames(BinMat)[Uni]
-    
-    return(KeepGenes)
+    StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
+                                     VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
+                                     PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
+                                     MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate)
     
   }
   
 }
+
+

@@ -2,24 +2,29 @@
 % Please edit documentation in R/pipelines.R
 \name{DistillGene}
 \alias{DistillGene}
-\title{Title}
+\title{Filter Gene saccording to predefined properties}
 \usage{
-DistillGene(BaseAnalysis, Mode = "VarPC", DistillThr = 1e-04,
-  Topo = "lasso", FullExpression, LoesSpan = 0.1)
+DistillGene(BaseAnalysis, Mode = "VarPC", DistillThr = 0.2, ExtMode = 1,
+  Topo = "lasso", FullExpression, Log = FALSE)
 }
 \arguments{
-\item{BaseAnalysis}{}
+\item{BaseAnalysis}{a strure returned by Project and Compute}
 
-\item{Mode}{}
+\item{Mode}{scalar, a string indicating the algorithm to use. I can be
+"VarPC" (Variance-based on genes the genes used to contruct the principal curve)
+"PeakPC" (Peack-based on genes the genes used to contruct the principal curve)
+"VarALL" (Variance-based on all genes)
+"PeakALL" (Peack-based on all genes)}
 
-\item{DistillThr}{}
+\item{DistillThr}{numeric, a threshold used by the algorithm. It is a p-value for variance based selection
+and a quantile for peack based selection}
 
-\item{Topo}{}
+\item{Topo}{string, a string describing the topology of the principal curve. It can be 'lasso' or 'circle'}
 
-\item{FullExpression}{}
+\item{FullExpression}{the matrix containing the full expression data (note that sample filtered during the construction of the principal graph will be removed)}
 
-\item{LoesSpan}{}
+\item{LoesSpan}{the span parameter to use with the loes function}
 }
 \description{
-Title
+Filter Gene saccording to predefined properties
 }
