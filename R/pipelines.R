@@ -1967,9 +1967,11 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     FullExpression <- FullExpression
   }
   
-  if(Mode == "VarPC"){
-    print("Selecting genes with the smallest fluctuations aroud the principal curve")
+  
+  if(Mode == "VarPC" | Mode == "VarALL"){
+    print("Selecting genes with small fluctuations aroud the principal curve")
     
+    # Find association of cells to nodes of the PG
     CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
     
     nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
@@ -1978,35 +1980,132 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
     
-    NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
-    
-    # MatrixExpansion <- NodeOnGenes[CellVertexAssociation, ]
-    # DiffExpData <- BaseAnalysis$FiltExp - MatrixExpansion
-    
-    SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){t(BaseAnalysis$FiltExp[x,])})
-    
-    if(ExtMode == 1){
-      DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - NodeOnGenes[,as.numeric(names(SplitData)[i])]})
-      DiffData <- lapply(DiffData, function(x){if(dim(x)[1] ==1) return(t(x)) else return(x)})
+    if(Mode == "VarALL"){
       
-      DistComb <- do.call(cbind, DiffData)
+      # Only look at cells that are present in the principal graph structure
+      FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
       
-      StatData <- apply(abs(DistComb), 1, median)/apply(NodeOnGenes[,as.numeric(names(SplitData))], 1, median)
-    }
-    
-    
-    if(ExtMode == 2){
-      IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
+      # Split the data according to their assocaition to the different nodes
+      SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
       
-      IQRComb <- do.call(cbind, IQRData)
+    } else {
       
-      IQRoMed <- IQRComb/NodeOnGenes[,as.numeric(names(SplitData))]
-      IQRoMed[!is.finite(IQRoMed)] <- NA
-      
-      StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+      # Split the data according to their assocaition to the different nodes
+      SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){t(BaseAnalysis$FiltExp)[,x]})
       
     }
 
+    # Only consider nodes with at least three cells projected
+    ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
+    SplitData <- SplitData[ToUse]
+    
+    if(Mode == "VarPC"){
+    
+      NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
+      NodeOnGenes <- NodeOnGenes[,as.numeric(ToUse)]
+      
+      if(ExtMode == 1){
+
+            # Get the difference between the data and the PC value
+            DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - NodeOnGenes[,i]})
+
+            # Put all together into matrices
+            DistComb <- do.call(cbind, DiffData)
+
+            # median normalized distance from the PC points
+            StatData <- apply(apply(abs(DistComb), 1, mean)/NodeOnGenes, 1, mean)
+
+          }
+      
+      if(ExtMode == 2){
+
+            # Get the variance of the data
+            VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
+
+            # Put all together into matrices
+            VarComb <- do.call(cbind, VarData)
+
+            # median coefficient of variation
+            StatData <- apply(VarComb/NodeOnGenes, 1, mean)
+
+          }
+      
+      if(ExtMode == 3){
+
+            IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
+
+            IQRComb <- do.call(cbind, IQRData)
+
+            IQRoMed <- IQRComb/NodeOnGenes
+            IQRoMed[!is.finite(IQRoMed)] <- NA
+
+            StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+
+          }
+      
+    }
+      
+    if(Mode == "VarALL"){
+      
+      if(ExtMode == 1){
+        
+        # Get the gene mean for each node
+        MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+        
+        # Get the difference between the data and the mean
+        DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
+        
+        # Put all together into matrices
+        DistComb <- do.call(cbind, DiffData)
+        MeanComb <- do.call(cbind, MeanData)
+        
+        StatData <- apply(apply(abs(DistComb), 1, mean)/MeanComb, 1, mean)
+        
+      }
+      
+      if(ExtMode == 2){
+        
+        # Get the gene mean for each node
+        MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+        
+        # Get the variance of the data
+        VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
+        
+        # Put all together into matrices
+        VarComb <- do.call(cbind, VarData)
+        MeanComb <- do.call(cbind, MeanData)
+        
+        StatData <- apply(VarComb/MeanComb, 1, median)
+        
+      }
+      
+      if(ExtMode == 3){
+        
+        IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
+        MedianData <- lapply(SplitData, function(x){apply(x, 1, median)})
+        
+        IQRComb <- do.call(cbind, IQRData)
+        MedianComb <- do.call(cbind, MedianData)
+        
+        IQRoMed <- IQRComb/MedianComb
+        IQRoMed[!is.finite(IQRoMed)] <- NA
+        
+        StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+        
+      }
+      
+    }
+    
+    KeepGenes <- names(which(StatData < DistillThr))
+    KeepGenes <- KeepGenes[!is.na(KeepGenes)]
+    
+    print(paste(sum(StatData >= DistillThr, na.rm = TRUE), "genes filtered"))
+    print(paste(length(KeepGenes), "genes selected"))
+    
+    return(KeepGenes)
+    
+  }
+    
     
     # CombinedMat <- cbind(DiffExpData, scale(BaseAnalysis$FiltExp, center = TRUE))
     # 
@@ -2016,19 +2115,167 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     
     # hist( abs(apply(DiffExpData, 2, median)) / apply(MatrixExpansion, 2, median) )
     
-    KeepGenes <- names(which(StatData < DistillThr))
-    KeepGenes <- KeepGenes[!is.na(KeepGenes)]
     
-    print(length(KeepGenes), "genes selected")
-    
-    return(KeepGenes)
     
     # par(mfcol=c(3,3))
     # 
     # for(i in 1:length(KeepGenes)) boxplot(list(DiffExpData[, KeepGenes[i]],
     #                                            scale(BaseAnalysis$FiltExp[, KeepGenes[i]], center = TRUE)))
     
-  }
+  
+  
+  # if(Mode == "VarALL"){
+  #   print("Selecting genes with the smallest fluctuations")
+  #   
+  #   # AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+  #   #                            Structure = Topo, Circular = TRUE)
+  #   # 
+  #   # ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
+  #   # 
+  #   # if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
+  #   #   PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
+  #   # } else {
+  #   #   PathToUse <- AllPaths$VertNumb
+  #   # }
+  #   # 
+  #   # PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
+  #   # TotPathLen <- sum(PathProjection$PathLen)
+  #   
+  #   
+  #   # Find association of cells to nodes of the PG
+  #   CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
+  #   
+  #   nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
+  #   
+  #   for(i in 1:nNodes){
+  #     CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
+  #   }
+  #   
+  #   # Only look at cells that are present in the principal graph structure
+  #   FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
+  #   
+  #   # Split the data according to their assocaition to the different nodes
+  #   SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
+  #   
+  #   # Only consider nodes with at least three cells projected
+  #   ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
+  #   SplitData <- SplitData[ToUse]
+  #   
+  #   if(ExtMode == 1){
+  #     
+  #     # Get the gene mean for each node
+  #     MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+  #     
+  #     # Get the difference between the data and the mean
+  #     DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
+  #     
+  #     # Put all together into matrices
+  #     DistComb <- do.call(cbind, DiffData)
+  #     MeanComb <- do.call(cbind, MeanData)
+  #     
+  #     StatData <- apply(abs(DistComb)/MeanComb, 1, median)
+  #     
+  #   }
+  #   
+  #   
+  #   if(ExtMode == 2){
+  #     
+  #     # Get the gene mean for each node
+  #     MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+  #     
+  #     # Get the variance of the data
+  #     VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
+  #     
+  #     # Put all together into matrices
+  #     VarComb <- do.call(cbind, VarData)
+  #     MeanComb <- do.call(cbind, MeanData)
+  #     
+  #     StatData <- apply(VarComb/MeanComb, 1, median)
+  #     
+  #   }
+  #   
+  #   
+  #   if(ExtMode == 3){
+  #     
+  #     IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
+  #     MedianData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else apply(x, 1, median)})
+  #     
+  #     IQRComb <- do.call(cbind, IQRData)
+  #     MedianComb <- do.call(cbind, MedianData)
+  #     
+  #     IQRoMed <- IQRComb/MedianComb
+  #     IQRoMed[!is.finite(IQRoMed)] <- NA
+  #     
+  #     StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+  #     
+  #   }
+  #   
+  #   
+  #   
+  #   # print("Fitting loess smoothers")
+  #   # 
+  #   # pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+  #   # 
+  #   # AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
+  #   #   setTxtProgressBar(pb, value = i)
+  #   #   return(loess(unlist(FullExpression[i,]) ~ PathProjection$PositionOnPath, span = LoesSpan))
+  #   # })
+  #   #  
+  #   # AllResiduals <- lapply(lapply(AllSmooth, "[[", "residuals"), var)
+  #   # 
+  #   # print("Testing the distribution of the residuals")
+  #   # 
+  #   # pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
+  #   # 
+  #   # AllWT <- lapply(as.list(1:nrow(FullExpression)), function(i){
+  #   #   setTxtProgressBar(pb1, value = i)
+  #   #   wilcox.test(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])), AllSmooth[[i]]$residuals, alternative = "greater" )
+  #   # })
+  #   
+  #   # AllMedRat <- lapply(as.list(1:nrow(FullExpression)), function(i){
+  #   #   setTxtProgressBar(pb1, value = i)
+  #   #   median(AllSmooth[[i]]$residuals) - median(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])))
+  #   # })
+  #   
+  #   # AllWT <- AllPV
+  #   
+  #   # PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
+  #   # names(PVVect) <- rownames(FullExpression)
+  #   
+  #   print(paste(sum(StatData > DistillThr, na.rm = TRUE), "genes excluded due to thresholding"))
+  #   
+  #   KeepGenes <- rownames(FullExpression)[StatData < DistillThr]
+  #   KeepGenes <- KeepGenes[!is.na(KeepGenes)]
+  #   
+  #   return(KeepGenes)
+  #   
+  #   # i <- 10
+  #   # 
+  #   # boxplot(list(
+  #   #   (unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]) - mean(unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]))),
+  #   #   AllSmooth[[order(PVVect, decreasing = FALSE)[i]]]$residuals
+  #   # ), main = sort(PVVect)[i])
+  #   
+  # }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   # if(Mode == "PeakPC"){
   #   print("Selecting genes with more defined single peaks on the principal curve")
@@ -2090,137 +2337,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
   #   
   # }
   
-  if(Mode == "VarALL"){
-    print("Selecting genes with the smallest fluctuations")
-    
-    # AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
-    #                            Structure = Topo, Circular = TRUE)
-    # 
-    # ProjPoints <- BaseAnalysis$ProjPoints[[length(BaseAnalysis$ProjPoints)]]
-    # 
-    # if(length(AllPaths$VertPath) > nrow(BaseAnalysis$PrinGraph$Nodes) + 1){
-    #   PathToUse <- AllPaths$VertNumb[sample(1:nrow(AllPaths$VertNumb), 1),]
-    # } else {
-    #   PathToUse <- AllPaths$VertNumb
-    # }
-    # 
-    # PathProjection <- OrderOnPath(PrinGraph = BaseAnalysis$PrinGraph, Path = PathToUse, PointProjections = ProjPoints)
-    # TotPathLen <- sum(PathProjection$PathLen)
-    
-    
-    # Find association of cells to nodes of the PG
-    CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
-    
-    nNodes <- nrow(BaseAnalysis$PrinGraph$Nodes)
-    
-    for(i in 1:nNodes){
-      CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
-    }
-    
-    # Only look at cells that are present in the principal graph structure
-    FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
-    
-    # Split the data according to their assocaition to the different nodes
-    SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
-    
-    # Only consider nodes with at least three cells projected
-    ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
-    SplitData <- SplitData[ToUse]
-    
-    if(ExtMode == 1){
-      
-      # Get the gene mean for each node
-      MeanData <- lapply(SplitData, function(x){rowMeans(x)})
-      
-      # Get the difference between the data and the mean
-      DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
-      
-      # Put all together into matrices
-      DistComb <- do.call(cbind, DiffData)
-      MeanComb <- do.call(cbind, MeanData)
-      
-      StatData <- apply(abs(DistComb)/MeanComb, 1, mean)
-      
-    }
-    
-    
-    if(ExtMode == 2){
-      
-      # Get the gene mean for each node
-      MeanData <- lapply(SplitData, function(x){rowMeans(x)})
-      
-      # Get the variance of the data
-      VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
-      
-      # Put all together into matrices
-      VarData <- do.call(cbind, VarData)
-      MeanComb <- do.call(cbind, MeanData)
-      
-      StatData <- apply(VarData/MeanComb, 1, mean)
-      
-    }
-    
-    
-    if(ExtMode == 3){
-      
-      IQRData <- lapply(SplitData, function(x){if(is.null(dim(x))) rep(0, length(x)) else apply(x, 1, IQR)})
-      MedianData <- lapply(SplitData, function(x){if(is.null(dim(x))) x else apply(x, 1, median)})
-      
-      IQRComb <- do.call(cbind, IQRData)
-      MedianComb <- do.call(cbind, MedianData)
-      
-      IQRoMed <- IQRComb/MedianComb
-      IQRoMed[!is.finite(IQRoMed)] <- NA
-      
-      StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
-      
-    }
-    
-    
-    
-    # print("Fitting loess smoothers")
-    # 
-    # pb <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
-    # 
-    # AllSmooth <- lapply(X = as.list(1:nrow(FullExpression)), function(i){
-    #   setTxtProgressBar(pb, value = i)
-    #   return(loess(unlist(FullExpression[i,]) ~ PathProjection$PositionOnPath, span = LoesSpan))
-    # })
-    #  
-    # AllResiduals <- lapply(lapply(AllSmooth, "[[", "residuals"), var)
-    # 
-    # print("Testing the distribution of the residuals")
-    # 
-    # pb1 <- txtProgressBar(min = 0, max = nrow(FullExpression), style = 3)
-    # 
-    # AllWT <- lapply(as.list(1:nrow(FullExpression)), function(i){
-    #   setTxtProgressBar(pb1, value = i)
-    #   wilcox.test(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])), AllSmooth[[i]]$residuals, alternative = "greater" )
-    # })
-    
-    # AllMedRat <- lapply(as.list(1:nrow(FullExpression)), function(i){
-    #   setTxtProgressBar(pb1, value = i)
-    #   median(AllSmooth[[i]]$residuals) - median(unlist(FullExpression[i,]) - mean(unlist(FullExpression[i,])))
-    # })
-
-    # AllWT <- AllPV
-    
-    # PVVect <- unlist(lapply(AllWT, "[[", "p.value"))
-    # names(PVVect) <- rownames(FullExpression)
-    
-    KeepGenes <- rownames(FullExpression)[StatData < DistillThr]
-    KeepGenes <- KeepGenes[!is.na(KeepGenes)]
-    
-    return(KeepGenes)
-    
-    # i <- 10
-    # 
-    # boxplot(list(
-    #   (unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]) - mean(unlist(FullExpression[order(PVVect, decreasing = FALSE)[i],]))),
-    #   AllSmooth[[order(PVVect, decreasing = FALSE)[i]]]$residuals
-    # ), main = sort(PVVect)[i])
-
-  }
+  
   
   # if(Mode == "PeakALL"){
   #   print("Selecting genes with more defined single peaks in the smoother")
@@ -2394,6 +2511,8 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
   FilteredGenes <- StartGeneSet
   Converged <- FALSE
   
+  GeneNumber <- NULL
+  
   while(!Converged){
     
     OldFiltered <- FilteredGenes
@@ -2402,9 +2521,17 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                  Mode = Mode, DistillThr = DistillThr, ExtMode = ExtMode,
                                  Topo = GraphType, FullExpression = ExpData, Log = Log)
     
+    if(is.null(FilteredGenes)){
+      print("No gene found")
+      return(NULL)
+    }
+    
     GeneNumber <- c(GeneNumber, length(FilteredGenes))
     
+    print(paste(length(FilteredGenes), "genes selected"))
+    
     if(length(intersect(FilteredGenes, OldFiltered))/length(OldFiltered) > StopCrit){
+      plot(GeneNumber, xlab="Iterations", ylab = "Number of genes")
       return(FilteredGenes)
     }
     
