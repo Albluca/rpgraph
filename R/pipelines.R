@@ -1959,9 +1959,9 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #'
 #' @examples
 DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'Lasso', 
-                        FullExpression, Log = FALSE, LoesSpan = .1) {
+                        FullExpression = NULL, Log = FALSE, LoesSpan = .1) {
   
-  if(Log){
+  if(!is.null(FullExpression) & Log){
     FullExpression <- log10(FullExpression + 1)
   } else {
     FullExpression <- FullExpression
@@ -2048,7 +2048,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       
       if(ExtMode == 3){
         
-        print("Extended mode 2: mean IQR/median across groups (0 median removed)")
+        print("Extended mode 3: mean IQR/median across groups (0 median removed)")
         
         IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
         MedianData <- lapply(SplitData, function(x){apply(x, 1, median)})
@@ -2097,7 +2097,6 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 
         # Put all together into matrices
         VarComb <- do.call(cbind, VarData)
-        MeanComb <- do.call(cbind, MeanData)
 
         # median coefficient of variation
         tMat <- VarComb/abs(NodeOnGenes)
