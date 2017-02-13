@@ -1969,7 +1969,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
   
   
   if(Mode == "VarPC" | Mode == "VarALL"){
-    print("Selecting genes with small fluctuations aroud the principal curve")
+    print("Selecting genes based on dispersion")
     
     # Find association of cells to nodes of the PG
     CellVertexAssociation <- rep(NA, nrow(BaseAnalysis$FiltExp))
@@ -1981,6 +1981,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     }
     
     if(Mode == "VarALL"){
+      print("Using variance over mean on node")
       
       # Only look at cells that are present in the principal graph structure
       FullExpression <- FullExpression[,rownames(BaseAnalysis$FiltExp)]
@@ -1989,6 +1990,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){FullExpression[,x]})
       
     } else {
+      print("Using variance over the position of the principal curve")
       
       # Split the data according to their assocaition to the different nodes
       SplitData <- lapply(split(1:length(CellVertexAssociation), CellVertexAssociation), function(x){t(BaseAnalysis$FiltExp)[,x]})
@@ -1999,71 +2001,33 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
     SplitData <- SplitData[ToUse]
     
-    if(Mode == "VarPC"){
     
-      NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
-      NodeOnGenes <- NodeOnGenes[,as.numeric(ToUse)]
-      
-      if(ExtMode == 1){
-
-            # Get the difference between the data and the PC value
-            DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - NodeOnGenes[,i]})
-
-            # Put all together into matrices
-            DistComb <- do.call(cbind, DiffData)
-
-            # median normalized distance from the PC points
-            StatData <- apply(apply(abs(DistComb), 1, mean)/NodeOnGenes, 1, mean)
-
-          }
-      
-      if(ExtMode == 2){
-
-            # Get the variance of the data
-            VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
-
-            # Put all together into matrices
-            VarComb <- do.call(cbind, VarData)
-
-            # median coefficient of variation
-            StatData <- apply(VarComb/NodeOnGenes, 1, mean)
-
-          }
-      
-      if(ExtMode == 3){
-
-            IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
-
-            IQRComb <- do.call(cbind, IQRData)
-
-            IQRoMed <- IQRComb/NodeOnGenes
-            IQRoMed[!is.finite(IQRoMed)] <- NA
-
-            StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
-
-          }
-      
-    }
-      
     if(Mode == "VarALL"){
       
       if(ExtMode == 1){
+        
+        print("Extended mode 1: median of the mean distances from the group means (0 means removed)")
         
         # Get the gene mean for each node
         MeanData <- lapply(SplitData, function(x){rowMeans(x)})
         
         # Get the difference between the data and the mean
-        DiffData <- lapply(1:length(SplitData), function(i){SplitData[[i]] - MeanData[[i]]})
+        DiffData <- lapply(1:length(SplitData), function(i){apply( abs(SplitData[[i]] - MeanData[[i]]) , 1, mean) })
         
         # Put all together into matrices
         DistComb <- do.call(cbind, DiffData)
         MeanComb <- do.call(cbind, MeanData)
         
-        StatData <- apply(apply(abs(DistComb), 1, mean)/MeanComb, 1, mean)
+        tMat <- DistComb/MeanComb
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
         
       }
       
       if(ExtMode == 2){
+        
+        print("Extended mode 2: median coefficient of vartiation across groups (0 means removed)")
         
         # Get the gene mean for each node
         MeanData <- lapply(SplitData, function(x){rowMeans(x)})
@@ -2075,11 +2039,16 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
         VarComb <- do.call(cbind, VarData)
         MeanComb <- do.call(cbind, MeanData)
         
-        StatData <- apply(VarComb/MeanComb, 1, median)
+        tMat <- VarComb/MeanComb
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
         
       }
       
       if(ExtMode == 3){
+        
+        print("Extended mode 2: mean IQR/median across groups (0 median removed)")
         
         IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
         MedianData <- lapply(SplitData, function(x){apply(x, 1, median)})
@@ -2095,6 +2064,68 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       }
       
     }
+    
+    
+    if(Mode == "VarPC"){
+    
+      NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
+      NodeOnGenes <- NodeOnGenes[,as.numeric(ToUse)]
+      
+      if(ExtMode == 1){
+
+        print("Extended mode 1: median of the mean distances from the principal curve (0 means removed)")
+        
+        # Get the difference between the data and the PC value
+        DiffData <- lapply(1:length(SplitData), function(i){ apply(abs(SplitData[[i]] - NodeOnGenes[,i]), 1, mean) })
+
+        # Put all together into matrices
+        DistComb <- do.call(cbind, DiffData)
+
+        # median normalized distance from the PC points
+        tMat <- DistComb/NodeOnGenes
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
+
+      }
+      
+      if(ExtMode == 2){
+
+        print("Extended mode 2: median coefficient of variation over the principal curve (0 median removed)")
+        
+        # Get the variance of the data
+        VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
+
+        # Put all together into matrices
+        VarComb <- do.call(cbind, VarData)
+        MeanComb <- do.call(cbind, MeanData)
+
+        # median coefficient of variation
+        tMat <- VarComb/NodeOnGenes
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
+
+      }
+      
+      if(ExtMode == 3){
+
+        print("Extended mode 3: mean IQR/median over the principal curve (0 median removed)")
+        
+        IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
+
+        IQRComb <- do.call(cbind, IQRData)
+
+        IQRoMed <- IQRComb/NodeOnGenes
+        IQRoMed[!is.finite(IQRoMed)] <- NA
+
+        StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+
+      }
+      
+    }
+      
+    
     
     KeepGenes <- names(which(StatData < DistillThr))
     KeepGenes <- KeepGenes[!is.na(KeepGenes)]
