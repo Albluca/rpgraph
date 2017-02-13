@@ -2158,7 +2158,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     }
 
     if(Topo == 'Lasso'){
-      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'tail')$VertNumb
+      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'Tail')$VertNumb
       PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
     }
     

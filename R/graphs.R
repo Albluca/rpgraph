@@ -287,7 +287,7 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
   }
   
-  if(Structure == 'circle'){
+  if(Structure == 'Circle'){
     
     RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
     
@@ -310,7 +310,7 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
   }
   
-  if(Structure == 'lasso'){
+  if(Structure == 'Lasso'){
     
     # The largest 
     
@@ -340,7 +340,7 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
   }
   
   
-  if(Structure == 'tail'){
+  if(Structure == 'Tail'){
     
     # The largest 
     
