@@ -2725,7 +2725,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 #' @export
 #'
 #' @examples
-ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99, MaxRounds = 25,
+ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99, MaxRounds = 25, FastReduce = FALSE,
                             OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL,
                             GraphType = 'Circle', PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
                             LassoCircInit = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
@@ -2775,6 +2775,10 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
       print("Max number of iterations reached, returning")
       plot(GeneNumber, xlab="Iterations", ylab = "Number of genes")
       return(FilteredGenes)
+    }
+    
+    if(FastReduce){
+      ExpData <- ExpData[rownames(ExpData) %in% FilteredGenes,]
     }
     
     StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
