@@ -1950,7 +1950,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' "PeakALL" (Peack-based on all genes)
 #' @param DistillThr numeric, a threshold used by the algorithm. It is a p-value for variance based selection
 #' and a quantile for peack based selection
-#' @param Topo string, a string describing the topology of the principal curve. It can be 'lasso' or 'circle'
+#' @param Topo string, a string describing the topology of the principal curve. It can be 'Lasso' or 'Circle'
 #' @param FullExpression the matrix containing the full expression data (note that sample filtered during the construction of the principal graph will be removed)
 #' @param LoesSpan the span parameter to use with the loes function
 #'
@@ -1958,7 +1958,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' @export
 #'
 #' @examples
-DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'lasso', 
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'Lasso', 
                         FullExpression, Log = FALSE, LoesSpan = .1) {
   
   if(Log){
