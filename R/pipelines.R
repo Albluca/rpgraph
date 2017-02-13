@@ -2757,6 +2757,11 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
       return(NULL)
     }
     
+    if(length(FilteredGenes) == 0){
+      print("No gene found")
+      return(NULL)
+    }
+    
     GeneNumber <- c(GeneNumber, length(FilteredGenes))
     
     print(paste(length(FilteredGenes), "genes selected"))
