@@ -17,7 +17,7 @@ CountPubmedResults <- function(Tokens) {
   
   url <- paste("http://www.ncbi.nlm.nih.gov/pubmed/?term=", SrcStr, sep = "")
   
-  hh <-  xml2::read_html(url)
+  hh <-  xml2::read_html(url, options = c("RECOVER", "NOERROR", "NOBLANKS"))
   src <- XML::htmlTreeParse(hh,useInternalNodes=TRUE)
   tags <- XML::xpathApply(src, "//meta[@name='ncbi_resultcount']", XML::xmlAttrs)
   return(as.numeric(tags[[1]]["content"]))

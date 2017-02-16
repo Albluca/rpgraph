@@ -811,7 +811,7 @@ PlotOnPath <- function(PathProjection, GroupsLab){
 #'
 #' @examples
 ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL, Title='',
-                                    PCACenter = TRUE){
+                                    PCACenter = TRUE, ShowFitted = TRUE){
   
   if(PCACenter){
     ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
@@ -847,11 +847,14 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
   RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
   RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
   
-  p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot2::geom_point() +
-    ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2),
-                       inherit.aes = FALSE) +
-    ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%")) +
-                    ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+  if(ShowFitted){
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+  } else {
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat))
+  }
+  
+  p <- p + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
+    ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%"))
   
   for(j in 1:nrow(Edges)){
     p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),

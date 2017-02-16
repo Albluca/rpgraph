@@ -1370,7 +1370,7 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 #' 
 ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
-                              ForceLasso = FALSE, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
+                              ForceLasso = FALSE, EstProlif = "Quantile", QuaThr = .6, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
                               PlotDebug = FALSE, PlotIntermediate = FALSE){
   
   if(is.null(PlanVarLimitIC)){
@@ -1435,7 +1435,6 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   # hist(MedianRank, main = "Gene expression ranking", xlab = "Median rank of gene expression by cell")
   
-  print("Multimodality detected")
   print("Estimating most likely proliferative cells")
   
   # print("performing k-means")
@@ -1449,76 +1448,101 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   # G0Cell <- which(KM$cluster == 1)
   # NonG0Cell <- which(KM$cluster == 2)
   
-  print("Finding most significant multimodality thr")
-  
-  CheckVals <- seq(from = .25, by=.025, to = .75)
-  DipPV <- NULL
-  
-  for(i in CheckVals){
-    print(paste("Looking for dip at", i))
-    DipPV <- c(DipPV, diptest::dip.test(apply(RankedData, 2, quantile, i),
-                                        simulate.p.value = TRUE, B = 5000)$p.value)
+  if(EstProlif == "Quantile"){
     
-    if(DipPV[length(DipPV)] < DipPVThr){
-      if(PlotDebug){
-        hist(apply(RankedData, 2, quantile, i),
-             main = "Gene expression ranking",
-             xlab = paste("q", i, "of gene expression by cell"))
-      }
-      
-    }
+    NonG0Cell <-  which(apply(DataMat, 1, quantile, QuaThr) > median(DataMat))
+    G0Cell <-  which(apply(DataMat, 1, quantile, QuaThr) == median(DataMat))
+    
   }
   
-  
-  IDxs <- which(DipPV < DipPVThr)
-  Association <- NULL
-  
-  for(i in IDxs){
+  if(EstProlif =="DipQuant"){
     
-    print(paste("Using mixed gaussian model on q", CheckVals[i]))
+    print("Finding most significant multimodality thr")
     
-    MixedModel <- try(mixtools::normalmixEM(apply(RankedData, 2, quantile, CheckVals[i]),
-                                            maxit = 1000, maxrestarts = 100), TRUE)
+    CheckVals <- seq(from = .25, by=.025, to = .75)
+    DipPV <- NULL
     
-    if(!is.list(MixedModel)){
-      next()
-    }
-    
-    if(ncol(MixedModel$posterior) > 2){
-      print("Multiple populations detected, moving on ...")
-      next()
-    }
-    
-    if(ncol(MixedModel$posterior) == 1){
-      print("Only one population detected, moving on ...")
-      next()
-    }
-    
-    print("Looking for quantile separation")
-    
-    QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
-    QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
-    
-    if(any(is.na(QA)) | any(is.na(QB))){
-      print("Too few cells in at least one population, moving on ...")
-      next()
-    }
-    
-    if( (min(QA) < min(QB) & max(QA) < min(QB)) |
-        (min(QB) < min(QA) & max(QB) < min(QA)) ){
+    for(i in CheckVals){
+      print(paste("Looking for dip at", i))
+      DipPV <- c(DipPV, diptest::dip.test(apply(RankedData, 2, quantile, i),
+                                          simulate.p.value = TRUE, B = 5000)$p.value)
       
-      print("Quantile separation detected")
-      
-      Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
-      
-      if(PlotDebug){
-        boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-                main=paste(CheckVals[i], "Quantile separated"))
+      if(DipPV[length(DipPV)] < DipPVThr){
+        if(PlotDebug){
+          hist(apply(RankedData, 2, quantile, i),
+               main = "Gene expression ranking",
+               xlab = paste("q", i, "of gene expression by cell"))
+        }
+        
       }
+    }
+    
+    IDxs <- which(DipPV < DipPVThr)
+    Association <- NULL
+    
+    for(i in IDxs){
+      
+      print(paste("Using mixed gaussian model on q", CheckVals[i]))
+      
+      MixedModel <- try(mixtools::normalmixEM(apply(RankedData, 2, quantile, CheckVals[i]),
+                                              maxit = 1000, maxrestarts = 100), TRUE)
+      
+      if(!is.list(MixedModel)){
+        next()
+      }
+      
+      if(ncol(MixedModel$posterior) > 2){
+        print("Multiple populations detected, moving on ...")
+        next()
+      }
+      
+      if(ncol(MixedModel$posterior) == 1){
+        print("Only one population detected, moving on ...")
+        next()
+      }
+      
+      print("Looking for quantile separation")
+      
+      QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
+      QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
+      
+      if(any(is.na(QA)) | any(is.na(QB))){
+        print("Too few cells in at least one population, moving on ...")
+        next()
+      }
+      
+      if( (min(QA) < min(QB) & max(QA) < min(QB)) |
+          (min(QB) < min(QA) & max(QB) < min(QA)) ){
+        
+        print("Quantile separation detected")
+        
+        Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
+        
+        if(PlotDebug){
+          boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+                  main=paste(CheckVals[i], "Quantile separated"))
+        }
+      } else {
+        if(PlotDebug){
+          boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+                  main=paste(CheckVals[i], "Quantile non-separated"))
+        }
+        
+      }
+      
+    }
+    
+    
+    if(length(Association)>ncol(RankedData)){
+      NonG0Cell <-  which(apply(Association, 2, min) > .5)
+      G0Cell <-  which(apply(Association, 2, min) <= .5)
     } else {
-      if(PlotDebug){
-        boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-                main=paste(CheckVals[i], "Quantile non-separated"))
+      if(!is.null(Association)){
+        NonG0Cell <- which(Association > .5)
+        G0Cell <- which(Association <= .5)
+      } else {
+        NonG0Cell <- NULL
+        G0Cell <- NULL
       }
       
     }
@@ -1526,25 +1550,16 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   }
   
   
-  if(length(Association)>ncol(RankedData)){
-    NonG0Cell <-  which(apply(Association, 2, min) > .5)
-    G0Cell <-  which(apply(Association, 2, min) <= .5)
-  } else {
-    if(!is.null(Association)){
-      NonG0Cell <- which(Association > .5)
-      G0Cell <- which(Association <= .5)
-    } else {
-      NonG0Cell <- NULL
-      G0Cell <- NULL
-    }
-    
-  }
+  
+  
   
   if(!is.null(NonG0Cell)){
     TB <- rbind(table(Categories[NonG0Cell]), table(Categories[G0Cell]))
     barplot(TB/rowSums(TB), ylab = "Percentage of cells", xlab = "Category", beside = TRUE,
             legend.text = c("Strongly Proliferative", "Not strongly proliferative"))
   }
+  
+  
   
   if(length(NonG0Cell)>MinProlCells){
     
@@ -2729,13 +2744,13 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                             OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL,
                             GraphType = 'Circle', PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
                             LassoCircInit = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
-                            DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE) {
+                            DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE, StartQuant = .5, QuantInc = .01) {
   
   StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = StartGeneSet, OutThr = OutThr, nNodes = nNodes,
                                          VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
                                          PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
                                          MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                         PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate)
+                                         PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate, QuaThr = StartQuant)
   
   FilteredGenes <- StartGeneSet
   Converged <- FALSE
@@ -2785,7 +2800,8 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                      VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
                                      PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
                                      MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate)
+                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
+                                     QuaThr = StartQuant + RoundCount*QuantInc)
     
   }
   
