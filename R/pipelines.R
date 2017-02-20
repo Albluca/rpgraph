@@ -1370,7 +1370,7 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 #' 
 ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, LassoCircInit = 8,
-                              ForceLasso = FALSE, EstProlif = "Quantile", QuaThr = .6, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
+                              ForceLasso = FALSE, EstProlif = "Quantile", QuaThr = .6, NonG0Cell = NULL, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
                               PlotDebug = FALSE, PlotIntermediate = FALSE){
   
   if(is.null(PlanVarLimitIC)){
@@ -1448,115 +1448,37 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   # G0Cell <- which(KM$cluster == 1)
   # NonG0Cell <- which(KM$cluster == 2)
   
-  if(EstProlif == "Quantile"){
+  if(is.null(NonG0Cell)){
     
-    NonG0Cell <-  which(apply(DataMat, 1, quantile, QuaThr) > median(DataMat))
-    G0Cell <-  which(apply(DataMat, 1, quantile, QuaThr) == median(DataMat))
+    if(EstProlif == "Quantile"){
+      # NonG0Cell <-  rownames(DataMat)[apply(DataMat, 1, quantile, QuaThr) > median(DataMat)]
+      NonG0Cell <-  rownames(DataMat)[apply(DataMat, 1, median) > quantile(DataMat, QuaThr)]
+    }
     
+    if(EstProlif == "PercQuant"){
+      NonG0Cell <-  rownames(DataMat)[order(apply(DataMat, 1, quantile, QuaThr), decreasing = TRUE)[1:round(nrow(DataMat)/10)]]
+    }
+    
+  } else {
+    NonG0Cell <- intersect(NonG0Cell, rownames(DataMat))
   }
   
-  if(EstProlif =="DipQuant"){
-    
-    print("Finding most significant multimodality thr")
-    
-    CheckVals <- seq(from = .25, by=.025, to = .75)
-    DipPV <- NULL
-    
-    for(i in CheckVals){
-      print(paste("Looking for dip at", i))
-      DipPV <- c(DipPV, diptest::dip.test(apply(RankedData, 2, quantile, i),
-                                          simulate.p.value = TRUE, B = 5000)$p.value)
-      
-      if(DipPV[length(DipPV)] < DipPVThr){
-        if(PlotDebug){
-          hist(apply(RankedData, 2, quantile, i),
-               main = "Gene expression ranking",
-               xlab = paste("q", i, "of gene expression by cell"))
-        }
-        
-      }
-    }
-    
-    IDxs <- which(DipPV < DipPVThr)
-    Association <- NULL
-    
-    for(i in IDxs){
-      
-      print(paste("Using mixed gaussian model on q", CheckVals[i]))
-      
-      MixedModel <- try(mixtools::normalmixEM(apply(RankedData, 2, quantile, CheckVals[i]),
-                                              maxit = 1000, maxrestarts = 100), TRUE)
-      
-      if(!is.list(MixedModel)){
-        next()
-      }
-      
-      if(ncol(MixedModel$posterior) > 2){
-        print("Multiple populations detected, moving on ...")
-        next()
-      }
-      
-      if(ncol(MixedModel$posterior) == 1){
-        print("Only one population detected, moving on ...")
-        next()
-      }
-      
-      print("Looking for quantile separation")
-      
-      QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
-      QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
-      
-      if(any(is.na(QA)) | any(is.na(QB))){
-        print("Too few cells in at least one population, moving on ...")
-        next()
-      }
-      
-      if( (min(QA) < min(QB) & max(QA) < min(QB)) |
-          (min(QB) < min(QA) & max(QB) < min(QA)) ){
-        
-        print("Quantile separation detected")
-        
-        Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
-        
-        if(PlotDebug){
-          boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-                  main=paste(CheckVals[i], "Quantile separated"))
-        }
-      } else {
-        if(PlotDebug){
-          boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
-                  main=paste(CheckVals[i], "Quantile non-separated"))
-        }
-        
-      }
-      
-    }
-    
-    
-    if(length(Association)>ncol(RankedData)){
-      NonG0Cell <-  which(apply(Association, 2, min) > .5)
-      G0Cell <-  which(apply(Association, 2, min) <= .5)
-    } else {
-      if(!is.null(Association)){
-        NonG0Cell <- which(Association > .5)
-        G0Cell <- which(Association <= .5)
-      } else {
-        NonG0Cell <- NULL
-        G0Cell <- NULL
-      }
-      
-    }
-    
-  }
+  print(paste(length(NonG0Cell), "strongly proliferative cells inferred"))
+  
+  G0Cell <-  setdiff(rownames(DataMat), NonG0Cell)
+
   
   
   
   
   
   if(!is.null(NonG0Cell)){
-    TB <- rbind(table(Categories[NonG0Cell]), table(Categories[G0Cell]))
+    TB <- rbind(table(Categories[rownames(DataMat) %in% NonG0Cell]), table(Categories[rownames(DataMat) %in% G0Cell]))
     barplot(TB/rowSums(TB), ylab = "Percentage of cells", xlab = "Category", beside = TRUE,
             legend.text = c("Strongly Proliferative", "Not strongly proliferative"))
+    barplot(TB, ylab = "Number of cells", xlab = "Category", beside = TRUE,
+            legend.text = c("Strongly Proliferative", "Not strongly proliferative"))
+    
   }
   
   
@@ -1570,7 +1492,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     
     print("Unable to find a sufficent number of strongly proliferative cells")
     
-    NonG0Cell <- 1:nrow(DataMat)
+    NonG0Cell <- rownames(DataMat)
     UseTree <- FALSE
     
   }
@@ -1596,7 +1518,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     
     # Step I - Construct the base circle
     
-    BasicCircData <- computeElasticPrincipalGraph(Data = Data[NonG0Cell,], NumNodes = 4,
+    BasicCircData <- computeElasticPrincipalGraph(Data = Data[rownames(Data) %in% NonG0Cell,], NumNodes = 4,
                                                   Method = 'CircleConfiguration', NodeStep = 1)
     
     PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
@@ -1610,7 +1532,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
       
       # Contiune to add node untill the circle remains planar
       
-      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[NonG0Cell,],
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[rownames(Data) %in% NonG0Cell,],
                                                                           NumNodes = UsedNodes + 1,
                                                                           Method = 'CircleConfiguration',
                                                                           NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
@@ -1714,7 +1636,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
             
             if(max(BranchesLen[-which.max(BranchesLen)] - max(BranchesLen)) <= -MinBranDiff){
               
-              print("Dominating brnach found ... pruning the shortest one")
+              print("Dominating brach found ... pruning the shortest one")
               
               # There is a "dominating"" branch
               ToKeep <- names(which.max(BranchesLen))
@@ -1785,7 +1707,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     
     # Step I - Construct the base circle
     
-    BasicCircData <- computeElasticPrincipalGraph(Data = Data[NonG0Cell,], NumNodes = 4,
+    BasicCircData <- computeElasticPrincipalGraph(Data = Data[rownames(Data) %in% NonG0Cell,], NumNodes = 4,
                                                   Method = 'CircleConfiguration', NodeStep = 1)
     
     PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
@@ -1799,7 +1721,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
       
       # Contiune to add node untill the circle remains planar
       
-      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[NonG0Cell,],
+      BasicCircData <- append(BasicCircData, computeElasticPrincipalGraph(Data = Data[rownames(Data) %in% NonG0Cell,],
                                                                           NumNodes = UsedNodes + 1,
                                                                           Method = 'CircleConfiguration',
                                                                           NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
@@ -1906,7 +1828,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
     if(PlotIntermediate & i != length(FitData)){
       if(FitData[[i]]$Method == "CircleConfiguration" & GraphType == 'Lasso'){
         ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
-                                UsedPoints = NonG0Cell, Categories = Categories, Title= paste("Round", i),
+                                UsedPoints = which(rownames(Data) %in% NonG0Cell), Categories = Categories, Title= paste("Round", i),
                                 PCACenter = PCAProjCenter)
       } else {
         ProjectOnPrincipalGraph(Nodes = FitData[[i]]$Nodes, Edges = FitData[[i]]$Edges, Points = Data,
@@ -1928,7 +1850,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   return(list(Data = Data, FiltExp = DataMat, Categories = Categories, PrinGraph = CombData,
               IntGrahs = FitData, Net = Net, TaxonList = TaxonList, PCAData = PCAData,
-              nDims = nDims, ProjPoints = ProjPoints, PCAPrGraph = PCAPrGraph))
+              nDims = nDims, ProjPoints = ProjPoints, PCAPrGraph = PCAPrGraph, NonG0Cell = NonG0Cell))
 }
 
   
@@ -1973,7 +1895,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' @export
 #'
 #' @examples
-DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'Lasso', 
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'Lasso', IgnoreTail = FALSE,
                         FullExpression = NULL, Log = FALSE, LoesSpan = .1) {
   
   if(!is.null(FullExpression) & Log){
@@ -2014,6 +1936,16 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 
     # Only consider nodes with at least three cells projected
     ToUse <- paste(which(lapply(BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]], length) >= 3))
+    
+    # Consider only the circle if indicated
+    if(Topo == 'Lasso' & IgnoreTail){
+      TailPath <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
+                                 Structure = 'Tail', Circular = FALSE)$VertNumb
+      if(!is.null(TailPath)){
+        ToUse <- setdiff(ToUse, TailPath[-length(TailPath)])
+      }
+    }
+    
     SplitData <- SplitData[ToUse]
     
     
@@ -2173,8 +2105,10 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     }
 
     if(Topo == 'Lasso'){
-      Tail <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'Tail')$VertNumb
-      PathToUse <- PathToUse[!(PathToUse %in% Tail[-length(Tail)])]
+      TailPath <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]], Structure = 'Tail')$VertNumb
+      if(!is.null(TailPath)){
+        PathToUse <- PathToUse[!(PathToUse %in% TailPath[-length(TailPath)])]
+      }
     }
     
     if(Mode == "PeakALL"){
@@ -2260,7 +2194,6 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       }
       
     }
-    
     
     if(Mode == "PeakALL"){
       
@@ -2741,8 +2674,8 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 #'
 #' @examples
 ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99, MaxRounds = 25, FastReduce = FALSE,
-                            OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL,
-                            GraphType = 'Circle', PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
+                            OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL, UpdateG0Cells = TRUE,
+                            GraphType = 'Circle', IgnoreTail = FALSE, PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
                             LassoCircInit = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
                             DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE, StartQuant = .5, QuantInc = .01) {
   
@@ -2751,6 +2684,7 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                          PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
                                          MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                          PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate, QuaThr = StartQuant)
+  ConsideredStruct <- StartStruct
   
   FilteredGenes <- StartGeneSet
   Converged <- FALSE
@@ -2763,9 +2697,9 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
     
     OldFiltered <- FilteredGenes
     
-    FilteredGenes <- DistillGene(BaseAnalysis = StartStruct,
+    FilteredGenes <- DistillGene(BaseAnalysis = ConsideredStruct,
                                  Mode = Mode, DistillThr = DistillThr, ExtMode = ExtMode,
-                                 Topo = GraphType, FullExpression = ExpData, Log = Log)
+                                 Topo = GraphType, IgnoreTail = IgnoreTail, FullExpression = ExpData, Log = Log)
     
     if(is.null(FilteredGenes)){
       print("No gene found")
@@ -2796,15 +2730,128 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
       ExpData <- ExpData[rownames(ExpData) %in% FilteredGenes,]
     }
     
-    StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
-                                     VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
-                                     PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
-                                     MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                     QuaThr = StartQuant + RoundCount*QuantInc)
+    if(UpdateG0Cells){
+      ConsideredStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
+                                       VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
+                                       PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
+                                       MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                       PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = NULL)
+    } else {
+      ConsideredStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
+                                       VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
+                                       PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, LassoCircInit = LassoCircInit,
+                                       MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                       PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell)
+    }
+
     
   }
   
 }
 
 
+
+
+
+
+
+
+
+# Extra code --------------------------------------------------------------
+
+# if(EstProlif =="DipQuant"){
+#   
+#   print("Finding most significant multimodality thr")
+#   
+#   CheckVals <- seq(from = .25, by=.025, to = .75)
+#   DipPV <- NULL
+#   
+#   for(i in CheckVals){
+#     print(paste("Looking for dip at", i))
+#     DipPV <- c(DipPV, diptest::dip.test(apply(RankedData, 2, quantile, i),
+#                                         simulate.p.value = TRUE, B = 5000)$p.value)
+#     
+#     if(DipPV[length(DipPV)] < DipPVThr){
+#       if(PlotDebug){
+#         hist(apply(RankedData, 2, quantile, i),
+#              main = "Gene expression ranking",
+#              xlab = paste("q", i, "of gene expression by cell"))
+#       }
+#       
+#     }
+#   }
+#   
+#   IDxs <- which(DipPV < DipPVThr)
+#   Association <- NULL
+#   
+#   for(i in IDxs){
+#     
+#     print(paste("Using mixed gaussian model on q", CheckVals[i]))
+#     
+#     MixedModel <- try(mixtools::normalmixEM(apply(RankedData, 2, quantile, CheckVals[i]),
+#                                             maxit = 1000, maxrestarts = 100), TRUE)
+#     
+#     if(!is.list(MixedModel)){
+#       next()
+#     }
+#     
+#     if(ncol(MixedModel$posterior) > 2){
+#       print("Multiple populations detected, moving on ...")
+#       next()
+#     }
+#     
+#     if(ncol(MixedModel$posterior) == 1){
+#       print("Only one population detected, moving on ...")
+#       next()
+#     }
+#     
+#     print("Looking for quantile separation")
+#     
+#     QA <- quantile(MixedModel$x[MixedModel$posterior[,1]>.5], probs = c(.25, .75))
+#     QB <- quantile(MixedModel$x[MixedModel$posterior[,2]>.5], probs = c(.25, .75))
+#     
+#     if(any(is.na(QA)) | any(is.na(QB))){
+#       print("Too few cells in at least one population, moving on ...")
+#       next()
+#     }
+#     
+#     if( (min(QA) < min(QB) & max(QA) < min(QB)) |
+#         (min(QB) < min(QA) & max(QB) < min(QA)) ){
+#       
+#       print("Quantile separation detected")
+#       
+#       Association <- rbind(Association, MixedModel$posterior[,which.max(MixedModel$mu)])
+#       
+#       if(PlotDebug){
+#         boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+#                 main=paste(CheckVals[i], "Quantile separated"))
+#       }
+#     } else {
+#       if(PlotDebug){
+#         boxplot(MixedModel$x[MixedModel$posterior[,1]>.5], MixedModel$x[MixedModel$posterior[,2]>.5],
+#                 main=paste(CheckVals[i], "Quantile non-separated"))
+#       }
+#       
+#     }
+#     
+#   }
+#   
+#   
+#   if(length(Association)>ncol(RankedData)){
+#     NonG0Cell <-  which(apply(Association, 2, min) > .5)
+#     G0Cell <-  which(apply(Association, 2, min) <= .5)
+#   } else {
+#     if(!is.null(Association)){
+#       NonG0Cell <- which(Association > .5)
+#       G0Cell <- which(Association <= .5)
+#     } else {
+#       NonG0Cell <- NULL
+#       G0Cell <- NULL
+#     }
+#     
+#   }
+#   
+# }
+# 

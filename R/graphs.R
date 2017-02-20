@@ -344,6 +344,10 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
     # The largest 
     
+    if(all(igraph::degree(Net)!=1) & all(igraph::degree(Net)!=3)){
+      return(NULL)
+    }
+    
     StartNode_Name <- names(which(igraph::degree(Net)==1))
     StartNode_Numb <- strsplit(StartNode_Name, "V_", TRUE)[[1]][2]
     
