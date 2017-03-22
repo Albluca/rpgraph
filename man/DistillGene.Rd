@@ -5,7 +5,8 @@
 \title{Filter Gene saccording to predefined properties}
 \usage{
 DistillGene(BaseAnalysis, Mode = "VarPC", DistillThr = 0.2, ExtMode = 1,
-  Topo = "lasso", FullExpression, Log = FALSE)
+  Topo = "Lasso", IgnoreTail = FALSE, FullExpression = NULL,
+  Log = FALSE, LoesSpan = 0.1)
 }
 \arguments{
 \item{BaseAnalysis}{a strure returned by Project and Compute}
@@ -19,7 +20,7 @@ DistillGene(BaseAnalysis, Mode = "VarPC", DistillThr = 0.2, ExtMode = 1,
 \item{DistillThr}{numeric, a threshold used by the algorithm. It is a p-value for variance based selection
 and a quantile for peack based selection}
 
-\item{Topo}{string, a string describing the topology of the principal curve. It can be 'lasso' or 'circle'}
+\item{Topo}{string, a string describing the topology of the principal curve. It can be 'Lasso' or 'Circle'}
 
 \item{FullExpression}{the matrix containing the full expression data (note that sample filtered during the construction of the principal graph will be removed)}
 

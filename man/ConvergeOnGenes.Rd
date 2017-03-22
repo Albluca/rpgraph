@@ -5,12 +5,14 @@
 \title{Title}
 \usage{
 ConvergeOnGenes(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = 0.5,
-  ExtMode = 1, StopCrit = 0.99, OutThr = 3, nNodes = 25,
-  VarThr = 0.99, Categories = NULL, GraphType = "Circle",
+  ExtMode = 1, StopCrit = 0.99, MaxRounds = 25, FastReduce = FALSE,
+  OutThr = 3, nNodes = 25, VarThr = 0.99, Categories = NULL,
+  UpdateG0Cells = TRUE, GraphType = "Circle", IgnoreTail = FALSE,
   PlanVarLimit = 0.9, PlanVarLimitIC = 0.95, ForceLasso = FALSE,
-  LassoCircInit = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE,
+  InitStructNodes = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE,
   MinProlCells = 25, DipPVThr = 1e-04, PCACenter = FALSE,
-  PCAProjCenter = TRUE, PlotIntermediate = FALSE)
+  PCAProjCenter = TRUE, PlotIntermediate = FALSE, StartQuant = 0.5,
+  QuantInc = 0.01)
 }
 \arguments{
 \item{ExpData}{}
@@ -41,8 +43,6 @@ ConvergeOnGenes(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = 0.5,
 
 \item{ForceLasso}{}
 
-\item{LassoCircInit}{}
-
 \item{MinBranDiff}{}
 
 \item{Log}{}
@@ -58,6 +58,8 @@ ConvergeOnGenes(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = 0.5,
 \item{PCAProjCenter}{}
 
 \item{PlotIntermediate}{}
+
+\item{LassoCircInit}{}
 }
 \description{
 Title

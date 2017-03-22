@@ -5,7 +5,7 @@
 \title{Title}
 \usage{
 ProjectOnPrincipalGraph(Nodes, Edges, Points, UsedPoints = NULL,
-  Categories = NULL, Title = "", PCACenter = TRUE)
+  Categories = NULL, Title = "", PCACenter = TRUE, ShowFitted = TRUE)
 }
 \arguments{
 \item{Nodes}{}
