@@ -339,7 +339,6 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
   }
   
-  
   if(Structure == 'Tail'){
     
     # The largest 
@@ -356,6 +355,28 @@ GetLongestPath <- function(Net, Structure = 'auto', Circular = TRUE) {
     
     VerNameMat <- names(igraph::get.shortest.paths(graph = Net, from = StartNode_Name, to = EndNode_Name)$vpath[[1]])
     VerNumMat <- unlist(lapply(strsplit(VerNameMat, "V_", TRUE), "[[", 2), use.names = FALSE)
+    
+    return(list(VertPath = VerNameMat, VertNumb = VerNumMat))
+    
+  }
+  
+  if(Structure == 'Line'){
+    
+    # The largest 
+    
+    if(any(igraph::degree(Net)>2)){
+      return(NULL)
+    }
+    
+    RefNet <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
+    
+    SubIsoProjList <- igraph::graph.get.subisomorphisms.vf2(Net, RefNet)
+    
+    VerNumMat <- t(sapply(1:length(SubIsoProjList), FUN = function(i){unlist(lapply(strsplit(SubIsoProjList[[i]]$name, split = "V_"), "[[", 2))}))
+    VerNumMat <- VerNumMat[!duplicated(VerNumMat[,1]),]
+    
+    VerNameMat <- t(sapply(SubIsoProjList, names))
+    VerNameMat <- VerNameMat[!duplicated(VerNameMat[,1]),]
     
     return(list(VertPath = VerNameMat, VertNumb = VerNumMat))
     
