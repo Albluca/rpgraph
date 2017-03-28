@@ -1368,9 +1368,12 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 #'
 #' @examples
 #' 
-ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, Log = TRUE, Categories = NULL,
-                              Filter = TRUE, GraphType = 'Lasso', PlanVarLimit = .9, PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 8,
-                              ForceLasso = FALSE, EstProlif = "MeanPerc", QuaThr = .6, NonG0Cell = NULL, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = FALSE, PCAProjCenter = FALSE,
+ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRUE, Categories = NULL,
+                              Filter = TRUE, OutThr = 5, PCAFilter = FALSE, OutThrPCA = 5,
+                              GraphType = 'Lasso', PlanVarLimit = .9,
+                              PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 8,
+                              ForceLasso = FALSE, EstProlif = "MeanPerc", QuaThr = .5,
+                              NonG0Cell = NULL, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = TRUE, PCAProjCenter = FALSE,
                               PlotDebug = FALSE, PlotIntermediate = FALSE){
   
   if(is.null(PlanVarLimitIC)){
@@ -1389,14 +1392,18 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   DataMat <- DataMat[, apply(DataMat > 0, 2, sum) > 3]
   
-  # hist(apply(DataMat > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
-  #        freq = TRUE, ylab = "Number of cells")
-  # 
-  # hist(apply(DataMat, 1, sum), main = "Reads per cell", xlab = "Reads count",
-  #        freq = TRUE, ylab = "Number of cells")
   
-  # hist(apply(DataMat>0, 2, sum), main = "Transcripts per cell", xlab = "Reads count",
-  #          freq = TRUE, ylab = "Number of genes identified")
+  if(PlotDebug){
+    hist(apply(DataMat > 0, 1, sum), main = "Genes per cell", xlab = "Genes count",
+         freq = TRUE, ylab = "Number of cells")
+    
+    hist(apply(DataMat, 1, sum), main = "Reads per cell", xlab = "Reads count",
+         freq = TRUE, ylab = "Number of cells")
+    
+    hist(apply(DataMat>0, 2, sum), main = "Transcripts per cell", xlab = "Reads count",
+         freq = TRUE, ylab = "Number of genes identified")
+  }
+
   
   if(Filter){
     OutExpr <- scater::isOutlier(rowSums(DataMat>0), nmads = OutThr)
@@ -1414,15 +1421,14 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   Categories <- Categories[!(OutExpr & OutCount)]
   
-  PCAData <- prcomp(DataMat, retx = TRUE, center = PCACenter, scale. = FALSE)
-  
-  if(Filter){
+  if(PCAFilter){
+    PCAData <- prcomp(DataMat, retx = TRUE, center = PCACenter, scale. = FALSE)
     Centroid <- colMeans(PCAData$x)
     
     Dists <- as.matrix(dist(rbind(Centroid, PCAData$x)))
     DistFromCent <- Dists[1,-1]
     
-    PCAFil <- scater::isOutlier(DistFromCent, nmads = OutThr)
+    PCAFil <- scater::isOutlier(DistFromCent, nmads = OutThrPCA)
   } else {
     PCAFil <- rep(FALSE, nrow(DataMat))
   }
@@ -1430,55 +1436,30 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   DataMat <- DataMat[!PCAFil, ]
   Categories <- Categories[!PCAFil]
   
-  # library(Rtsne)
-  # Test <- Rtsne::Rtsne(X = DataMat)
-  # plot(Test$Y)
-  # 
-  # cells_rankings <- AUCell::AUCell.buildRankings(t(DataMat), nCores=1, plotStats=TRUE)
-  # cells_AUC <- AUCell.calcAUC(list(All = colnames(DataMat)), cells_rankings)
-  # cells_assignment <- AUCell.exploreThresholds(cells_AUC, seed=123, plotHist=TRUE, assign=TRUE) 
-  # 
-  # 
-  # cells_assignment$All
-  # 
-  # 
-  
-  RankedData <- apply(DataMat, 1, rank)
-  # MedianRank <- apply(RankedData, 2, median)
-  
-  # plot(apply(DataMat/rowSums(DataMat), 1, median), apply(DataMat/rowSums(DataMat), 1, IQR))
-  
-  # hist(MedianRank, main = "Gene expression ranking", xlab = "Median rank of gene expression by cell")
-  
   print("Estimating most likely proliferative cells")
+  RankedData <- apply(DataMat, 1, rank)
   
-  # print("performing k-means")
-  # KM <- kmeans(MedianRank, centers = c(min(MedianRank), max(MedianRank)))
-  # boxplot(MedianRank ~ KM$cluster, ylab = "Median rank of gene expression by cell", xlab = "Cluster ID")
-  # boxplot(MedianRank ~ Categories, ylab = "Median rank of gene expression by cell", xlab = "Category")
-  # 
-  # TB <- table(KM$cluster, Categories)
-  # barplot(TB/rowSums(TB), ylab = "Percentage of cells", xlab = "Category", beside = TRUE, legend.text = 1:2)
-  # 
-  # G0Cell <- which(KM$cluster == 1)
-  # NonG0Cell <- which(KM$cluster == 2)
   
   if(is.null(NonG0Cell)){
     
     if(EstProlif == "Quantile"){
-      # NonG0Cell <-  rownames(DataMat)[apply(DataMat, 1, quantile, QuaThr) > median(DataMat)]
+      print("Using quantile separation")
       NonG0Cell <-  rownames(DataMat)[apply(DataMat, 1, median) > quantile(DataMat, QuaThr)]
     }
     
     if(EstProlif == "PercQuant"){
+      print("Using quantile ordering")
       NonG0Cell <-  rownames(DataMat)[order(apply(DataMat, 1, quantile, QuaThr), decreasing = TRUE)[1:round(nrow(DataMat)/10)]]
     }
     
     if(EstProlif == "KmeansPerc"){
-      Cellvect <- apply(DataMat/rowSums(DataMat), 1, median)
+      print("Using kmeans on quantile data")
+      Cellvect <- apply(DataMat/rowSums(DataMat), 1, quantile, QuaThr)
       
       KM <- kmeans(x = Cellvect, centers = range(Cellvect))
-      # boxplot(apply(DataMat/rowSums(DataMat), 1, median) ~ KM$cluster)
+      if(PlotDebug){
+        boxplot(apply(DataMat/rowSums(DataMat), 1, median) ~ KM$cluster)
+      }
       
       if(KM$centers[1] < KM$centers[2]){
         NonG0Cell <-  rownames(DataMat)[KM$cluster == 2]
@@ -1488,14 +1469,12 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
       
     }
     
-    
     if(EstProlif == "MeanPerc"){
-      Cellvect <- apply(DataMat/rowSums(DataMat), 1, median)
+      print("Using mean of quantiles")
+      Cellvect <- apply(DataMat/rowSums(DataMat), 1, quantile, QuaThr)
       
       NonG0Cell <- rownames(DataMat)[Cellvect > mean(Cellvect)]
-      
     }
-    
     
   } else {
     NonG0Cell <- intersect(NonG0Cell, rownames(DataMat))
@@ -1537,7 +1516,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
   
   print("Transforming Data")
   
-  PCAData <- prcomp(DataMat, retx = TRUE, center=FALSE, scale.=FALSE)
+  PCAData <- prcomp(DataMat, retx = TRUE, center = PCACenter, scale.=FALSE)
   ExpVar <- PCAData$sdev^2/sum(PCAData$sdev^2)
   
   if(VarThr<1){
@@ -1595,6 +1574,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                           NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
                                                                           Edges = BasicCircData[[length(BasicCircData)]]$Edges))
       
+     
       PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
       PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
       
@@ -1611,6 +1591,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                             Method = 'DefaultPrincipalTreeConfiguration',
                                                                             NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
                                                                             Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+        
         
         UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
         
@@ -1765,6 +1746,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                           NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
                                                                           Edges = BasicCircData[[length(BasicCircData)]]$Edges))
       
+      
       UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
       
       PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
@@ -1783,6 +1765,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                           Method = 'CurveConfiguration',
                                                                           NodesPositions = BasicCircData[[length(BasicCircData)]]$Nodes,
                                                                           Edges = BasicCircData[[length(BasicCircData)]]$Edges))
+      
       
       Net <- ConstructGraph(Results = BasicCircData[[length(BasicCircData)]], DirectionMat = NULL, Thr = NULL)
       
@@ -1830,6 +1813,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                           NodesPositions = BasicLineData[[length(BasicLineData)]]$Nodes,
                                                                           Edges = BasicLineData[[length(BasicLineData)]]$Edges))
       
+      
       UsedNodes <- nrow(BasicLineData[[length(BasicLineData)]]$Nodes)
       
       PCAStruct <- prcomp(BasicLineData[[length(BasicLineData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
@@ -1849,6 +1833,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
                                                                           NodesPositions = BasicLineData[[length(BasicLineData)]]$Nodes,
                                                                           Edges = BasicLineData[[length(BasicLineData)]]$Edges))
       
+     
       Net <- ConstructGraph(Results = BasicLineData[[length(BasicLineData)]], DirectionMat = NULL, Thr = NULL)
       
       PCAStruct <- prcomp(BasicLineData[[length(BasicLineData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
@@ -1995,13 +1980,21 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes, L
 #' @param Topo string, a string describing the topology of the principal curve. It can be 'Lasso' or 'Circle'
 #' @param FullExpression the matrix containing the full expression data (note that sample filtered during the construction of the principal graph will be removed)
 #' @param LoesSpan the span parameter to use with the loes function
+#' @param ExtMode 
+#' @param IgnoreTail 
+#' @param ZeroQuant 
+#' @param Log 
+#' @param MedianRatThr 
+#' @param VarTestPVThr 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1, Topo = 'Lasso', IgnoreTail = FALSE,
-                        FullExpression = NULL, Log = FALSE, LoesSpan = .1) {
+DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1,
+                        Topo = 'Lasso', IgnoreTail = FALSE, ZeroQuant = .75,
+                        FullExpression = NULL, Log = FALSE, LoesSpan = .1,
+                        MedianRatThr = .05, VarTestPVThr = 1e-5) {
   
   if(!is.null(FullExpression) & Log){
     FullExpression <- log10(FullExpression + 1)
@@ -2009,6 +2002,9 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     FullExpression <- FullExpression
   }
   
+  
+  # Get gene projection on the principal curve
+  NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
   
   if(Mode == "VarPC" | Mode == "VarALL"){
     print("Selecting genes based on dispersion")
@@ -2052,7 +2048,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     }
     
     SplitData <- SplitData[ToUse]
-    
+    NodeOnGenes <- NodeOnGenes[,as.numeric(ToUse)]
     
     if(Mode == "VarALL"){
       
@@ -2119,9 +2115,6 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     
     if(Mode == "VarPC"){
     
-      NodeOnGenes <- t(BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims]))
-      NodeOnGenes <- NodeOnGenes[,as.numeric(ToUse)]
-      
       if(ExtMode == 1){
 
         print("Extended mode 1: median of the mean distances from the principal curve (0 means removed)")
@@ -2142,7 +2135,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       
       if(ExtMode == 2){
 
-        print("Extended mode 2: median coefficient of variation over the principal curve (0 median removed)")
+        print("Extended mode 2: median variance over the principal curve (0 variance removed)")
         
         # Get the variance of the data
         VarData <- lapply(1:length(SplitData), function(i){apply(SplitData[[i]], 1, var)})
@@ -2160,7 +2153,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
       
       if(ExtMode == 3){
 
-        print("Extended mode 3: mean IQR/median over the principal curve (0 median removed)")
+        print("Extended mode 3: median IQR over the principal curve (0 IQR removed)")
         
         IQRData <- lapply(SplitData, function(x){apply(x, 1, IQR)})
 
@@ -2169,7 +2162,7 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
         IQRoMed <- IQRComb/abs(NodeOnGenes)
         IQRoMed[!is.finite(IQRoMed)] <- NA
 
-        StatData <- apply(IQRoMed, 1, mean, na.rm=TRUE)
+        StatData <- apply(IQRoMed, 1, median, na.rm=TRUE)
 
       }
       
@@ -2178,13 +2171,11 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     KeepGenes <- names(which(StatData < DistillThr))
     KeepGenes <- KeepGenes[!is.na(KeepGenes)]
     
-    print(paste(sum(StatData >= DistillThr, na.rm = TRUE), "genes filtered"))
+    print(paste(sum(StatData >= DistillThr, na.rm = TRUE),
+                "genes filtered by the selected procedure"))
     print(paste(length(KeepGenes), "genes selected"))
     
-    return(KeepGenes)
-    
   }
-  
   
   if(Mode == "PeakPC" | Mode == "PeakALL"){
     print("Selecting genes based on the presence of single peaks")
@@ -2197,8 +2188,6 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     for(i in 1:nNodes){
       CellVertexAssociation[ BaseAnalysis$TaxonList[[length(BaseAnalysis$TaxonList)]][[i]] ] <- i
     }
-
-    NodeOnGenes <- BaseAnalysis$PrinGraph$Nodes %*% t(BaseAnalysis$PCAData$rotation[,1:BaseAnalysis$nDims])
 
     AllPaths <- GetLongestPath(Net = BaseAnalysis$Net[[length(BaseAnalysis$Net)]],
                                Structure = Topo, Circular = TRUE)
@@ -2382,9 +2371,29 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
     print(paste(length(Multi), "genes filtered due to multimodality"))
     print(paste(length(KeepGenes), "genes selected"))
     
-    return(KeepGenes)
      
+  }
+  
+  # Get the median expresion value 
+  MedianPCExp <- apply(NodeOnGenes, 1, quantile, ZeroQuant)
+  
+  Jumps <- (sort(MedianPCExp)[-1] - sort(MedianPCExp)[-length(MedianPCExp)])
+  BigJmps <- which((Jumps-mean(Jumps))/sd(Jumps)>3)
+  
+  PCnOK <- names(Jumps)[1:(BigJmps[1]-1)]
+  PCOK <- names(Jumps)[(BigJmps[1]):length(Jumps)]
+  
+  if(length(PCOK) > 10 & length(PCnOK) > 10){
+    MedianRat <- median(MedianPCExp[PCnOK])/median(MedianPCExp)
+    VarPopPV <- var.test(MedianPCExp[PCnOK], MedianPCExp[PCOK], alternative = "less")$p.value
+    
+    if(MedianRat < MedianRatThr & VarPopPV < VarTestPVThr){
+      return(intersect(KeepGenes, PCOK))
     }
+  }
+  
+  
+  return(KeepGenes)
     
 }
 
@@ -2779,16 +2788,19 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 #'
 #' @examples
 ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99, MaxRounds = 25, FastReduce = FALSE,
-                            OutThr = 3, nNodes = 25, VarThr = .99, Categories = NULL, UpdateG0Cells = TRUE,
+                            OutThr = 5, nNodes = 25, VarThr = .99, Categories = NULL, UpdateG0Cells = TRUE, PCAFilter = TRUE, OutThrPCA = 5,
                             GraphType = 'Circle', IgnoreTail = FALSE, PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
                             InitStructNodes = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
-                            DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE, StartQuant = .5, QuantInc = .01) {
+                            DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE,
+                            StartQuant = .5, QuantInc = .01, EstProlif = "MeanPerc", PlotDebug = FALSE) {
   
   StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = StartGeneSet, OutThr = OutThr, nNodes = nNodes,
                                          VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
                                          PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                          MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                         PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate, QuaThr = StartQuant)
+                                         PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
+                                         QuaThr = StartQuant, EstProlif = "MeanPerc", PCAFilter = PCAFilter, OutThrPCA = OutThrPCA,
+                                   PlotDebug = PlotDebug)
   ConsideredStruct <- StartStruct
   
   FilteredGenes <- StartGeneSet
@@ -2841,14 +2853,16 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                        MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = NULL)
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = NULL, EstProlif = "MeanPerc",
+                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
     } else {
       ConsideredStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
                                        VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                        MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell)
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell, EstProlif = "MeanPerc",
+                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
     }
 
     
@@ -3414,24 +3428,6 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
       ggplot2::labs(x = "Pseudotime", y="Gene expression", title = rownames(NodeOnGenes)[Idx]) +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     
-    # RangeDF <- data.frame(t(as.data.frame(lapply(Idxs, range))))
-    # colnames(RangeDF) <- c("Min", "Max")
-    # RangeDF[!is.finite(RangeDF$Min),] <- NA
-    # RangeDF <- cbind(rownames(RangeDF), RangeDF)
-    # colnames(RangeDF) <- c("Stage", "Min", "Max")
-    # 
-    # RangeDF$Stage <- factor(as.character(RangeDF$Stage), AllCat)
-    # RangeDF$Min <- as.numeric(as.character(RangeDF$Min))
-    # RangeDF$Max <- as.numeric(as.character(RangeDF$Max))
-    # 
-    # RangeDF$Min <- cumsum(OrderedPoints$PathLen)[RangeDF$Min]
-    # RangeDF$Max <- cumsum(OrderedPoints$PathLen)[RangeDF$Max]
-    # 
-    # for(i in 2:nrow(RangeDF)){
-    #   RangeDF$Max[i-1] <- mean(c(RangeDF$Max[i-1], RangeDF$Min[i]), na.rm=TRUE)
-    #   RangeDF$Min[i] <- RangeDF$Max[i-1]
-    # }
-    
     RecCoord <- NULL
     
     for(i in 1:length(Idxs)){
@@ -3477,5 +3473,36 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
     
   }
   
+  CellsPT <- OrderedPoints$PositionOnPath
+  names(CellsPT) <-  rownames(ExpData)
+  
+  return(list(Structure = Structure, ExtPath = ExtPath,
+              NodesPT = cumsum(OrderedPoints$PathLen),
+              NodesExp = NodeOnGenes[order(apply(NodeOnGenes, 1, var), decreasing = TRUE),as.numeric(ExtPath)],
+              CellsPT = CellsPT,
+              CellExp = t(ExpData[,order(apply(ExpData, 1, var), decreasing = TRUE)]),
+              RecCoord = RecCoord,
+              StageOnNodes = Idxs
+              )
+         )
+  
 }
+
+
+
+
+
+
+
+
+# 
+# 
+# ExpandGenes <- function(variables) {
+#   
+# }
+
+
+
+
+
 
