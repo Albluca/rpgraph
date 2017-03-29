@@ -6,13 +6,14 @@
 \usage{
 ConvergeOnGenes(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = 0.5,
   ExtMode = 1, StopCrit = 0.99, MaxRounds = 25, FastReduce = FALSE,
-  OutThr = 3, nNodes = 25, VarThr = 0.99, Categories = NULL,
-  UpdateG0Cells = TRUE, GraphType = "Circle", IgnoreTail = FALSE,
-  PlanVarLimit = 0.9, PlanVarLimitIC = 0.95, ForceLasso = FALSE,
-  InitStructNodes = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE,
-  MinProlCells = 25, DipPVThr = 1e-04, PCACenter = FALSE,
-  PCAProjCenter = TRUE, PlotIntermediate = FALSE, StartQuant = 0.5,
-  QuantInc = 0.01)
+  OutThr = 5, nNodes = 25, VarThr = 0.99, Categories = NULL,
+  UpdateG0Cells = TRUE, PCAFilter = TRUE, OutThrPCA = 5,
+  GraphType = "Circle", IgnoreTail = FALSE, PlanVarLimit = 0.9,
+  PlanVarLimitIC = 0.95, ForceLasso = FALSE, InitStructNodes = 10,
+  MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
+  DipPVThr = 1e-04, PCACenter = FALSE, PCAProjCenter = TRUE,
+  PlotIntermediate = FALSE, StartQuant = 0.5, QuantInc = 0.01,
+  EstProlif = "MeanPerc", PlotDebug = FALSE)
 }
 \arguments{
 \item{ExpData}{}

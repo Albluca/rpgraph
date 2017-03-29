@@ -4,20 +4,19 @@
 \alias{ProjectAndCompute}
 \title{Title}
 \usage{
-ProjectAndCompute(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes,
-  Log = TRUE, Categories = NULL, Filter = TRUE, GraphType = "Lasso",
-  PlanVarLimit = 0.9, PlanVarLimitIC = NULL, MinBranDiff = 2,
-  InitStructNodes = 8, ForceLasso = FALSE, EstProlif = "MeanPerc",
-  QuaThr = 0.6, NonG0Cell = NULL, DipPVThr = 0.001, MinProlCells = 25,
-  PCACenter = FALSE, PCAProjCenter = FALSE, PlotDebug = FALSE,
+ProjectAndCompute(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRUE,
+  Categories = NULL, Filter = TRUE, OutThr = 5, PCAFilter = FALSE,
+  OutThrPCA = 5, GraphType = "Lasso", PlanVarLimit = 0.9,
+  PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 8,
+  ForceLasso = FALSE, EstProlif = "MeanPerc", QuaThr = 0.5,
+  NonG0Cell = NULL, DipPVThr = 0.001, MinProlCells = 25,
+  PCACenter = TRUE, PCAProjCenter = FALSE, PlotDebug = FALSE,
   PlotIntermediate = FALSE)
 }
 \arguments{
 \item{DataSet}{}
 
 \item{GeneSet}{}
-
-\item{OutThr}{}
 
 \item{VarThr}{}
 
@@ -28,6 +27,8 @@ ProjectAndCompute(DataSet, GeneSet = NULL, OutThr, VarThr, nNodes,
 \item{Categories}{}
 
 \item{Filter}{}
+
+\item{OutThr}{}
 
 \item{GraphType}{}
 

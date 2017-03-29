@@ -5,7 +5,8 @@
 \title{Title}
 \usage{
 PlotOnStages(Structure, TaxonList, Categories, PrinGraph, Net, SelThr = NULL,
-  ComputeOverlaps = TRUE, RotatioMatrix, ExpData)
+  ComputeOverlaps = TRUE, RotatioMatrix, PointProjections, ExpData,
+  nGenes = 10)
 }
 \arguments{
 \item{Structure}{}

@@ -3495,11 +3495,459 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
 
 
 
-# 
-# 
-# ExpandGenes <- function(variables) {
-#   
-# }
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# PlotsAndDistill ------------------------------------------------------
+#
+################################################################################
+
+
+#' Title
+#'
+#' @param GeneExprMat 
+#' @param StartSet 
+#' @param Categories 
+#' @param Topology 
+#' @param IgnoreTail 
+#' @param PlanVarLimit 
+#' @param PlanVarLimitIC 
+#' @param DistillThr 
+#' @param Log 
+#' @param StartQuant 
+#' @param OutThr 
+#' @param OutThrPCA 
+#' @param Title 
+#' @param MinProlCells 
+#' @param PCACenter 
+#' @param PlotDebug 
+#' @param Mode 
+#' @param ExtMode 
+#' @param nNodes 
+#' @param InitStructNodes 
+#' @param DipPVThr 
+#' @param PCAFilter 
+#' @param PCAProjCenter 
+#' @param StopCrit 
+#' @param Filter 
+#' @param CompareSet 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circle", IgnoreTail = FALSE, PlanVarLimit = .9, PlanVarLimitIC = 92,
+                            DistillThr = .7, Log = TRUE, StartQuant = .5, OutThr = 3, OutThrPCA = 3, Title = '', MinProlCells = 20, PCACenter = FALSE,
+                            PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, nNodes = 40, InitStructNodes = 20, DipPVThr = 1e-4, PCAFilter = TRUE,
+                            PCAProjCenter = TRUE, StopCrit = .95, Filter = TRUE, CompareSet = list()) {
+  
+  
+  # Perform the initial analysis
+  
+  PrGraph.Initial <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = StartSet, OutThr = OutThr, nNodes = nNodes, 
+                                       VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
+                                       PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
+                                       MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                       PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE,
+                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
+  
+  # Distill genes
+  
+  DistilledGenes <- ConvergeOnGenes(ExpData = GeneExprMat, StartGeneSet = StartSet, Mode = Mode, DistillThr = DistillThr, FastReduce = FALSE,
+                                    ExtMode = ExtMode, StopCrit = StopCrit, OutThr = OutThr, nNodes = nNodes, VarThr = .99, Categories = Categories,
+                                    GraphType = Topology, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE,
+                                    InitStructNodes = InitStructNodes, MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                    PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PlotDebug = PlotDebug,
+                                    IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA)
+  
+  # Perform the analysis on the final structure
+  
+  PrGraph.Final <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = DistilledGenes, OutThr = OutThr, nNodes = nNodes, 
+                                     VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
+                                     PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
+                                     MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PCAFilter = PCAFilter,
+                                     OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
+  
+  # Plot the initial projection
+  ProjectOnPrincipalGraph(Nodes = PrGraph.Initial$PrinGraph$Nodes, Edges = PrGraph.Initial$PrinGraph$Edges, Points = PrGraph.Initial$Data,
+                          UsedPoints = NULL, Categories = PrGraph.Initial$Categories, Title=paste(Title, "(Initial)"),
+                          PCACenter = TRUE, ShowFitted = FALSE)
+  
+  # Plot the final projection
+  ProjectOnPrincipalGraph(Nodes = PrGraph.Final$PrinGraph$Nodes, Edges = PrGraph.Final$PrinGraph$Edges, Points = PrGraph.Final$Data,
+                          UsedPoints = NULL, Categories = PrGraph.Final$Categories, Title=paste(Title, "(Filtered)"),
+                          PCACenter = TRUE, ShowFitted = FALSE)
+  
+  # Plot the difference in number
+  barplot(c(length(StartSet), length(DistilledGenes)), ylab = "Number of genes", names.arg = c("Initial", "Filtered"))
+  
+  PTList <- list()
+  
+  if(length(CompareSet) > 0){
+    
+    CIListEnd <- list()
+    CIListStart <- list()
+    
+    for(i in 1:length(CompareSet)){
+      CIListEnd[[length(CIListEnd)+1]] <- prop.test(length(intersect(CompareSet[[i]], DistilledGenes)), length(DistilledGenes), conf.level = .95)$conf.int[1:2]*100
+      CIListStart[[length(CIListStart)+1]] <- prop.test(length(intersect(CompareSet[[i]], StartSet)), length(StartSet), conf.level = .95)$conf.int[1:2]*100
+    }
+    
+    IntersectListEnd <- lapply(CompareSet, function(x) intersect(x, DistilledGenes))
+    IntersectListStart <- lapply(CompareSet, function(x) intersect(x, StartSet))
+    
+    for(i in 1:length(CompareSet)){
+      
+      PTList[[i]] <- prop.test(c(length(IntersectListEnd[[i]]), length(IntersectListStart[[i]])), c(length(DistilledGenes), length(StartSet)))
+      
+      yMax <- max(c(CIListEnd[[i]], CIListStart[[i]]))
+      
+      B <- barplot(100*c(length(IntersectListEnd[[i]]), length(IntersectListStart[[i]]))/c(length(DistilledGenes), length(StartSet)),
+                   names.arg = c("Filtered", "Initial"), ylab = "Percentage of genes identified", ylim = c(0, yMax), main = names(CompareSet)[i])
+      
+      arrows(x0 = B[1], x1 = B[1], y0 = CIListEnd[[i]][1], y1 = CIListEnd[[i]][2], angle = 90, length = .5, lwd = 2, code = 3)
+      arrows(x0 = B[2], x1 = B[2], y0 = CIListStart[[i]][1], y1 = CIListStart[[i]][2], angle = 90, length = .5, lwd = 2, code = 3)
+      
+    }
+    
+    names(PTList) <- names(CompareSet)
+    
+  }
+  
+  return(list(Genes = DistilledGenes, PTList = PTList, FinalStruct = PrGraph.Final, InitialStruct = PrGraph.Initial))
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#
+# PlotOnStages ------------------------------------------------------
+#
+################################################################################
+
+
+#' Title
+#'
+#' @param GeneExprMat 
+#' @param StartSet 
+#' @param Categories 
+#' @param Topology 
+#' @param DistillThr 
+#' @param IgnoreTail 
+#' @param Log 
+#' @param StartQuant 
+#' @param Title 
+#' @param PlanVarLimit 
+#' @param PlanVarLimitIC 
+#' @param KeepOriginal 
+#' @param PCACenter 
+#' @param PlotDebug 
+#' @param Mode 
+#' @param ExtMode 
+#' @param MaxRounds 
+#' @param StopCrit 
+#' @param ExpQuant 
+#' @param StopMode 
+#' @param Parallel 
+#' @param nCores 
+#' @param ClusType 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circle', DistillThr = .6,
+                             IgnoreTail = TRUE, Log = TRUE, StartQuant = .25, Title = "Buettner et al",
+                             PlanVarLimit = .85, PlanVarLimitIC = .9, KeepOriginal = TRUE,
+                             PCACenter = FALSE, PlotDebug = FALSE, Mode = "VarPC", ExtMode = 3,
+                             MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode =1,
+                             Parallel = TRUE, nCores = NULL, ClusType = "PSOCK") {
+  
+  
+  # Produce the initial analysis
+  
+  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet,
+                              Categories = Categories, Topology = Topology, DistillThr = DistillThr,
+                              IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = Title, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
+                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode)
+  
+  # Produce the initial processed data
+  
+  Proc.Exp <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]],
+                           Categories = Info.Exp$FinalStruct$Categories, nGenes = 2,
+                           PrinGraph = Info.Exp$FinalStruct$PrinGraph,
+                           Net = Info.Exp$FinalStruct$Net[[length(Info.Exp$FinalStruct$Net)]],
+                           SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp$FinalStruct$FiltExp,
+                           RotatioMatrix = Info.Exp$FinalStruct$PCAData$rotation[,1:Info.Exp$FinalStruct$nDims],
+                           PointProjections = Info.Exp$FinalStruct$ProjPoints[[length(Info.Exp$FinalStruct$ProjPoints)]])
+  
+  
+  TaxonList <- Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]]
+  TaxVect <- rep(NA, ncol(Proc.Exp$NodesExp)-1)
+  
+  for(i in 1:length(TaxonList)){
+    TaxVect[TaxonList[[i]]] <- i 
+  }
+  
+  AllMean <- apply(log10(GeneExprMat[, colnames(Proc.Exp$CellExp)] + 1), 1, mean)
+  SelMean <- apply(log10(GeneExprMat[rownames(Proc.Exp$CellExp), colnames(Proc.Exp$CellExp)] + 1), 1, mean)
+  
+  print(paste(sum(AllMean < min(SelMean)), "genes will be excluded a priori from the analysis"))
+  print("Computing median of IQR/median")
+  
+  if(Parallel){
+    
+    tictoc::tic()
+    if(is.null(nCores)){
+      nCores <- parallel::detectCores() - 1
+    }
+    
+    cl <- parallel::makeCluster(nCores, type = ClusType)
+    
+    parallel::clusterExport(cl, "TaxVect", environment())
+    
+    MedianVar <- parallel::parApply(cl,log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)] + 1), 1, function(x){
+      AGG <- aggregate(x, by=list(TaxVect), median)
+      AGGVect <- AGG[,2]
+      names(AGGVect) <- paste(AGG[,1])
+      median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+    })
+    
+    parallel::stopCluster(cl)
+    
+    tictoc::toc()
+    
+  } else {
+    
+    tictoc::tic()
+    MedianVar <- apply(log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)] + 1), 1, function(x){
+      AGG <- aggregate(x, by=list(TaxVect), median)
+      AGGVect <- AGG[,2]
+      names(AGGVect) <- paste(AGG[,1])
+      median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+    })
+    tictoc::toc()
+    
+  }
+  
+  
+  
+  MedianVar <- MedianVar[!is.infinite(MedianVar)]
+  MedianVar <- MedianVar[!is.na(MedianVar)]
+  
+  PrevDistilled <- names(MedianVar) %in% rownames(Proc.Exp$NodesExp)
+  
+  boxplot(MedianVar ~ PrevDistilled)
+  
+  # wilcox.test(MedianVar ~ PrevDistilled)
+  # t.test(MedianVar ~ PrevDistilled)
+  
+  GeneStageList <- list()
+  Info.Exp.List <- list()
+  Proc.Exp.List <- list()
+  
+  GeneStageList[[1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
+                                 rownames(Proc.Exp$NodesExp)))
+  
+  length(GeneStageList[[1]])/nrow(Proc.Exp$NodesExp)
+  
+  DONE <- FALSE
+  Info.Exp.Final <- NULL
+  Round.Count <- 0
+  
+  while(!DONE){
+    
+    # Repeating the analysis untill convergence (or max iterations)
+    
+    Info.Exp.StageI <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = GeneStageList[[length(GeneStageList)]],
+                                       Categories = Categories, Topology = Topology, DistillThr = DistillThr,
+                                       IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = paste(Title, "STEP", Round.Count), PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
+                                       PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode)
+    
+    Info.Exp.List[[length(Info.Exp.List)+1]] <- Info.Exp.StageI
+    
+    
+    Proc.Exp.StageI <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp.StageI$FinalStruct$TaxonList[[length(Info.Exp.StageI$FinalStruct$TaxonList)]],
+                                    Categories = Info.Exp.StageI$FinalStruct$Categories, nGenes = 2,
+                                    PrinGraph = Info.Exp.StageI$FinalStruct$PrinGraph,
+                                    Net = Info.Exp.StageI$FinalStruct$Net[[length(Info.Exp.StageI$FinalStruct$Net)]],
+                                    SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp.StageI$FinalStruct$FiltExp,
+                                    RotatioMatrix = Info.Exp.StageI$FinalStruct$PCAData$rotation[,1:Info.Exp.StageI$FinalStruct$nDims],
+                                    PointProjections = Info.Exp.StageI$FinalStruct$ProjPoints[[length(Info.Exp.StageI$FinalStruct$ProjPoints)]])
+    
+    Proc.Exp.List[[length(Proc.Exp.List)+1]] <- Proc.Exp.StageI
+    
+    print(paste(length(Proc.Exp.StageI$NodesExp), "genes selected"))
+    
+    OnlyOld <- setdiff(GeneStageList[[length(GeneStageList)]], rownames(Proc.Exp.StageI$NodesExp))    
+    print(paste(length(OnlyOld), "genes removed:"))
+    print(OnlyOld)
+    
+    OnlyNew <- setdiff(rownames(Proc.Exp.StageI$NodesExp), GeneStageList[[length(GeneStageList)]])
+    print(paste(length(OnlyNew), "genes added:"))
+    print(OnlyNew)
+    
+    if(StopMode == 1){
+      if( (length(OnlyOld) + length(OnlyNew))/length(GeneStageList[[length(GeneStageList)]]) < 1 - StopCrit ){
+        print("Converged! - Mode 1")
+        DONE <- TRUE
+        break()
+      }
+    }
+    
+    Round.Count <- Round.Count + 1
+    
+    print(paste("Round", Round.Count, "Done"))
+    
+    if(Round.Count >= MaxRounds){
+      print("Maximum number of iteration reached")
+      DONE <- TRUE
+      break()
+    }
+    
+    TaxonList <- Info.Exp.StageI$FinalStruct$TaxonList[[length(Info.Exp.StageI$FinalStruct$TaxonList)]]
+    TaxVect <- rep(NA, ncol(Proc.Exp.StageI$NodesExp)-1)
+    
+    for(i in 1:length(TaxonList)){
+      TaxVect[TaxonList[[i]]] <- i 
+    }
+    
+    AllMean <- apply(log10(GeneExprMat[, colnames(Proc.Exp.StageI$CellExp)] + 1), 1, mean)
+    SelMean <- apply(log10(GeneExprMat[rownames(Proc.Exp.StageI$CellExp), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, mean)
+    
+    print(paste(sum(AllMean < min(SelMean)), "genes will be excluded a priori from the analysis"))
+    print("Computing median of IQR/median")
+    
+    
+    
+    
+    
+    
+    
+    if(Parallel){
+      
+      tictoc::tic()
+      if(is.null(nCores)){
+        nCores <- parallel::detectCores() - 1
+      }
+      
+      cl <- parallel::makeCluster(nCores, type = ClusType)
+      
+      parallel::clusterExport(cl, "TaxVect", environment())
+      
+      MedianVar <- parallel::parApply(cl,log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, function(x){
+        AGG <- aggregate(x, by=list(TaxVect), median)
+        AGGVect <- AGG[,2]
+        names(AGGVect) <- paste(AGG[,1])
+        median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+      })
+      
+      parallel::stopCluster(cl)
+      tictoc::toc()
+      
+    } else {
+      
+      tictoc::tic()
+      MedianVar <- apply(log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, function(x){
+        AGG <- aggregate(x, by=list(TaxVect), median)
+        AGGVect <- AGG[,2]
+        names(AGGVect) <- paste(AGG[,1])
+        median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+      })
+      tictoc::toc()
+      
+    }
+    
+    MedianVar <- MedianVar[!is.infinite(MedianVar)]
+    MedianVar <- MedianVar[!is.na(MedianVar)]
+    
+    PrevDistilled <- names(MedianVar) %in% rownames(Proc.Exp.StageI$NodesExp)
+    
+    boxplot(MedianVar ~ PrevDistilled, main = paste(Title, "STEP", Round.Count))
+    
+    # wilcox.test(MedianVar ~ PrevDistilled)
+    # t.test(MedianVar ~ PrevDistilled)
+    
+    if(KeepOriginal){
+      GeneStageList[[length(GeneStageList)+1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
+                                                           rownames(Proc.Exp$NodesExp)))
+      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp$NodesExp)
+    } else {
+      GeneStageList[[length(GeneStageList)+1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
+                                                           rownames(Proc.Exp.StageI$NodesExp)))
+      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp.StageI$NodesExp)
+    }
+    
+    GeneIntRatPrev <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
+      length(GeneStageList[[length(GeneStageList)-1]])
+    GeneIntRatCurr <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
+      length(GeneStageList[[length(GeneStageList)]])
+    
+    print(paste("Gene number variation", GeneNumbVarRat))
+    print(paste("Gene intersection variation (Prev)", GeneIntRatPrev))
+    print(paste("Gene intersection variation (Curr)", GeneIntRatCurr))
+    
+    Sys.sleep(10)
+    
+    if(StopMode == 2){
+      if(GeneIntRatPrev > StopCrit & GeneIntRatCurr > StopCrit){
+        print("Converged! - Mode 2")
+        DONE <- TRUE
+        break()
+      }
+    }
+    
+  }
+  
+  return(list(StartInfo = Info.Exp, StartProc = Proc.Exp,
+              ListInfo = Info.Exp.List, ListProc = Proc.Exp.List,
+              GeneList = GeneStageList))
+}
+
+
+
+
+
+
+
+
 
 
 
