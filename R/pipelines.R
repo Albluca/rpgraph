@@ -314,7 +314,7 @@ Filter <- function(ExpressionMatrix, GeneDetectedFilter, GeneCountFilter, MinCel
   
   OutExpr <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneDetectedFilter)
   
-  OutCount <- scater::isOutlier(rowSums(ExpressionMatrix>0), nmads = GeneCountFilter)
+  OutCount <- scater::isOutlier(rowSums(ExpressionMatrix), nmads = GeneCountFilter)
   
   print(paste(sum(OutExpr & OutCount), "Cells will be removed due to both filtering"))
   print(paste(sum(OutExpr & !OutCount), "Cells will be removed due to gene count filtering"))
@@ -1371,9 +1371,9 @@ MakeCCSummaryMatrix <- function(CCStruct) {
 ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRUE, Categories = NULL,
                               Filter = TRUE, OutThr = 5, PCAFilter = FALSE, OutThrPCA = 5,
                               GraphType = 'Lasso', PlanVarLimit = .9,
-                              PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 8,
+                              PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 15,
                               ForceLasso = FALSE, EstProlif = "MeanPerc", QuaThr = .5,
-                              NonG0Cell = NULL, DipPVThr = 1e-3, MinProlCells = 25, PCACenter = TRUE, PCAProjCenter = FALSE,
+                              NonG0Cell = NULL, DipPVThr = 1e-3, MinProlCells = 20, PCACenter = TRUE, PCAProjCenter = FALSE,
                               PlotDebug = FALSE, PlotIntermediate = FALSE){
   
   if(is.null(PlanVarLimitIC)){
@@ -1472,7 +1472,21 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRU
     if(EstProlif == "MeanPerc"){
       print("Using mean of quantiles")
       Cellvect <- apply(DataMat/rowSums(DataMat), 1, quantile, QuaThr)
-      
+      NonG0Cell <- rownames(DataMat)[Cellvect > mean(Cellvect)]
+      boxplot(Cellvect)
+      abline(h=mean(Cellvect))
+    }
+    
+    if(EstProlif == "AdaptiveMeanPerc"){
+      print("Using adaptive mean of quantiles")
+      Cellvect <- apply(DataMat/rowSums(DataMat), 1, quantile, QuaThr)
+      AdjFact = 0
+      while((sum(Cellvect != 0) < MinProlCells) & (QuaThr + AdjFact < 1)){
+        AdjFact <- AdjFact + .01
+        Cellvect <- apply(DataMat/rowSums(DataMat), 1, quantile, QuaThr + AdjFact)
+      }
+      boxplot(Cellvect, main=paste("Q =", QuaThr + AdjFact))
+      abline(h=mean(Cellvect))
       NonG0Cell <- rownames(DataMat)[Cellvect > mean(Cellvect)]
     }
     
@@ -1752,6 +1766,8 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRU
       PCAStruct <- prcomp(BasicCircData[[length(BasicCircData)]]$Nodes, center = TRUE, scale. = FALSE, retx = TRUE)
       PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
       
+      print(paste("Initial circle: Nodes = ", UsedNodes, "PercPlan = ", PlanPerc))
+      
     }
     
     # Step II - Using curves
@@ -1773,6 +1789,8 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRU
       PlanPerc <- sum(PCAStruct$sdev[1:2]^2)/sum(PCAStruct$sdev^2)
       
       UsedNodes <- nrow(BasicCircData[[length(BasicCircData)]]$Nodes)
+      
+      print(paste("Final circle: Nodes = ", UsedNodes, "PercPlan = ", PlanPerc))
       
     }
     
@@ -1994,7 +2012,7 @@ ProjectAndCompute <- function(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRU
 DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =1,
                         Topo = 'Lasso', IgnoreTail = FALSE, ZeroQuant = .75,
                         FullExpression = NULL, Log = FALSE, LoesSpan = .1,
-                        MedianRatThr = .05, VarTestPVThr = 1e-5) {
+                        MedianRatThr = .05, VarTestPVThr = 1e-5, FilterLow = FALSE) {
   
   if(!is.null(FullExpression) & Log){
     FullExpression <- log10(FullExpression + 1)
@@ -2374,24 +2392,26 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
      
   }
   
-  # Get the median expresion value 
-  MedianPCExp <- apply(NodeOnGenes, 1, quantile, ZeroQuant)
-  
-  Jumps <- (sort(MedianPCExp)[-1] - sort(MedianPCExp)[-length(MedianPCExp)])
-  BigJmps <- which((Jumps-mean(Jumps))/sd(Jumps)>3)
-  
-  PCnOK <- names(Jumps)[1:(BigJmps[1]-1)]
-  PCOK <- names(Jumps)[(BigJmps[1]):length(Jumps)]
-  
-  if(length(PCOK) > 10 & length(PCnOK) > 10){
-    MedianRat <- median(MedianPCExp[PCnOK])/median(MedianPCExp)
-    VarPopPV <- var.test(MedianPCExp[PCnOK], MedianPCExp[PCOK], alternative = "less")$p.value
+  if(FilterLow){
+    # Get the median expresion value 
+    MedianPCExp <- apply(NodeOnGenes, 1, quantile, ZeroQuant)
     
-    if(MedianRat < MedianRatThr & VarPopPV < VarTestPVThr){
-      return(intersect(KeepGenes, PCOK))
+    Jumps <- (sort(MedianPCExp)[-1] - sort(MedianPCExp)[-length(MedianPCExp)])
+    BigJmps <- which((Jumps-mean(Jumps))/sd(Jumps)>3)
+    
+    PCnOK <- names(Jumps)[1:(BigJmps[1]-1)]
+    PCOK <- names(Jumps)[(BigJmps[1]):length(Jumps)]
+    
+    if(length(PCOK) > 10 & length(PCnOK) > 10){
+      MedianRat <- median(MedianPCExp[PCnOK])/median(MedianPCExp)
+      VarPopPV <- var.test(MedianPCExp[PCnOK], MedianPCExp[PCOK], alternative = "less")$p.value
+      
+      if(MedianRat < MedianRatThr & VarPopPV < VarTestPVThr){
+        return(intersect(KeepGenes, PCOK))
+      }
     }
   }
-  
+
   
   return(KeepGenes)
     
@@ -2788,9 +2808,9 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 #'
 #' @examples
 ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr = .5, ExtMode = 1, StopCrit = .99, MaxRounds = 25, FastReduce = FALSE,
-                            OutThr = 5, nNodes = 25, VarThr = .99, Categories = NULL, UpdateG0Cells = TRUE, PCAFilter = TRUE, OutThrPCA = 5,
+                            OutThr = 5, nNodes = 40, VarThr = .99, Categories = NULL, UpdateG0Cells = TRUE, PCAFilter = TRUE, OutThrPCA = 5,
                             GraphType = 'Circle', IgnoreTail = FALSE, PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
-                            InitStructNodes = 10, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 25,
+                            InitStructNodes = 20, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 20,
                             DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE,
                             StartQuant = .5, QuantInc = .01, EstProlif = "MeanPerc", PlotDebug = FALSE) {
   
@@ -2799,7 +2819,7 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                          PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                          MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                          PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                         QuaThr = StartQuant, EstProlif = "MeanPerc", PCAFilter = PCAFilter, OutThrPCA = OutThrPCA,
+                                         QuaThr = StartQuant, EstProlif = EstProlif, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA,
                                    PlotDebug = PlotDebug)
   ConsideredStruct <- StartStruct
   
@@ -2853,7 +2873,7 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                        MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = NULL, EstProlif = "MeanPerc",
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = NULL, EstProlif = EstProlif,
                                        PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
     } else {
       ConsideredStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = FilteredGenes, OutThr = OutThr, nNodes = nNodes,
@@ -2861,7 +2881,7 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                        MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell, EstProlif = "MeanPerc",
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell, EstProlif = EstProlif,
                                        PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
     }
 
@@ -3072,11 +3092,14 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
       AGG2 <- aggregate(NumReord, by = list(Categories), min)
       AGG3 <- aggregate(NumReord, by = list(Categories), max)
       
+      Sorted <- FALSE
+      
       if(S4Vectors::isSorted(AGG[,2])){
         SummInfo <- rbind(SummInfo,
                           c(i, 1, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
                             AGG2[1,2], AGG[1,2])
         )
+        Sorted <- TRUE
         # boxplot(NumReord ~ Categories, main = i)
       }
       
@@ -3086,23 +3109,53 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
                             nNodes - AGG3[1,2] + 1,
                             nNodes - AGG[1,2] + 1)
         )
+        Sorted <- TRUE
         # boxplot(NumReord ~ Categories, main = paste(i, "rev"))
+      }
+      
+      if(!Sorted){
+        
+        if(cor(AGG[,2], 1:nrow(AGG))>0){
+          SummInfo <- rbind(SummInfo,
+                            c(i, 3, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              AGG2[1,2], AGG[1,2])
+          )
+        } else {
+          SummInfo <- rbind(SummInfo,
+                            c(i, 4, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              nNodes - AGG3[1,2] + 1,
+                              nNodes - AGG[1,2] + 1)
+          )
+        }
+        
       }
     }
     
+    print(SummInfo)
+    
     print("Finding the best path")
     
+    if(any(SummInfo[,2] %in% 1:2)){
+      SummInfo <- SummInfo[SummInfo[,2] %in% 1:2, ]
+    } else {
+      print("Unable to find strongly consecutive stages")
+    }
+    
     Selected <- SummInfo[SummInfo[, 3] == min(SummInfo[, 3]), ]
+    
+    print(Selected)
     
     if(length(Selected)>5){
       Selected <- Selected[which.min(Selected[,4]),]
     }
     
+    print(Selected)
+    
     SelPath <- AllPaths$VertNumb[Selected[1],]
     # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
     SelPath <- SelPath[-length(SelPath)]
     
-    if(Selected[2] == 2){
+    if(Selected[2] %in% c(2, 4)){
       SelPath <- rev(SelPath)
     }
     
@@ -3271,7 +3324,7 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   if(Structure == 'Circle'){
     
     for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,2] & !BinPercMat[j,ncol(BinPercMat)]){
+      if(!BinPercMat[j,2] & !BinPercMat[j,ncol(BinPercMat)] & any(BinPercMat[j,-1])){
         BinPercMat[j,1] <- FALSE
       }
     }
@@ -3282,7 +3335,7 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   
   for(i in 2:(ncol(BinPercMat)-1)){
     for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,i-1] & !BinPercMat[j,i+1]){
+      if(!BinPercMat[j,i-1] & !BinPercMat[j,i+1] & any(BinPercMat[j,-i])){
         BinPercMat[j,i] <- FALSE
       }
     }
@@ -3294,7 +3347,7 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   if(Structure == 'Circle'){
     
     for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,1] & !BinPercMat[j,ncol(BinPercMat)-1]){
+      if(!BinPercMat[j,1] & !BinPercMat[j,ncol(BinPercMat)-1] & any(BinPercMat[j,-ncol(BinPercMat)])){
         BinPercMat[j,ncol(BinPercMat)] <- FALSE
       }
     }
@@ -3410,6 +3463,11 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   Idxs <- apply(BinPercMatExt, 1, which)
   
   Bond <- lapply(Idxs[lapply(Idxs, length) > 1], range)
+  
+  print(1*BinPercMatExt)
+  
+  print(unlist(Bond))
+  
   
   if(!S4Vectors::isSorted(unlist(Bond))){
     warning("Stages are not sequential!")
@@ -3548,20 +3606,20 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
 #' @export
 #'
 #' @examples
-PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circle", IgnoreTail = FALSE, PlanVarLimit = .9, PlanVarLimitIC = 92,
+PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circle", IgnoreTail = FALSE, PlanVarLimit = .9, PlanVarLimitIC = .95,
                             DistillThr = .7, Log = TRUE, StartQuant = .5, OutThr = 3, OutThrPCA = 3, Title = '', MinProlCells = 20, PCACenter = FALSE,
                             PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, nNodes = 40, InitStructNodes = 20, DipPVThr = 1e-4, PCAFilter = TRUE,
-                            PCAProjCenter = TRUE, StopCrit = .95, Filter = TRUE, CompareSet = list()) {
+                            PCAProjCenter = TRUE, StopCrit = .95, Filter = TRUE, QuaThr = .5, CompareSet = list(), EstProlif = "MeanPerc") {
   
   
   # Perform the initial analysis
   
-  PrGraph.Initial <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = StartSet, OutThr = OutThr, nNodes = nNodes, 
+  PrGraph.Initial <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = StartSet, OutThr = OutThr, nNodes = nNodes, QuaThr = QuaThr,
                                        VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
                                        MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE,
-                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
+                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif)
   
   # Distill genes
   
@@ -3570,7 +3628,7 @@ PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circl
                                     GraphType = Topology, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE,
                                     InitStructNodes = InitStructNodes, MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PlotDebug = PlotDebug,
-                                    IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA)
+                                    IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, EstProlif = EstProlif)
   
   # Perform the analysis on the final structure
   
@@ -3579,7 +3637,7 @@ PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circl
                                      PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
                                      MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                      PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PCAFilter = PCAFilter,
-                                     OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
+                                     OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif)
   
   # Plot the initial projection
   ProjectOnPrincipalGraph(Nodes = PrGraph.Initial$PrinGraph$Nodes, Edges = PrGraph.Initial$PrinGraph$Edges, Points = PrGraph.Initial$Data,
@@ -3695,23 +3753,23 @@ PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circl
 #' @examples
 ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circle', DistillThr = .6,
                              IgnoreTail = TRUE, Log = TRUE, StartQuant = .25, Title = "Buettner et al",
-                             PlanVarLimit = .85, PlanVarLimitIC = .9, KeepOriginal = TRUE,
+                             PlanVarLimit = .85, PlanVarLimitIC = .9, KeepOriginal = TRUE, InitStructNodes = 20,
                              PCACenter = FALSE, PlotDebug = FALSE, Mode = "VarPC", ExtMode = 3,
-                             MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode =1,
-                             Parallel = TRUE, nCores = NULL, ClusType = "PSOCK") {
+                             MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode =1, EstProlif = "MeanPerc",
+                             Parallel = TRUE, nCores = NULL, ClusType = "PSOCK", QuaThr = .5, MinProlCells = 20) {
   
   
   # Produce the initial analysis
   
-  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet,
-                              Categories = Categories, Topology = Topology, DistillThr = DistillThr,
+  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet, QuaThr = QuaThr, MinProlCells = MinProlCells,
+                              Categories = Categories, Topology = Topology, DistillThr = DistillThr, InitStructNodes = InitStructNodes,
                               IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = Title, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
-                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode)
+                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode, EstProlif = EstProlif)
   
   # Produce the initial processed data
   
   Proc.Exp <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]],
-                           Categories = Info.Exp$FinalStruct$Categories, nGenes = 2,
+                           Categories = Info.Exp$FinalStruct$Categories, nGenes = 2, 
                            PrinGraph = Info.Exp$FinalStruct$PrinGraph,
                            Net = Info.Exp$FinalStruct$Net[[length(Info.Exp$FinalStruct$Net)]],
                            SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp$FinalStruct$FiltExp,
