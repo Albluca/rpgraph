@@ -3751,26 +3751,28 @@ PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circl
 #' @export
 #'
 #' @examples
-ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circle', DistillThr = .6,
-                             IgnoreTail = TRUE, Log = TRUE, StartQuant = .25, Title = "Buettner et al",
-                             PlanVarLimit = .85, PlanVarLimitIC = .9, KeepOriginal = TRUE, InitStructNodes = 20,
-                             PCACenter = FALSE, PlotDebug = FALSE, Mode = "VarPC", ExtMode = 3,
+ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circle', DistillThr = .7, DipPVThr = 1e-4,
+                             IgnoreTail = FALSE, Log = TRUE, StartQuant = .5, Title = "", OutThr = 3, nNodes = 40,
+                             PlanVarLimit = .9, PlanVarLimitIC = .95, KeepOriginal = TRUE, InitStructNodes = 20,
+                             PCACenter = FALSE, PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, OutThrPCA = 3,
                              MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode =1, EstProlif = "MeanPerc",
-                             Parallel = TRUE, nCores = NULL, ClusType = "PSOCK", QuaThr = .5, MinProlCells = 20) {
+                             Parallel = TRUE, nCores = NULL, ClusType = "PSOCK", QuaThr = .5, MinProlCells = 20,
+                             PCAFilter = TRUE, PCAProjCenter = TRUE, Filter = TRUE) {
   
   
   # Produce the initial analysis
   
-  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet, QuaThr = QuaThr, MinProlCells = MinProlCells,
-                              Categories = Categories, Topology = Topology, DistillThr = DistillThr, InitStructNodes = InitStructNodes,
+  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet, QuaThr = QuaThr, MinProlCells = MinProlCells, OutThr = OutThr, OutThrPCA = OutThrPCA,
+                              Categories = Categories, Topology = Topology, DistillThr = DistillThr, InitStructNodes = InitStructNodes, nNodes = nNodes, DipPVThr,
                               IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = Title, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
-                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode, EstProlif = EstProlif)
+                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode, EstProlif = EstProlif, PCAFilter = PCAFilter,
+                              PCAProjCenter = PCAProjCenter, Filter = TRUE)
   
   # Produce the initial processed data
   
   Proc.Exp <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]],
                            Categories = Info.Exp$FinalStruct$Categories, nGenes = 2, 
-                           PrinGraph = Info.Exp$FinalStruct$PrinGraph,
+                           PrinGraph = Info.Exp$FinalStruct$PrinGraph, 
                            Net = Info.Exp$FinalStruct$Net[[length(Info.Exp$FinalStruct$Net)]],
                            SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp$FinalStruct$FiltExp,
                            RotatioMatrix = Info.Exp$FinalStruct$PCAData$rotation[,1:Info.Exp$FinalStruct$nDims],
