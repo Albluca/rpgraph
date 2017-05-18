@@ -7,9 +7,9 @@
 ProjectAndCompute(DataSet, GeneSet = NULL, VarThr, nNodes, Log = TRUE,
   Categories = NULL, Filter = TRUE, OutThr = 5, PCAFilter = FALSE,
   OutThrPCA = 5, GraphType = "Lasso", PlanVarLimit = 0.9,
-  PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 8,
+  PlanVarLimitIC = NULL, MinBranDiff = 2, InitStructNodes = 15,
   ForceLasso = FALSE, EstProlif = "MeanPerc", QuaThr = 0.5,
-  NonG0Cell = NULL, DipPVThr = 0.001, MinProlCells = 25,
+  NonG0Cell = NULL, DipPVThr = 0.001, MinProlCells = 20,
   PCACenter = TRUE, PCAProjCenter = FALSE, PlotDebug = FALSE,
   PlotIntermediate = FALSE)
 }

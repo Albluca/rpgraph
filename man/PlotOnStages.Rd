@@ -6,7 +6,7 @@
 \usage{
 PlotOnStages(Structure, TaxonList, Categories, PrinGraph, Net, SelThr = NULL,
   ComputeOverlaps = TRUE, RotatioMatrix, PointProjections, ExpData,
-  nGenes = 10)
+  nGenes = 10, OrderOnCat = FALSE)
 }
 \arguments{
 \item{Structure}{}

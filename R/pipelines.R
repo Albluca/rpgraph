@@ -2129,6 +2129,28 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
         
       }
       
+      
+      if(ExtMode == 4){
+        
+        print("Extended mode 4: median of the ratio of the mad distances from the group means over mean expression  (0 means removed)")
+        
+        # Get the gene mean for each node
+        MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+        
+        # Get the median difference between the data and the mean
+        DiffData <- lapply(1:length(SplitData), function(i){apply( abs(SplitData[[i]] - MeanData[[i]]) , 1, mad) })
+        
+        # Put all together into matrices
+        DistComb <- do.call(cbind, DiffData)
+        MeanComb <- do.call(cbind, MeanData)
+        
+        tMat <- DistComb/MeanComb
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
+        
+      }
+      
     }
     
     if(Mode == "VarPC"){
@@ -2182,6 +2204,26 @@ DistillGene <- function(BaseAnalysis, Mode = "VarPC", DistillThr = .2, ExtMode =
 
         StatData <- apply(IQRoMed, 1, median, na.rm=TRUE)
 
+      }
+      
+      if(ExtMode == 4){
+        
+        print("Extended mode 4: median of the ratio of the mad distances from the group means over mean expression  (0 means removed)")
+        
+        # Get the gene mean for each node
+        MeanData <- lapply(SplitData, function(x){rowMeans(x)})
+        
+        # Get the median difference between the data and the mean
+        DiffData <- lapply(1:length(SplitData), function(i){apply( abs(SplitData[[i]] - NodeOnGenes[,i]) , 1, mad) })
+        
+        # Put all together into matrices
+        DistComb <- do.call(cbind, DiffData)
+        
+        tMat <- DistComb/abs(NodeOnGenes)
+        tMat[is.infinite(tMat)] <- NA
+        
+        StatData <- apply(tMat, 1, median, na.rm=TRUE)
+        
       }
       
     }
@@ -2812,7 +2854,9 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                             GraphType = 'Circle', IgnoreTail = FALSE, PlanVarLimit = .90, PlanVarLimitIC = .95, ForceLasso = FALSE,
                             InitStructNodes = 20, MinBranDiff = 2, Log = TRUE, Filter = TRUE, MinProlCells = 20,
                             DipPVThr = 1e-4, PCACenter = FALSE, PCAProjCenter = TRUE, PlotIntermediate = FALSE,
-                            StartQuant = .5, QuantInc = .01, EstProlif = "MeanPerc", PlotDebug = FALSE) {
+                            StartQuant = .5, QuantInc = .01, EstProlif = "MeanPerc", PlotDebug = FALSE, NonG0Cell = NULL, UpdateG0CellsOnce = TRUE) {
+  
+  CurrentNonG0Cell <- NonG0Cell
   
   StartStruct <- ProjectAndCompute(DataSet = ExpData, GeneSet = StartGeneSet, OutThr = OutThr, nNodes = nNodes,
                                          VarThr = VarThr, Categories = Categories, GraphType = GraphType, PlanVarLimit = PlanVarLimit,
@@ -2820,13 +2864,17 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                          MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                          PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
                                          QuaThr = StartQuant, EstProlif = EstProlif, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA,
-                                   PlotDebug = PlotDebug)
+                                         PlotDebug = PlotDebug, NonG0Cell = CurrentNonG0Cell)
   ConsideredStruct <- StartStruct
   
   FilteredGenes <- StartGeneSet
   Converged <- FALSE
   RoundCount <- 0
   GeneNumber <- NULL
+  
+  if(UpdateG0CellsOnce & is.null(CurrentNonG0Cell)){
+    CurrentNonG0Cell <- StartStruct$NonG0Cell
+  }
   
   while(!Converged){
     
@@ -2881,10 +2929,15 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = ForceLasso, InitStructNodes = InitStructNodes,
                                        MinBranDiff = MinBranDiff, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = PlotIntermediate,
-                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = StartStruct$NonG0Cell, EstProlif = EstProlif,
+                                       QuaThr = StartQuant + RoundCount*QuantInc, NonG0Cell = CurrentNonG0Cell, EstProlif = EstProlif,
                                        PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug)
+      
+      if(UpdateG0CellsOnce & is.null(CurrentNonG0Cell)){
+        CurrentNonG0Cell <- ConsideredStruct$NonG0Cell
+      }
+      
     }
-
+    
     
   }
   
@@ -3028,7 +3081,8 @@ ConvergeOnGenes <- function(ExpData, StartGeneSet, Mode = "VarALL", DistillThr =
 #'
 #' @examples
 PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelThr = NULL,
-                         ComputeOverlaps = TRUE, RotatioMatrix, PointProjections, ExpData, nGenes = 10) {
+                         ComputeOverlaps = TRUE, RotatioMatrix, PointProjections,
+                         ExpData, nGenes = 10, OrderOnCat = FALSE) {
   
   if(!is.factor(Categories)){
     stop("Categories must be a factor")
@@ -3074,12 +3128,92 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
     
     AllPaths <- GetLongestPath(Net = Net, Structure = Structure, Circular = TRUE)
     
-    SummInfo <- NULL
-    
-    for(i in 1:nrow(AllPaths$VertNumb)){
-      SelPath <- AllPaths$VertNumb[i,]
+    if(OrderOnCat){
+      
+      SummInfo <- NULL
+      
+      for(i in 1:nrow(AllPaths$VertNumb)){
+        SelPath <- AllPaths$VertNumb[i,]
+        # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
+        SelPath <- SelPath[-length(SelPath)]
+        
+        Reordered <- TaxVect
+        for(j in 1:length(SelPath)){
+          Reordered[as.character(TaxVect) == SelPath[j]] <- j
+        }
+        
+        NumReord <- as.numeric(as.character(Reordered))
+        
+        AGG <- aggregate(NumReord, by = list(Categories), median)
+        AGG2 <- aggregate(NumReord, by = list(Categories), min)
+        AGG3 <- aggregate(NumReord, by = list(Categories), max)
+        
+        Sorted <- FALSE
+        
+        if(S4Vectors::isSorted(AGG[,2])){
+          SummInfo <- rbind(SummInfo,
+                            c(i, 1, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              AGG2[1,2], AGG[1,2])
+          )
+          Sorted <- TRUE
+          # boxplot(NumReord ~ Categories, main = i)
+        }
+        
+        if(S4Vectors::isSorted(rev(AGG[,2]))){
+          SummInfo <- rbind(SummInfo,
+                            c(i, 2, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              nNodes - AGG3[1,2] + 1,
+                              nNodes - AGG[1,2] + 1)
+          )
+          Sorted <- TRUE
+          # boxplot(NumReord ~ Categories, main = paste(i, "rev"))
+        }
+        
+        if(!Sorted){
+          
+          if(cor(AGG[,2], 1:nrow(AGG))>0){
+            SummInfo <- rbind(SummInfo,
+                              c(i, 3, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                                AGG2[1,2], AGG[1,2])
+            )
+          } else {
+            SummInfo <- rbind(SummInfo,
+                              c(i, 4, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                                nNodes - AGG3[1,2] + 1,
+                                nNodes - AGG[1,2] + 1)
+            )
+          }
+          
+        }
+      }
+      
+      # print(SummInfo)
+      
+      print("Finding the best path")
+      
+      if(any(SummInfo[,2] %in% 1:2)){
+        SummInfo <- SummInfo[SummInfo[,2] %in% 1:2, ]
+      } else {
+        print("Unable to find strongly consecutive stages")
+      }
+      
+      Selected <- SummInfo[SummInfo[, 3] == min(SummInfo[, 3]), ]
+      
+      print(Selected)
+      
+      if(length(Selected)>5){
+        Selected <- Selected[which.min(Selected[,4]),]
+      }
+      
+      print(Selected)
+      
+      SelPath <- AllPaths$VertNumb[Selected[1],]
       # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
       SelPath <- SelPath[-length(SelPath)]
+      
+      if(Selected[2] %in% c(2, 4)){
+        SelPath <- rev(SelPath)
+      }
       
       Reordered <- TaxVect
       for(j in 1:length(SelPath)){
@@ -3088,85 +3222,13 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
       
       NumReord <- as.numeric(as.character(Reordered))
       
-      AGG <- aggregate(NumReord, by = list(Categories), median)
-      AGG2 <- aggregate(NumReord, by = list(Categories), min)
-      AGG3 <- aggregate(NumReord, by = list(Categories), max)
+      boxplot(NumReord ~ Categories)
       
-      Sorted <- FALSE
-      
-      if(S4Vectors::isSorted(AGG[,2])){
-        SummInfo <- rbind(SummInfo,
-                          c(i, 1, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                            AGG2[1,2], AGG[1,2])
-        )
-        Sorted <- TRUE
-        # boxplot(NumReord ~ Categories, main = i)
-      }
-      
-      if(S4Vectors::isSorted(rev(AGG[,2]))){
-        SummInfo <- rbind(SummInfo,
-                          c(i, 2, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                            nNodes - AGG3[1,2] + 1,
-                            nNodes - AGG[1,2] + 1)
-        )
-        Sorted <- TRUE
-        # boxplot(NumReord ~ Categories, main = paste(i, "rev"))
-      }
-      
-      if(!Sorted){
-        
-        if(cor(AGG[,2], 1:nrow(AGG))>0){
-          SummInfo <- rbind(SummInfo,
-                            c(i, 3, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                              AGG2[1,2], AGG[1,2])
-          )
-        } else {
-          SummInfo <- rbind(SummInfo,
-                            c(i, 4, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                              nNodes - AGG3[1,2] + 1,
-                              nNodes - AGG[1,2] + 1)
-          )
-        }
-        
-      }
-    }
-    
-    print(SummInfo)
-    
-    print("Finding the best path")
-    
-    if(any(SummInfo[,2] %in% 1:2)){
-      SummInfo <- SummInfo[SummInfo[,2] %in% 1:2, ]
     } else {
-      print("Unable to find strongly consecutive stages")
+      SelPath <- AllPaths$VertNumb[sample(x = 1:nrow(AllPaths$VertNumb), size = 1),]
+      SelPath <- SelPath[-length(SelPath)]
     }
     
-    Selected <- SummInfo[SummInfo[, 3] == min(SummInfo[, 3]), ]
-    
-    print(Selected)
-    
-    if(length(Selected)>5){
-      Selected <- Selected[which.min(Selected[,4]),]
-    }
-    
-    print(Selected)
-    
-    SelPath <- AllPaths$VertNumb[Selected[1],]
-    # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
-    SelPath <- SelPath[-length(SelPath)]
-    
-    if(Selected[2] %in% c(2, 4)){
-      SelPath <- rev(SelPath)
-    }
-    
-    Reordered <- TaxVect
-    for(j in 1:length(SelPath)){
-      Reordered[as.character(TaxVect) == SelPath[j]] <- j
-    }
-    
-    NumReord <- as.numeric(as.character(Reordered))
-    
-    boxplot(NumReord ~ Categories)
     
   }
   
@@ -3178,69 +3240,76 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
     
     AllPaths <- GetLongestPath(Net = Net, Structure = Structure, Circular = FALSE)
     
-    SummInfo <- NULL
-    
-    for(i in 1:nrow(AllPaths$VertNumb)){
-      SelPath <- AllPaths$VertNumb[i,]
+    if(OrderOnCat){
+      
+      SummInfo <- NULL
+      
+      for(i in 1:nrow(AllPaths$VertNumb)){
+        SelPath <- AllPaths$VertNumb[i,]
+        # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
+        # SelPath <- SelPath[-length(SelPath)]
+        
+        Reordered <- TaxVect
+        for(j in 1:length(SelPath)){
+          Reordered[TaxVect == SelPath[j]] <- j
+        }
+        
+        NumReord <- as.numeric(as.character(Reordered))
+        
+        AGG <- aggregate(NumReord, by = list(Categories), median)
+        AGG2 <- aggregate(NumReord, by = list(Categories), min)
+        AGG3 <- aggregate(NumReord, by = list(Categories), max)
+        
+        if(S4Vectors::isSorted(AGG[,2])){
+          SummInfo <- rbind(SummInfo,
+                            c(i, 1, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              AGG2[1,2], AGG[1,2])
+          )
+          
+          # boxplot(NumReord ~ Categories, main = i)
+          
+        }
+        
+        
+        if(S4Vectors::isSorted(rev(AGG[,2]))){
+          SummInfo <- rbind(SummInfo,
+                            c(i, 2, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
+                              nNodes - AGG3[1,2] + 1,
+                              nNodes - AGG[1,2] + 1)
+          )
+          # boxplot(Reordered ~ Categories, main = paste(i, "rev"))
+        }
+      }
+      
+      print("Finding the best path")
+      
+      Selected <- SummInfo[SummInfo[, 3] == min(SummInfo[, 3]), ]
+      
+      if(length(Selected)>5){
+        Selected <- Selected[which.min(Selected[,4]),]
+      }
+      
+      SelPath <- AllPaths$VertNumb[Selected[1],]
       # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
-      # SelPath <- SelPath[-length(SelPath)]
+      SelPath <- SelPath[-length(SelPath)]
+      
+      if(Selected[2] == 2){
+        SelPath <- rev(SelPath)
+      }
       
       Reordered <- TaxVect
       for(j in 1:length(SelPath)){
-        Reordered[TaxVect == SelPath[j]] <- j
+        Reordered[as.character(TaxVect) == SelPath[j]] <- j
       }
       
       NumReord <- as.numeric(as.character(Reordered))
       
-      AGG <- aggregate(NumReord, by = list(Categories), median)
-      AGG2 <- aggregate(NumReord, by = list(Categories), min)
-      AGG3 <- aggregate(NumReord, by = list(Categories), max)
+      boxplot(NumReord ~ Categories)
       
-      if(S4Vectors::isSorted(AGG[,2])){
-        SummInfo <- rbind(SummInfo,
-                          c(i, 1, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                            AGG2[1,2], AGG[1,2])
-        )
-        
-        # boxplot(NumReord ~ Categories, main = i)
-        
-      }
-      
-      
-      if(S4Vectors::isSorted(rev(AGG[,2]))){
-        SummInfo <- rbind(SummInfo,
-                          c(i, 2, summary(aov(NumReord ~ Categories))[[1]][1,"Pr(>F)"],
-                            nNodes - AGG3[1,2] + 1,
-                            nNodes - AGG[1,2] + 1)
-        )
-        # boxplot(Reordered ~ Categories, main = paste(i, "rev"))
-      }
+    } else {
+      SelPath <- AllPaths$VertNumb[sample(x = 1:nrow(AllPaths$VertNumb), size = 1),]
     }
-    
-    print("Finding the best path")
-    
-    Selected <- SummInfo[SummInfo[, 3] == min(SummInfo[, 3]), ]
-    
-    if(length(Selected)>5){
-      Selected <- Selected[which.min(Selected[,4]),]
-    }
-    
-    SelPath <- AllPaths$VertNumb[Selected[1],]
-    # SelPath <- SelPath[SelPath %in% unique(TaxVect)]
-    SelPath <- SelPath[-length(SelPath)]
-    
-    if(Selected[2] == 2){
-      SelPath <- rev(SelPath)
-    }
-    
-    Reordered <- TaxVect
-    for(j in 1:length(SelPath)){
-      Reordered[as.character(TaxVect) == SelPath[j]] <- j
-    }
-    
-    NumReord <- as.numeric(as.character(Reordered))
-    
-    boxplot(NumReord ~ Categories)
+
     
   }
   
@@ -3261,10 +3330,14 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   
   ExtendedTB <- TB[,ExtPath]
   
-  barplot(t(t(ExtendedTB)/colSums(ExtendedTB)), col = rainbow(nrow(TB)), beside = TRUE, las = 2,
-          legend.text = rownames(ExtendedTB), args.legend = list(x = "top", fill=rainbow(nrow(TB))),
-          ylim = c(0, 1.25), yaxt = "n")
-  axis(2, seq(from=0, to=1, by=.25), las=2)
+  if(OrderOnCat){
+    barplot(t(t(ExtendedTB)/colSums(ExtendedTB)), col = rainbow(nrow(TB)), beside = TRUE, las = 2,
+            legend.text = rownames(ExtendedTB), args.legend = list(x = "top", fill=rainbow(nrow(TB))),
+            ylim = c(0, 1.25), yaxt = "n")
+    axis(2, seq(from=0, to=1, by=.25), las=2)
+  }
+  
+  
   
   # SelPath <- SelPath[-length(SelPath)]
   SelPathSTG <- rep(NA, length(SelPath))
@@ -3276,258 +3349,287 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   PercMat <- PercMat[,ExtPath]
   BinPercMat <- (PercMat > SelThr)
   
+  # print(1*BinPercMat)
+  
   # if(!any(BinPercMat[,1])){
     # BinPercMat[,1] <- BinPercMat[,2]
   # }
   
-  if(Structure == 'Circle'){
+  if(OrderOnCat){
+    # Fill gaps with TRUE
     
-    for(j in 1:nrow(BinPercMat)){
-      if(BinPercMat[j,2] & BinPercMat[j,ncol(BinPercMat)]){
-        BinPercMat[j,1] <- TRUE
-      }
-    }
-    
-  }
-  
-  
-  for(i in 2:(ncol(BinPercMat)-1)){
-    for(j in 1:nrow(BinPercMat)){
-      if(BinPercMat[j,i-1] & BinPercMat[j,i+1]){
-        BinPercMat[j,i] <- TRUE
-      }
-    }
-  }
-  
-  
-  
-  if(Structure == 'Circle'){
-    
-    for(j in 1:nrow(BinPercMat)){
-      if(BinPercMat[j,1] & BinPercMat[j,ncol(BinPercMat)-1]){
-        BinPercMat[j,ncol(BinPercMat)] <- TRUE
-      }
-    }
-    
-  }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  if(Structure == 'Circle'){
-    
-    for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,2] & !BinPercMat[j,ncol(BinPercMat)] & any(BinPercMat[j,-1])){
-        BinPercMat[j,1] <- FALSE
-      }
-    }
-    
-  }
-  
-  
-  
-  for(i in 2:(ncol(BinPercMat)-1)){
-    for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,i-1] & !BinPercMat[j,i+1] & any(BinPercMat[j,-i])){
-        BinPercMat[j,i] <- FALSE
-      }
-    }
-  }
-  
-  
-  
-  
-  if(Structure == 'Circle'){
-    
-    for(j in 1:nrow(BinPercMat)){
-      if(!BinPercMat[j,1] & !BinPercMat[j,ncol(BinPercMat)-1] & any(BinPercMat[j,-ncol(BinPercMat)])){
-        BinPercMat[j,ncol(BinPercMat)] <- FALSE
-      }
-    }
-    
-  }
-  
-  
-  
-  
-  
-  
-  if(ComputeOverlaps){
-    
-    OvefLapCat <- list()
-    
-    for(i in 1:nrow(BinPercMat)){
+    if(Structure == 'Circle'){
       
-      if(i == nrow(BinPercMat)){
-        if(Structure == 'Circle'){
-          OvefLapCat[[i]] <- BinPercMat[i,] & BinPercMat[1,]
+      for(j in 1:nrow(BinPercMat)){
+        if(BinPercMat[j,2] & BinPercMat[j,ncol(BinPercMat)]){
+          BinPercMat[j,1] <- TRUE
         }
-      } else {
-        OvefLapCat[[i]] <- BinPercMat[i,] & BinPercMat[i+1,]
       }
       
     }
     
-    BinPercMatExt <- NULL
+    for(i in 2:(ncol(BinPercMat)-1)){
+      for(j in 1:nrow(BinPercMat)){
+        if(BinPercMat[j,i-1] & BinPercMat[j,i+1]){
+          BinPercMat[j,i] <- TRUE
+        }
+      }
+    }
     
-    for(i in 1:nrow(BinPercMat)){
+    if(Structure == 'Circle'){
       
-      if(i == 1){
-        if(Structure == 'Circle'){
-          BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[1]] & !OvefLapCat[[nrow(BinPercMat)]],
-                                 OvefLapCat[[i]])
+      for(j in 1:nrow(BinPercMat)){
+        if(BinPercMat[j,1] & BinPercMat[j,ncol(BinPercMat)-1]){
+          BinPercMat[j,ncol(BinPercMat)] <- TRUE
+        }
+      }
+      
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    # Fill gaps with FALSE
+    
+    if(Structure == 'Circle'){
+      
+      for(j in 1:nrow(BinPercMat)){
+        if(!BinPercMat[j,2] & !BinPercMat[j,ncol(BinPercMat)] & any(BinPercMat[j,-1])){
+          BinPercMat[j,1] <- FALSE
+        }
+      }
+      
+    }
+    
+    for(i in 2:(ncol(BinPercMat)-1)){
+      for(j in 1:nrow(BinPercMat)){
+        if(!BinPercMat[j,i-1] & !BinPercMat[j,i+1] & any(BinPercMat[j,-i])){
+          BinPercMat[j,i] <- FALSE
+        }
+      }
+    }
+    
+    if(Structure == 'Circle'){
+      
+      for(j in 1:nrow(BinPercMat)){
+        if(!BinPercMat[j,1] & !BinPercMat[j,ncol(BinPercMat)-1] & any(BinPercMat[j,-ncol(BinPercMat)])){
+          BinPercMat[j,ncol(BinPercMat)] <- FALSE
+        }
+      }
+      
+    }
+    
+    print(1*BinPercMat)
+    
+    
+    if(ComputeOverlaps){
+      
+      # constructing stage overlaps
+      
+      OvefLapCat <- list()
+      
+      for(i in 1:nrow(BinPercMat)){
+        
+        if(i == nrow(BinPercMat)){
+          if(Structure == 'Circle'){
+            OvefLapCat[[i]] <- BinPercMat[i,] & BinPercMat[1,]
+          }
         } else {
-          BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[1]],
-                                 OvefLapCat[[i]])
+          OvefLapCat[[i]] <- BinPercMat[i,] & BinPercMat[i+1,]
         }
-        next()
+        
       }
       
-      if(i == nrow(BinPercMat)){
-        if(Structure == 'Circle'){
-          BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i-1]] & !OvefLapCat[[1]],
-                                 OvefLapCat[[i]])
-        } else {
-          BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i-1]])
-        }
-        next()
-      }
+      BinPercMatExt <- NULL
       
-      BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i]] & !OvefLapCat[[i-1]],
+      for(i in 1:nrow(BinPercMat)){
+        
+        if(i == 1){
+          if(Structure == 'Circle'){
+            BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[1]] & !OvefLapCat[[nrow(BinPercMat)]],
+                                   OvefLapCat[[i]])
+          } else {
+            BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[1]],
+                                   OvefLapCat[[i]])
+          }
+          next()
+        }
+        
+        if(i == nrow(BinPercMat)){
+          if(Structure == 'Circle'){
+            BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i-1]] & !OvefLapCat[[i]],
+                                   OvefLapCat[[i]])
+          } else {
+            BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i-1]])
+          }
+          next()
+        }
+        
+        BinPercMatExt <- rbind(BinPercMatExt, BinPercMat[i,] & !OvefLapCat[[i]] & !OvefLapCat[[i-1]],
                                OvefLapCat[[i]])
+        
+      }
       
-    }
-    
-    OverlapCat <- paste(levels(Categories)[-length(levels(Categories))],
-                        levels(Categories)[-1], sep = "+")
-    
-    if(Structure == 'Circle'){
-      OverlapCat <- c(OverlapCat,
-                      paste(levels(Categories)[length(levels(Categories))],
-                            levels(Categories)[1], sep = "+")
-      )
-    }
-    
-    if(Structure == 'Circle'){
-      rownames(BinPercMatExt) <- as.vector(rbind(rownames(BinPercMat), OverlapCat))
+      OverlapCat <- paste(levels(Categories)[-length(levels(Categories))],
+                          levels(Categories)[-1], sep = "+")
+      
+      if(Structure == 'Circle'){
+        OverlapCat <- c(OverlapCat,
+                        paste(levels(Categories)[length(levels(Categories))],
+                              levels(Categories)[1], sep = "+")
+        )
+      }
+      
+      if(Structure == 'Circle'){
+        rownames(BinPercMatExt) <- as.vector(rbind(rownames(BinPercMat), OverlapCat))
+      } else {
+        rownames(BinPercMatExt) <- as.vector(rbind(rownames(BinPercMat), c(OverlapCat, NA)))[-nrow(BinPercMat)*2]
+      }
+      
     } else {
-      rownames(BinPercMatExt) <- as.vector(rbind(rownames(BinPercMat), c(OverlapCat, NA)))[-nrow(BinPercMat)*2]
+      BinPercMatExt <- BinPercMat
     }
-
+    
+    print(1*BinPercMat)
+    
+    AllCat <- rownames(BinPercMatExt)
+    
+    if(Structure == "Circle"){
+      ExtPath <- ExtPath[-length(ExtPath)]
+      BinPercMatExt <- BinPercMatExt[, -ncol(BinPercMatExt)]
+    }
+    
+    LowStages <- 1
+    if(ComputeOverlaps){
+      LowStages <- 1:2
+    }
+    
+    while(any(BinPercMatExt[LowStages,ncol(BinPercMatExt)]) &
+          all(!BinPercMatExt[setdiff(1:nrow(BinPercMatExt), LowStages),ncol(BinPercMatExt)])){
+      BinPercMatExt <- cbind(BinPercMatExt[, ncol(BinPercMatExt)], BinPercMatExt[, -ncol(BinPercMatExt)])
+      ExtPath <- c(ExtPath[length(ExtPath)], ExtPath[-length(ExtPath)])
+    }
+    
+    HighStages <- nrow(BinPercMatExt)
+    if(ComputeOverlaps & Structure == 'Circle'){
+      HighStages <- c(nrow(BinPercMatExt)-1, nrow(BinPercMatExt))
+    }
+    
+    while(any(BinPercMatExt[HighStages,1]) &
+          all(!BinPercMatExt[setdiff(1:nrow(BinPercMatExt), HighStages),1])){
+      BinPercMatExt <- cbind(BinPercMatExt[, -1], BinPercMatExt[, 1])
+      ExtPath <- c(ExtPath[-1], ExtPath[1])
+    }
+    
+    if(Structure == 'Circle'){
+      ExtPath <- c(ExtPath, ExtPath[1])
+      BinPercMatExt <- cbind(BinPercMatExt,
+                             rep(FALSE, nrow(BinPercMatExt)))
+    }
+    
   } else {
     BinPercMatExt <- BinPercMat
+    AllCat <- rownames(BinPercMatExt)
   }
   
-  AllCat <- rownames(BinPercMatExt)
-  
-  if(Structure == "Circle"){
-    ExtPath <- ExtPath[-length(ExtPath)]
-    BinPercMatExt <- BinPercMatExt[, -ncol(BinPercMatExt)]
+  if(!is.null(dim(BinPercMatExt))){
+    Idxs <- apply(BinPercMatExt, 1, which)
+  } else {
+    Idxs <- list(Cat = which(BinPercMatExt))
   }
   
-  LowStages <- 1
-  if(ComputeOverlaps){
-    LowStages <- 1:2
-  }
-  
-  while(any(BinPercMatExt[LowStages,ncol(BinPercMatExt)]) &
-        all(!BinPercMatExt[setdiff(1:nrow(BinPercMatExt), LowStages),ncol(BinPercMatExt)])){
-    BinPercMatExt <- cbind(BinPercMatExt[, ncol(BinPercMatExt)], BinPercMatExt[, -ncol(BinPercMatExt)])
-    ExtPath <- c(ExtPath[length(ExtPath)], ExtPath[-length(ExtPath)])
-  }
-  
-  HighStages <- nrow(BinPercMatExt)
-  if(ComputeOverlaps & Structure == 'Circle'){
-    HighStages <- c(nrow(BinPercMatExt)-1, nrow(BinPercMatExt))
-  }
-  
-  while(any(BinPercMatExt[HighStages,1]) &
-        all(!BinPercMatExt[setdiff(1:nrow(BinPercMatExt), HighStages),1])){
-    BinPercMatExt <- cbind(BinPercMatExt[, -1], BinPercMatExt[, 1])
-    ExtPath <- c(ExtPath[-1], ExtPath[1])
-  }
-  
-  if(Structure == 'Circle'){
-    ExtPath <- c(ExtPath, ExtPath[1])
-    BinPercMatExt <- cbind(BinPercMatExt,
-                           rep(FALSE, nrow(BinPercMatExt)))
-  }
-  
-  Idxs <- apply(BinPercMatExt, 1, which)
+  print("Step III")
+  print(Idxs)
   
   Bond <- lapply(Idxs[lapply(Idxs, length) > 1], range)
-  
-  print(1*BinPercMatExt)
-  
-  print(unlist(Bond))
-  
   
   if(!S4Vectors::isSorted(unlist(Bond))){
     warning("Stages are not sequential!")
   }
   
+  print(1*BinPercMat)
+  
+  print(unlist(Bond))
   
   NodeOnGenes <- t(Nodes %*% t(RotatioMatrix))
   
-  OrderedPoints <- OrderOnPath(PrinGraph = PrinGraph, Path = as.numeric(ExtPath), PointProjections = PointProjections)
+  OrderedPoints <- OrderOnPath(PrinGraph = PrinGraph, Path = as.numeric(ExtPath),
+                               PointProjections = PointProjections)
   
-  for(Idx in order(apply(NodeOnGenes, 1, var), decreasing = TRUE)[1:nGenes]){
+  if(OrderOnCat){
+    SelIdxs <- order(apply(NodeOnGenes, 1, var), decreasing = TRUE)[1:nGenes]
+  } else {
+    SelIdxs <- 1:2
+  }
+  
+  
+  for(Idx in SelIdxs){
     
     p <- ggplot2::ggplot(data = data.frame(x=cumsum(OrderedPoints$PathLen),
-                                  y=NodeOnGenes[Idx,as.numeric(ExtPath)]),
-                mapping = ggplot2::aes(x = x, y = y, color="PC")) +
+                                           y=NodeOnGenes[Idx,as.numeric(ExtPath)]),
+                         mapping = ggplot2::aes(x = x, y = y, color="PC")) +
       ggplot2::labs(x = "Pseudotime", y="Gene expression", title = rownames(NodeOnGenes)[Idx]) +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     
     RecCoord <- NULL
     
-    for(i in 1:length(Idxs)){
-      LowIds <- Idxs[[i]]-1
-      LowIds[LowIds == 0] <- NA
-
-      HiIds <- Idxs[[i]]+1
-      HiIds[HiIds == length(ExtPath) + 1] <- NA
+    if(OrderOnCat){
       
-      LowCoord <- cumsum(OrderedPoints$PathLen)[LowIds]
-      MidCoord <- cumsum(OrderedPoints$PathLen)[Idxs[[i]]]
-      HighCoord <- cumsum(OrderedPoints$PathLen)[HiIds]
-    
-      RecCoord <- rbind(RecCoord, cbind(
-        colMeans(rbind(LowCoord, MidCoord)),
-        MidCoord,
-        colMeans(rbind(MidCoord, HighCoord)),
-        rep(names(Idxs)[i], length(MidCoord))
+      for(i in 1:length(Idxs)){
+        LowIds <- Idxs[[i]]-1
+        LowIds[LowIds == 0] <- NA
+        
+        HiIds <- Idxs[[i]]+1
+        HiIds[HiIds == length(ExtPath) + 1] <- NA
+        
+        LowCoord <- cumsum(OrderedPoints$PathLen)[LowIds]
+        MidCoord <- cumsum(OrderedPoints$PathLen)[Idxs[[i]]]
+        HighCoord <- cumsum(OrderedPoints$PathLen)[HiIds]
+        
+        RecCoord <- rbind(RecCoord, cbind(
+          colMeans(rbind(LowCoord, MidCoord)),
+          MidCoord,
+          colMeans(rbind(MidCoord, HighCoord)),
+          rep(names(Idxs)[i], length(MidCoord))
         )
-      )
-
+        )
+        
+      }
+      
+      colnames(RecCoord) <- c("Min", "Med", "Max", "Stage")
+      RecCoord <- data.frame(RecCoord)
+      RecCoord$Min <- as.numeric(as.character(RecCoord$Min))
+      RecCoord$Med <- as.numeric(as.character(RecCoord$Med))
+      RecCoord$Max <- as.numeric(as.character(RecCoord$Max))
+      
+      
+      RecCoord$Stage <- factor(as.character(RecCoord$Stage), levels = AllCat)
+      
+      RecCoord$Min[is.na(RecCoord$Min)] <- RecCoord$Med[is.na(RecCoord$Min)]
+      RecCoord$Max[is.na(RecCoord$Max)] <- RecCoord$Med[is.na(RecCoord$Max)]
+      
+      p <- p + ggplot2::geom_rect(data = RecCoord, mapping = ggplot2::aes(fill=Stage, xmin=Min, xmax=Max),
+                                  ymin = -Inf, ymax = Inf, inherit.aes = FALSE, alpha=.4) + 
+        ggplot2::geom_point(data = data.frame(x=OrderedPoints$PositionOnPath, y=ExpData[,Idx]),
+                            mapping = ggplot2::aes(x=x, y=y, color="Data"), inherit.aes = FALSE, alpha=.5) +
+        ggplot2::geom_point() + ggplot2::geom_line() + ggplot2::scale_color_manual(values = c("blue", "black"))
+      
+      print(p)
+      
+    } else {
+      
+      p <- p + ggplot2::geom_point(data = data.frame(x=OrderedPoints$PositionOnPath, y=ExpData[,Idx]),
+                            mapping = ggplot2::aes(x=x, y=y, color="Data"), inherit.aes = FALSE, alpha=.5) +
+        ggplot2::geom_point() + ggplot2::geom_line() + ggplot2::scale_color_manual(values = c("blue", "black"))
+      
     }
     
-    colnames(RecCoord) <- c("Min", "Med", "Max", "Stage")
-    RecCoord <- data.frame(RecCoord)
-    RecCoord$Min <- as.numeric(as.character(RecCoord$Min))
-    RecCoord$Med <- as.numeric(as.character(RecCoord$Med))
-    RecCoord$Max <- as.numeric(as.character(RecCoord$Max))
     
-    
-    RecCoord$Stage <- factor(as.character(RecCoord$Stage), levels = AllCat)
-    
-    RecCoord$Min[is.na(RecCoord$Min)] <- RecCoord$Med[is.na(RecCoord$Min)]
-    RecCoord$Max[is.na(RecCoord$Max)] <- RecCoord$Med[is.na(RecCoord$Max)]
-    
-    p <- p + ggplot2::geom_rect(data = RecCoord, mapping = ggplot2::aes(fill=Stage, xmin=Min, xmax=Max),
-                       ymin = -Inf, ymax = Inf, inherit.aes = FALSE, alpha=.4) + 
-      ggplot2::geom_point(data = data.frame(x=OrderedPoints$PositionOnPath, y=ExpData[,Idx]),
-                 mapping = ggplot2::aes(x=x, y=y, color="Data"), inherit.aes = FALSE, alpha=.5) +
-      ggplot2::geom_point() + ggplot2::geom_line() + ggplot2::scale_color_manual(values = c("blue", "black"))
-    
-    print(p)
     
   }
   
@@ -3537,8 +3639,8 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
   return(list(Structure = Structure, ExtPath = ExtPath,
               NodesPT = cumsum(OrderedPoints$PathLen),
               NodesExp = NodeOnGenes[order(apply(NodeOnGenes, 1, var), decreasing = TRUE),as.numeric(ExtPath)],
-              CellsPT = CellsPT,
-              CellExp = t(ExpData[,order(apply(ExpData, 1, var), decreasing = TRUE)]),
+              CellsPT = CellsPT, BinPercMatExt = BinPercMatExt, BinPercMat = BinPercMat,
+              CellExp = t(ExpData[order(apply(ExpData, 1, var), decreasing = TRUE),]),
               RecCoord = RecCoord,
               StageOnNodes = Idxs
               )
@@ -3609,7 +3711,8 @@ PlotOnStages <- function(Structure, TaxonList, Categories, PrinGraph, Net, SelTh
 PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circle", IgnoreTail = FALSE, PlanVarLimit = .9, PlanVarLimitIC = .95,
                             DistillThr = .7, Log = TRUE, StartQuant = .5, OutThr = 3, OutThrPCA = 3, Title = '', MinProlCells = 20, PCACenter = FALSE,
                             PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, nNodes = 40, InitStructNodes = 20, DipPVThr = 1e-4, PCAFilter = TRUE,
-                            PCAProjCenter = TRUE, StopCrit = .95, Filter = TRUE, QuaThr = .5, CompareSet = list(), EstProlif = "MeanPerc") {
+                            PCAProjCenter = TRUE, StopCrit = .95, Filter = TRUE, QuaThr = .5, CompareSet = list(), EstProlif = "MeanPerc",
+                            KeepOrgProlifiration = FALSE, NonG0Cell = NULL) {
   
   
   # Perform the initial analysis
@@ -3619,25 +3722,49 @@ PlotsAndDistill <- function(GeneExprMat, StartSet, Categories, Topology = "Circl
                                        PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
                                        MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
                                        PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE,
-                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif)
+                                       PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif,
+                                       NonG0Cell = NonG0Cell)
   
   # Distill genes
   
-  DistilledGenes <- ConvergeOnGenes(ExpData = GeneExprMat, StartGeneSet = StartSet, Mode = Mode, DistillThr = DistillThr, FastReduce = FALSE,
-                                    ExtMode = ExtMode, StopCrit = StopCrit, OutThr = OutThr, nNodes = nNodes, VarThr = .99, Categories = Categories,
-                                    GraphType = Topology, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE,
-                                    InitStructNodes = InitStructNodes, MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                    PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PlotDebug = PlotDebug,
-                                    IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, EstProlif = EstProlif)
+  if(KeepOrgProlifiration){
+    DistilledGenes <- ConvergeOnGenes(ExpData = GeneExprMat, StartGeneSet = StartSet, Mode = Mode, DistillThr = DistillThr, FastReduce = FALSE,
+                                      ExtMode = ExtMode, StopCrit = StopCrit, OutThr = OutThr, nNodes = nNodes, VarThr = .99, Categories = Categories,
+                                      GraphType = Topology, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE,
+                                      InitStructNodes = InitStructNodes, MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                      PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PlotDebug = PlotDebug,
+                                      IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, EstProlif = EstProlif,
+                                      UpdateG0Cells = FALSE, NonG0Cell = PrGraph.Initial$NonG0Cell)
+    
+    # Perform the analysis on the final structure
+    
+    PrGraph.Final <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = DistilledGenes, OutThr = OutThr, nNodes = nNodes, 
+                                       VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
+                                       PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
+                                       MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                       PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PCAFilter = PCAFilter,
+                                       OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif, NonG0Cell = PrGraph.Initial$NonG0Cell)
+    
+  } else {
+    DistilledGenes <- ConvergeOnGenes(ExpData = GeneExprMat, StartGeneSet = StartSet, Mode = Mode, DistillThr = DistillThr, FastReduce = FALSE,
+                                      ExtMode = ExtMode, StopCrit = StopCrit, OutThr = OutThr, nNodes = nNodes, VarThr = .99, Categories = Categories,
+                                      GraphType = Topology, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE,
+                                      InitStructNodes = InitStructNodes, MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                      PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PlotDebug = PlotDebug,
+                                      IgnoreTail = IgnoreTail, StartQuant = StartQuant, PCAFilter = PCAFilter, OutThrPCA = OutThrPCA, EstProlif = EstProlif,
+                                      UpdateG0Cells = TRUE, NonG0Cell = NULL)
+    
+    # Perform the analysis on the final structure
+    
+    PrGraph.Final <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = DistilledGenes, OutThr = OutThr, nNodes = nNodes, 
+                                       VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
+                                       PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
+                                       MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
+                                       PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PCAFilter = PCAFilter,
+                                       OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif)
+    
+  }
   
-  # Perform the analysis on the final structure
-  
-  PrGraph.Final <- ProjectAndCompute(DataSet = GeneExprMat, GeneSet = DistilledGenes, OutThr = OutThr, nNodes = nNodes, 
-                                     VarThr = .99, Categories = Categories, GraphType = Topology, PlanVarLimit = PlanVarLimit,
-                                     PlanVarLimitIC = PlanVarLimitIC, ForceLasso = FALSE, InitStructNodes = InitStructNodes,
-                                     MinBranDiff = 2, Log = Log, Filter = Filter, MinProlCells = MinProlCells, DipPVThr = DipPVThr,
-                                     PCACenter = PCACenter, PCAProjCenter = PCAProjCenter, PlotIntermediate = FALSE, PCAFilter = PCAFilter,
-                                     OutThrPCA = OutThrPCA, PlotDebug = PlotDebug, EstProlif = EstProlif)
   
   # Plot the initial projection
   ProjectOnPrincipalGraph(Nodes = PrGraph.Initial$PrinGraph$Nodes, Edges = PrGraph.Initial$PrinGraph$Edges, Points = PrGraph.Initial$Data,
@@ -3755,171 +3882,99 @@ ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circ
                              IgnoreTail = FALSE, Log = TRUE, StartQuant = .5, Title = "", OutThr = 3, nNodes = 40,
                              PlanVarLimit = .9, PlanVarLimitIC = .95, KeepOriginal = TRUE, InitStructNodes = 20,
                              PCACenter = FALSE, PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, OutThrPCA = 3,
-                             MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode =1, EstProlif = "MeanPerc",
+                             MaxRounds = 15, StopCrit = .95, ExpQuant = .01, StopMode = 1, EstProlif = "MeanPerc",
                              Parallel = TRUE, nCores = NULL, ClusType = "PSOCK", QuaThr = .5, MinProlCells = 20,
-                             PCAFilter = TRUE, PCAProjCenter = TRUE, Filter = TRUE) {
+                             PCAFilter = TRUE, PCAProjCenter = TRUE, Filter = TRUE, SelThr = .35, OrderOnCat = FALSE,
+                             KeepOrgProlifiration = TRUE) {
   
-  
-  # Produce the initial analysis
-  
-  Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = StartSet, QuaThr = QuaThr, MinProlCells = MinProlCells, OutThr = OutThr, OutThrPCA = OutThrPCA,
-                              Categories = Categories, Topology = Topology, DistillThr = DistillThr, InitStructNodes = InitStructNodes, nNodes = nNodes, DipPVThr,
-                              IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = Title, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
-                              PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode, EstProlif = EstProlif, PCAFilter = PCAFilter,
-                              PCAProjCenter = PCAProjCenter, Filter = TRUE)
-  
-  # Produce the initial processed data
-  
-  Proc.Exp <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]],
-                           Categories = Info.Exp$FinalStruct$Categories, nGenes = 2, 
-                           PrinGraph = Info.Exp$FinalStruct$PrinGraph, 
-                           Net = Info.Exp$FinalStruct$Net[[length(Info.Exp$FinalStruct$Net)]],
-                           SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp$FinalStruct$FiltExp,
-                           RotatioMatrix = Info.Exp$FinalStruct$PCAData$rotation[,1:Info.Exp$FinalStruct$nDims],
-                           PointProjections = Info.Exp$FinalStruct$ProjPoints[[length(Info.Exp$FinalStruct$ProjPoints)]])
-  
-  
-  TaxonList <- Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]]
-  TaxVect <- rep(NA, ncol(Proc.Exp$NodesExp)-1)
-  
-  for(i in 1:length(TaxonList)){
-    TaxVect[TaxonList[[i]]] <- i 
-  }
-  
-  AllMean <- apply(log10(GeneExprMat[, colnames(Proc.Exp$CellExp)] + 1), 1, mean)
-  SelMean <- apply(log10(GeneExprMat[rownames(Proc.Exp$CellExp), colnames(Proc.Exp$CellExp)] + 1), 1, mean)
-  
-  print(paste(sum(AllMean < min(SelMean)), "genes will be excluded a priori from the analysis"))
-  print("Computing median of IQR/median")
-  
-  if(Parallel){
-    
-    tictoc::tic()
-    if(is.null(nCores)){
-      nCores <- parallel::detectCores() - 1
-    }
-    
-    cl <- parallel::makeCluster(nCores, type = ClusType)
-    
-    parallel::clusterExport(cl, "TaxVect", environment())
-    
-    MedianVar <- parallel::parApply(cl,log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)] + 1), 1, function(x){
-      AGG <- aggregate(x, by=list(TaxVect), median)
-      AGGVect <- AGG[,2]
-      names(AGGVect) <- paste(AGG[,1])
-      median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
-    })
-    
-    parallel::stopCluster(cl)
-    
-    tictoc::toc()
-    
-  } else {
-    
-    tictoc::tic()
-    MedianVar <- apply(log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)] + 1), 1, function(x){
-      AGG <- aggregate(x, by=list(TaxVect), median)
-      AGGVect <- AGG[,2]
-      names(AGGVect) <- paste(AGG[,1])
-      median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
-    })
-    tictoc::toc()
-    
-  }
-  
-  
-  
-  MedianVar <- MedianVar[!is.infinite(MedianVar)]
-  MedianVar <- MedianVar[!is.na(MedianVar)]
-  
-  PrevDistilled <- names(MedianVar) %in% rownames(Proc.Exp$NodesExp)
-  
-  boxplot(MedianVar ~ PrevDistilled)
-  
-  # wilcox.test(MedianVar ~ PrevDistilled)
-  # t.test(MedianVar ~ PrevDistilled)
-  
-  GeneStageList <- list()
-  Info.Exp.List <- list()
-  Proc.Exp.List <- list()
-  
-  GeneStageList[[1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
-                                 rownames(Proc.Exp$NodesExp)))
-  
-  length(GeneStageList[[1]])/nrow(Proc.Exp$NodesExp)
   
   DONE <- FALSE
   Info.Exp.Final <- NULL
   Round.Count <- 0
   
+  GeneStageList <- list()
+  Info.Exp.List <- list()
+  Proc.Exp.List <- list()
+  
+  SavedNonG0 <- NULL
+  UsedGenes <- StartSet
+  
   while(!DONE){
-    
-    # Repeating the analysis untill convergence (or max iterations)
-    
-    Info.Exp.StageI <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = GeneStageList[[length(GeneStageList)]],
-                                       Categories = Categories, Topology = Topology, DistillThr = DistillThr,
-                                       IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = paste(Title, "STEP", Round.Count), PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
-                                       PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode)
-    
-    Info.Exp.List[[length(Info.Exp.List)+1]] <- Info.Exp.StageI
-    
-    
-    Proc.Exp.StageI <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp.StageI$FinalStruct$TaxonList[[length(Info.Exp.StageI$FinalStruct$TaxonList)]],
-                                    Categories = Info.Exp.StageI$FinalStruct$Categories, nGenes = 2,
-                                    PrinGraph = Info.Exp.StageI$FinalStruct$PrinGraph,
-                                    Net = Info.Exp.StageI$FinalStruct$Net[[length(Info.Exp.StageI$FinalStruct$Net)]],
-                                    SelThr = .35, ComputeOverlaps = TRUE, ExpData = Info.Exp.StageI$FinalStruct$FiltExp,
-                                    RotatioMatrix = Info.Exp.StageI$FinalStruct$PCAData$rotation[,1:Info.Exp.StageI$FinalStruct$nDims],
-                                    PointProjections = Info.Exp.StageI$FinalStruct$ProjPoints[[length(Info.Exp.StageI$FinalStruct$ProjPoints)]])
-    
-    Proc.Exp.List[[length(Proc.Exp.List)+1]] <- Proc.Exp.StageI
-    
-    print(paste(length(Proc.Exp.StageI$NodesExp), "genes selected"))
-    
-    OnlyOld <- setdiff(GeneStageList[[length(GeneStageList)]], rownames(Proc.Exp.StageI$NodesExp))    
-    print(paste(length(OnlyOld), "genes removed:"))
-    print(OnlyOld)
-    
-    OnlyNew <- setdiff(rownames(Proc.Exp.StageI$NodesExp), GeneStageList[[length(GeneStageList)]])
-    print(paste(length(OnlyNew), "genes added:"))
-    print(OnlyNew)
-    
-    if(StopMode == 1){
-      if( (length(OnlyOld) + length(OnlyNew))/length(GeneStageList[[length(GeneStageList)]]) < 1 - StopCrit ){
-        print("Converged! - Mode 1")
-        DONE <- TRUE
-        break()
-      }
-    }
     
     Round.Count <- Round.Count + 1
     
-    print(paste("Round", Round.Count, "Done"))
+    # Produce the initial analysis
     
-    if(Round.Count >= MaxRounds){
-      print("Maximum number of iteration reached")
-      DONE <- TRUE
-      break()
+    Info.Exp <- PlotsAndDistill(GeneExprMat = GeneExprMat, StartSet = UsedGenes, QuaThr = QuaThr, MinProlCells = MinProlCells, OutThr = OutThr, OutThrPCA = OutThrPCA,
+                                Categories = Categories, Topology = Topology, DistillThr = DistillThr, InitStructNodes = InitStructNodes, nNodes = nNodes,
+                                IgnoreTail = IgnoreTail, Log = Log, StartQuant = StartQuant, Title = Title, PlanVarLimit = PlanVarLimit, PlanVarLimitIC = PlanVarLimitIC,
+                                PCACenter = PCACenter, PlotDebug = PlotDebug, Mode = Mode, ExtMode = ExtMode, EstProlif = EstProlif, PCAFilter = PCAFilter,
+                                PCAProjCenter = PCAProjCenter, Filter = Filter, KeepOrgProlifiration = KeepOrgProlifiration, NonG0Cell = SavedNonG0)
+    
+    Info.Exp.List[[length(Info.Exp.List)+1]] <- Info.Exp
+    
+    if(is.null(SavedNonG0) & KeepOrgProlifiration){
+      SavedNonG0 <- Info.Exp$FinalStruct$NonG0Cell
     }
     
-    TaxonList <- Info.Exp.StageI$FinalStruct$TaxonList[[length(Info.Exp.StageI$FinalStruct$TaxonList)]]
-    TaxVect <- rep(NA, ncol(Proc.Exp.StageI$NodesExp)-1)
+    # readline("press any key")
+    
+    # Produce the processed data
+    
+    Proc.Exp <- PlotOnStages(Structure = Topology, TaxonList = Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]],
+                             Categories = Info.Exp$FinalStruct$Categories, nGenes = 2, 
+                             PrinGraph = Info.Exp$FinalStruct$PrinGraph, 
+                             Net = Info.Exp$FinalStruct$Net[[length(Info.Exp$FinalStruct$Net)]],
+                             SelThr = SelThr, ComputeOverlaps = TRUE, ExpData = Info.Exp$FinalStruct$FiltExp,
+                             RotatioMatrix = Info.Exp$FinalStruct$PCAData$rotation[,1:Info.Exp$FinalStruct$nDims],
+                             PointProjections = Info.Exp$FinalStruct$ProjPoints[[length(Info.Exp$FinalStruct$ProjPoints)]],
+                             OrderOnCat = OrderOnCat)
+    
+    Proc.Exp.List[[length(Proc.Exp.List)+1]] <- Proc.Exp
+    
+    print(paste(nrow(Proc.Exp$NodesExp), "genes selected"))
+    
+    if(length(GeneStageList)>0){
+      
+      OnlyOld <- setdiff(GeneStageList[[length(GeneStageList)]], rownames(Info.Exp$NodesExp))    
+      print(paste(length(OnlyOld), "genes removed:"))
+      print(OnlyOld)
+      
+      OnlyNew <- setdiff(rownames(Info.Exp$NodesExp), GeneStageList[[length(GeneStageList)]])
+      print(paste(length(OnlyNew), "genes added:"))
+      print(OnlyNew)
+      
+      print(paste(length(OnlyOld), "removed genes"))
+      print(paste(length(OnlyNew), "added genes"))
+      print(paste(length(GeneStageList[[length(GeneStageList)]]), "selected genes"))
+     
+      if(any(StopMode == 1)){
+        if( length(OnlyOld)/length(GeneStageList[[length(GeneStageList)]]) < 1 - StopCrit &
+            length(OnlyNew)/length(GeneStageList[[length(GeneStageList)]]) < 1 - StopCrit ){
+          print("Converged! - Mode 1")
+          DONE <- TRUE
+          break()
+        }
+      }
+      
+    }
+    
+    TaxonList <- Info.Exp$FinalStruct$TaxonList[[length(Info.Exp$FinalStruct$TaxonList)]]
+    TaxVect <- rep(NA, ncol(Proc.Exp$NodesExp)-1)
     
     for(i in 1:length(TaxonList)){
       TaxVect[TaxonList[[i]]] <- i 
     }
     
-    AllMean <- apply(log10(GeneExprMat[, colnames(Proc.Exp.StageI$CellExp)] + 1), 1, mean)
-    SelMean <- apply(log10(GeneExprMat[rownames(Proc.Exp.StageI$CellExp), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, mean)
+    if(Log){
+      TransGeneExprMat <- log10(GeneExprMat + 1)
+    }
+    
+    AllMean <- apply(TransGeneExprMat[, colnames(Proc.Exp$CellExp)], 1, mean)
+    SelMean <- apply(TransGeneExprMat[rownames(Proc.Exp$CellExp), colnames(Proc.Exp$CellExp)], 1, mean)
     
     print(paste(sum(AllMean < min(SelMean)), "genes will be excluded a priori from the analysis"))
-    print("Computing median of IQR/median")
-    
-    
-    
-    
-    
-    
+    print("Computing median of mad/mean")
     
     if(Parallel){
       
@@ -3932,33 +3987,35 @@ ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circ
       
       parallel::clusterExport(cl, "TaxVect", environment())
       
-      MedianVar <- parallel::parApply(cl,log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, function(x){
-        AGG <- aggregate(x, by=list(TaxVect), median)
+      MedianVar <- parallel::parApply(cl,TransGeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)], 1, function(x){
+        AGG <- aggregate(x, by=list(TaxVect), mean)
         AGGVect <- AGG[,2]
         names(AGGVect) <- paste(AGG[,1])
-        median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+        median((aggregate(x, by=list(TaxVect), mad))[,2]/AGGVect, na.rm=TRUE)
       })
       
       parallel::stopCluster(cl)
+      
       tictoc::toc()
       
     } else {
       
       tictoc::tic()
-      MedianVar <- apply(log10(GeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp.StageI$CellExp)] + 1), 1, function(x){
-        AGG <- aggregate(x, by=list(TaxVect), median)
+      MedianVar <- apply(TransGeneExprMat[AllMean >= min(SelMean), colnames(Proc.Exp$CellExp)], 1, function(x){
+        AGG <- aggregate(x, by=list(TaxVect), mean)
         AGGVect <- AGG[,2]
         names(AGGVect) <- paste(AGG[,1])
-        median((aggregate(x, by=list(TaxVect), IQR))[,2]/AGGVect, na.rm=TRUE)
+        median((aggregate(x, by=list(TaxVect), mad))[,2]/AGGVect, na.rm=TRUE)
       })
       tictoc::toc()
       
     }
     
+    
     MedianVar <- MedianVar[!is.infinite(MedianVar)]
     MedianVar <- MedianVar[!is.na(MedianVar)]
     
-    PrevDistilled <- names(MedianVar) %in% rownames(Proc.Exp.StageI$NodesExp)
+    PrevDistilled <- names(MedianVar) %in% rownames(Proc.Exp$NodesExp)
     
     boxplot(MedianVar ~ PrevDistilled, main = paste(Title, "STEP", Round.Count))
     
@@ -3967,35 +4024,39 @@ ProjectAndExpand <- function(GeneExprMat, StartSet, Categories, Topology = 'Circ
     
     if(KeepOriginal){
       GeneStageList[[length(GeneStageList)+1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
-                                                           rownames(Proc.Exp$NodesExp)))
-      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp$NodesExp)
+                                                           rownames(Proc.Exp.List[[1]]$NodesExp)))
+      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp.List[[1]]$NodesExp)
     } else {
       GeneStageList[[length(GeneStageList)+1]] <- unique(c(names(which(MedianVar < quantile(MedianVar[PrevDistilled], ExpQuant))),
-                                                           rownames(Proc.Exp.StageI$NodesExp)))
-      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp.StageI$NodesExp)
+                                                           rownames(Proc.Exp$NodesExp)))
+      GeneNumbVarRat <- length(GeneStageList[[length(GeneStageList)]])/nrow(Proc.Exp$NodesExp)
     }
     
-    GeneIntRatPrev <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
-      length(GeneStageList[[length(GeneStageList)-1]])
-    GeneIntRatCurr <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
-      length(GeneStageList[[length(GeneStageList)]])
-    
-    print(paste("Gene number variation", GeneNumbVarRat))
-    print(paste("Gene intersection variation (Prev)", GeneIntRatPrev))
-    print(paste("Gene intersection variation (Curr)", GeneIntRatCurr))
-    
-    Sys.sleep(10)
-    
-    if(StopMode == 2){
-      if(GeneIntRatPrev > StopCrit & GeneIntRatCurr > StopCrit){
-        print("Converged! - Mode 2")
-        DONE <- TRUE
-        break()
+    if(length(GeneStageList) > 1){
+      
+      GeneIntRatPrev <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
+        length(GeneStageList[[length(GeneStageList)-1]])
+      GeneIntRatCurr <- length(intersect(GeneStageList[[length(GeneStageList)]], GeneStageList[[length(GeneStageList)-1]]))/
+        length(GeneStageList[[length(GeneStageList)]])
+      
+      print(paste("Gene number variation", GeneNumbVarRat))
+      print(paste("Gene intersection variation (Prev)", GeneIntRatPrev))
+      print(paste("Gene intersection variation (Curr)", GeneIntRatCurr))
+      
+      if(any(StopMode == 2)){
+        if(GeneIntRatPrev > StopCrit & GeneIntRatCurr > StopCrit){
+          print("Converged! - Mode 2")
+          DONE <- TRUE
+          break()
+        }
       }
+      
     }
     
+    UsedGenes <- GeneStageList[[length(GeneStageList)]]
+
   }
-  
+
   return(list(StartInfo = Info.Exp, StartProc = Proc.Exp,
               ListInfo = Info.Exp.List, ListProc = Proc.Exp.List,
               GeneList = GeneStageList))

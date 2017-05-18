@@ -5,13 +5,13 @@
 \title{Title}
 \usage{
 PlotsAndDistill(GeneExprMat, StartSet, Categories, Topology = "Circle",
-  IgnoreTail = FALSE, PlanVarLimit = 0.9, PlanVarLimitIC = 92,
+  IgnoreTail = FALSE, PlanVarLimit = 0.9, PlanVarLimitIC = 0.95,
   DistillThr = 0.7, Log = TRUE, StartQuant = 0.5, OutThr = 3,
   OutThrPCA = 3, Title = "", MinProlCells = 20, PCACenter = FALSE,
   PlotDebug = FALSE, Mode = "VarPC", ExtMode = 2, nNodes = 40,
   InitStructNodes = 20, DipPVThr = 1e-04, PCAFilter = TRUE,
-  PCAProjCenter = TRUE, StopCrit = 0.95, Filter = TRUE,
-  CompareSet = list())
+  PCAProjCenter = TRUE, StopCrit = 0.95, Filter = TRUE, QuaThr = 0.5,
+  CompareSet = list(), EstProlif = "MeanPerc")
 }
 \arguments{
 \item{GeneExprMat}{}

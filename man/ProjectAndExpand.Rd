@@ -5,12 +5,16 @@
 \title{Title}
 \usage{
 ProjectAndExpand(GeneExprMat, StartSet, Categories, Topology = "Circle",
-  DistillThr = 0.6, IgnoreTail = TRUE, Log = TRUE, StartQuant = 0.25,
-  Title = "Buettner et al", PlanVarLimit = 0.85, PlanVarLimitIC = 0.9,
-  KeepOriginal = TRUE, PCACenter = FALSE, PlotDebug = FALSE,
-  Mode = "VarPC", ExtMode = 3, MaxRounds = 15, StopCrit = 0.95,
-  ExpQuant = 0.01, StopMode = 1, Parallel = TRUE, nCores = NULL,
-  ClusType = "PSOCK")
+  DistillThr = 0.7, DipPVThr = 1e-04, IgnoreTail = FALSE, Log = TRUE,
+  StartQuant = 0.5, Title = "", OutThr = 3, nNodes = 40,
+  PlanVarLimit = 0.9, PlanVarLimitIC = 0.95, KeepOriginal = TRUE,
+  InitStructNodes = 20, PCACenter = FALSE, PlotDebug = FALSE,
+  Mode = "VarPC", ExtMode = 2, OutThrPCA = 3, MaxRounds = 15,
+  StopCrit = 0.95, ExpQuant = 0.01, StopMode = 1,
+  EstProlif = "MeanPerc", Parallel = TRUE, nCores = NULL,
+  ClusType = "PSOCK", QuaThr = 0.5, MinProlCells = 20, PCAFilter = TRUE,
+  PCAProjCenter = TRUE, Filter = TRUE, SelThr = 0.35,
+  OrderOnCat = FALSE)
 }
 \arguments{
 \item{GeneExprMat}{}

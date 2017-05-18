@@ -811,7 +811,7 @@ PlotOnPath <- function(PathProjection, GroupsLab){
 #'
 #' @examples
 ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL, Title='',
-                                    PCACenter = TRUE, ShowFitted = TRUE){
+                                    PCACenter = TRUE, ShowFitted = TRUE, ExpValues = NULL){
   
   if(PCACenter){
     ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
@@ -840,20 +840,32 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
                          as.character(Categories))
   }
   
-  colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+  # colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+  
+  if(!is.null(ExpValues)){
+    RotatedData <- cbind(RotatedData, ExpValues)
+  } else {
+    RotatedData <- cbind(RotatedData, rep(1, nrow(RotatedData)))
+  }
+    
+  colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat", "Exp")
   
   RotatedData.DF <- data.frame(RotatedData)
   RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
   RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
   RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
+  RotatedData.DF$Exp <- as.numeric(as.character(RotatedData.DF$Exp))
   
   if(ShowFitted){
-    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) +
+      ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
   } else {
-    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat))
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat, alpha=Exp)) +
+      ggplot2::scale_alpha_continuous()
   }
   
-  p <- p + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
+  p <- p + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]),
+                                                       mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
     ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%"))
   
   for(j in 1:nrow(Edges)){

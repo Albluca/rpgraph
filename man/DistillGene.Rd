@@ -7,7 +7,7 @@
 DistillGene(BaseAnalysis, Mode = "VarPC", DistillThr = 0.2, ExtMode = 1,
   Topo = "Lasso", IgnoreTail = FALSE, ZeroQuant = 0.75,
   FullExpression = NULL, Log = FALSE, LoesSpan = 0.1,
-  MedianRatThr = 0.05, VarTestPVThr = 1e-05)
+  MedianRatThr = 0.05, VarTestPVThr = 1e-05, FilterLow = FALSE)
 }
 \arguments{
 \item{BaseAnalysis}{a strure returned by Project and Compute}
