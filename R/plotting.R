@@ -820,7 +820,7 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
   }
   
   PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
-  VarExp <- PCAPrGraph$sdev[1:2]^2/sum(PCAPrGraph$sdev^2)
+  VarExp <- PCAPrGraph$sdev[1:3]^2/sum(PCAPrGraph$sdev^2)
   
   if(is.null(Categories)){
     Categories <- rep("NoG", nrow(Points))
@@ -830,7 +830,7 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
     Points <- scale(Points, center = Centers, scale = FALSE)
   }
   
-  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:2]
+  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:3]
   
   if(is.null(UsedPoints)){
     RotatedData <- cbind(RotatedPoints, rep(TRUE, nrow(Points)),
@@ -840,7 +840,7 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
                          as.character(Categories))
   }
   
-  # colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
+  # colnames(RotatedData) <- c("PC1", "PC2", "PC3", "NG0", "Cat")
   
   if(!is.null(ExpValues)){
     RotatedData <- cbind(RotatedData, ExpValues)
@@ -848,19 +848,24 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
     RotatedData <- cbind(RotatedData, rep(1, nrow(RotatedData)))
   }
     
-  colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat", "Exp")
+  colnames(RotatedData) <- c("PC1", "PC2", "PC3", "NG0", "Cat", "Exp")
   
-  RotatedData.DF <- data.frame(RotatedData)
+  RotatedData.DF <- data.frame(RotatedData, row.names = NULL)
   RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
   RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+  RotatedData.DF$PC3 <- as.numeric(as.character(RotatedData.DF$PC3))
   RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
   RotatedData.DF$Exp <- as.numeric(as.character(RotatedData.DF$Exp))
   
   if(ShowFitted){
     p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) +
       ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+    p1 <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC3, alpha=NG0, colour=Cat)) +
+      ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
   } else {
     p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat, alpha=Exp)) +
+      ggplot2::scale_alpha_continuous()
+    p1 <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC3, colour=Cat, alpha=Exp)) +
       ggplot2::scale_alpha_continuous()
   }
   
@@ -873,7 +878,101 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
                                mapping = ggplot2::aes(x = PC1, y = PC2), inherit.aes = FALSE)
   }
   
+  p1 <- p1 + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,c(1,3)]),
+                                                       mapping = ggplot2::aes(x=PC1, y=PC3), inherit.aes = FALSE) +
+    ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC3 -", signif(100*VarExp[3], 4), "%"))
+  
+  for(j in 1:nrow(Edges)){
+    p1 <- p1 + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],c(1,3)]),
+                                mapping = ggplot2::aes(x = PC1, y = PC3), inherit.aes = FALSE)
+  }
+  
   print(p)
+  print(p1)
   
 }
 
+
+
+
+
+
+
+#' Title
+#'
+#' @param Points 
+#' @param Edges 
+#' @param Nodes 
+#' @param Categories 
+#' @param Title 
+#' @param ExpValues 
+#' @param PCACenter 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ProjectOnCircle <- function(Points, Edges, Nodes, Categories, Title, ExpValues, PCACenter = TRUE) {
+  
+  if(PCACenter){
+    ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
+    Centers <- attr(ScaledNodes, "scaled:center")
+    Nodes <- ScaledNodes
+  }
+  
+  PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
+  VarExp <- PCAPrGraph$sdev[1:2]^2/sum(PCAPrGraph$sdev^2)
+  
+  if(is.null(Categories)){
+    Categories <- rep("NoG", nrow(Points))
+  }
+  
+  if(!is.factor(Categories)){
+    Categories <- factor(Categories)
+  }
+  
+  if(PCACenter){
+    Points <- scale(Points, center = Centers, scale = FALSE)
+  }
+  
+  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:2]
+  
+  if(!is.null(ExpValues)){
+    RotatedData <- cbind(RotatedPoints,
+                         as.character(Categories),
+                         ExpValues[match(rownames(RotatedPoints), names(ExpValues))])
+  } else {
+    RotatedData <- cbind(RotatedPoints,
+                         as.character(Categories),
+                         rep(NA, nrow(RotatedPoints)))
+  }
+  
+  colnames(RotatedData) <- c("PC1", "PC2", "Cat", "Exp")
+  
+  RotatedData.DF <- data.frame(RotatedData)
+  RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
+  RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+  RotatedData.DF$Exp <- as.numeric(as.character(RotatedData.DF$Exp))
+  RotatedData.DF$Cat <- factor(as.character(RotatedData.DF$Cat), levels = levels(Categories))
+  
+  if(!is.null(ExpValues)){
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC2, colour = Exp, shape = Cat)) +
+      ggplot2::scale_color_continuous(low = "blue", high = "red")
+  } else {
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC2, shape = Cat)) +
+      ggplot2::scale_color_continuous(low = "blue", high = "red")
+  }
+  
+  p <- p + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
+    ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%"))
+  
+  for(j in 1:nrow(Edges)){
+    p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
+                                mapping = ggplot2::aes(x = PC1, y = PC2), inherit.aes = FALSE)
+  }
+  
+  p <- p + ggplot2::geom_point()
+  
+  return(p)
+  
+}

@@ -494,6 +494,67 @@ Categories <- Murine_ESC_Stages
 
 
 
+Output.Buet <- SelectGenesOnGraph(DataSet = Murine_ESC_All, StartSet = MouseGenes_GOCellCycle, Categories = Murine_ESC_Stages,
+                             PCACenter = TRUE, PCAProjCenter = TRUE)
+
+
+# BuettData <- read_rds("~/Google Drive/Datasets/Buettner et al. - Murie embrionic stem cells/rPG_Last.rds")
+
+write_rds(x = list(Analysis = Output.Buet,
+                   ExpMat = log10(Murine_ESC_All+1),
+                   Cats = Murine_ESC_Stages),
+          path = "~/Google Drive/Datasets/Buettner et al. - Murie embrionic stem cells/rPG_Last.rds")
+
+# write_rds(x = list(Analysis = BuettData$Analysis,
+#                    ExpMat = log10(BuettData$ExpMat+1),
+#                    Cats = BuettData$Cat),
+#           path = "~/Google Drive/Datasets/Buettner et al. - Murie embrionic stem cells/rPG_Last.rds")
+# 
+# 
+
+
+
+
+TargetStruct <- Output$PGStructs[[length(Output$PGStructs)]]
+
+Proc.Exp <- PlotOnStages(Structure = "Circle",
+                         Categories = TargetStruct$Categories,
+                         nGenes = 2,
+                         TaxonList = TargetStruct$TaxonList[[length(TargetStruct$TaxonList)]],
+                         PrinGraph = Output$PGStructs[[length(Output$PGStructs)]]$PrinGraph,
+                         Net = TargetStruct$Net[[length(TargetStruct$Net)]],
+                         SelThr = .3,
+                         ComputeOverlaps = TRUE,
+                         ExpData = TargetStruct$FiltExp,
+                         RotatioMatrix = TargetStruct$PCAData$rotation[,1:TargetStruct$nDims],
+                         PCACenter = TargetStruct$PCAData$center,
+                         PointProjections = TargetStruct$ProjPoints[[length(TargetStruct$ProjPoints)]],
+                         OrderOnCat = TRUE,
+                         SmoothPoints = 1, MinCellPerNode = 2)
+
+
+
+
+NormGE <- apply(Proc.Exp$NodesExp, 1, function(x){
+  x1 <- x-min(x)
+  x1 <- x1/max(x1)
+  return(x1)
+})
+
+pheatmap::pheatmap(t(NormGE), cluster_cols = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
 GeneExprMat = Murine_ESC_All
 StartSet = MouseGenes_GOCellCycle
 Categories = Murine_ESC_Stages

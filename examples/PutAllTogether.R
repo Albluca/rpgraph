@@ -1,179 +1,261 @@
-load("/Users/newmac-luca/Desktop/RecentData_U.RData")
-
-FinalStructure.Kowa <- ExpDataset.Kowa$ListProc[[length(ExpDataset.Kowa$ListProc)]]
-TaxonList.Kowa <- ExpDataset.Kowa$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Kowa$StartInfo$FinalStruct$TaxonList)]]
-ReOrd.Kowa <- match(colnames(FinalStructure.Kowa$CellExp), names(FinalStructure.Kowa$CellsPT))
-Genes.Kowa <- sort(unique(c(rownames(FinalStructure.Kowa$NodesExp), rownames(FinalStructure.Kowa$NodesExp))))
-
-
-FinalStructure.Sasa <- ExpDataset.Sasa$ListProc[[length(ExpDataset.Sasa$ListProc)]]
-TaxonList.Sasa <- ExpDataset.Sasa$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Sasa$StartInfo$FinalStruct$TaxonList)]]
-ReOrd.Sasa <- match(colnames(FinalStructure.Sasa$CellExp), names(FinalStructure.Sasa$CellsPT))
-Genes.Sasa <- sort(unique(c(rownames(FinalStructure.Sasa$NodesExp), rownames(FinalStructure.Sasa$NodesExp))))
-
-
-FinalStructure.Buett <- ExpDataset.Buett$ListProc[[length(ExpDataset.Buett$ListProc)]]
-TaxonList.Buett <- ExpDataset.Buett$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Buett$StartInfo$FinalStruct$TaxonList)]]
-ReOrd.Buett <- match(colnames(FinalStructure.Buett$CellExp), names(FinalStructure.Buett$CellsPT))
-Genes.Buett <- sort(unique(c(rownames(FinalStructure.Buett$NodesExp), rownames(FinalStructure.Buett$NodesExp))))
-
-
-tGMT <- rRoma::SelectFromMSIGdb("GO_CELL_CYCLE")
-MouseGenes_GOCellCycle <- tGMT[[which(unlist(lapply(tGMT, "[[", "Name"))=="GO_CELL_CYCLE")]]$Genes
-MouseGenes_GOCellCycle <- gsub("(\\b[a-z]{1})", "\\U\\1", tolower(MouseGenes_GOCellCycle), perl=TRUE)
+# load("/Users/newmac-luca/Desktop/RecentData_U.RData")
+# 
+# FinalStructure.Kowa <- ExpDataset.Kowa$ListProc[[length(ExpDataset.Kowa$ListProc)]]
+# TaxonList.Kowa <- ExpDataset.Kowa$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Kowa$StartInfo$FinalStruct$TaxonList)]]
+# ReOrd.Kowa <- match(colnames(FinalStructure.Kowa$CellExp), names(FinalStructure.Kowa$CellsPT))
+# Genes.Kowa <- sort(unique(c(rownames(FinalStructure.Kowa$NodesExp), rownames(FinalStructure.Kowa$NodesExp))))
+# 
+# 
+# FinalStructure.Sasa <- ExpDataset.Sasa$ListProc[[length(ExpDataset.Sasa$ListProc)]]
+# TaxonList.Sasa <- ExpDataset.Sasa$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Sasa$StartInfo$FinalStruct$TaxonList)]]
+# ReOrd.Sasa <- match(colnames(FinalStructure.Sasa$CellExp), names(FinalStructure.Sasa$CellsPT))
+# Genes.Sasa <- sort(unique(c(rownames(FinalStructure.Sasa$NodesExp), rownames(FinalStructure.Sasa$NodesExp))))
+# 
+# 
+# FinalStructure.Buett <- ExpDataset.Buett$ListProc[[length(ExpDataset.Buett$ListProc)]]
+# TaxonList.Buett <- ExpDataset.Buett$StartInfo$FinalStruct$TaxonList[[length(ExpDataset.Buett$StartInfo$FinalStruct$TaxonList)]]
+# ReOrd.Buett <- match(colnames(FinalStructure.Buett$CellExp), names(FinalStructure.Buett$CellsPT))
+# Genes.Buett <- sort(unique(c(rownames(FinalStructure.Buett$NodesExp), rownames(FinalStructure.Buett$NodesExp))))
+# 
+# 
+# tGMT <- rRoma::SelectFromMSIGdb("GO_CELL_CYCLE")
+# MouseGenes_GOCellCycle <- tGMT[[which(unlist(lapply(tGMT, "[[", "Name"))=="GO_CELL_CYCLE")]]$Genes
+# MouseGenes_GOCellCycle <- gsub("(\\b[a-z]{1})", "\\U\\1", tolower(MouseGenes_GOCellCycle), perl=TRUE)
 
 # options("java.home"="/Library/Java/JavaVirtualMachines/jdk1.8.0_112.jdk/Contents/Home/jre")
 # dyn.load('/Library/Java/JavaVirtualMachines/jdk1.8.0_112.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
 
 library(rpgraph)
 
-InputList <- list(list(Name = "Buettner et al", Expression = FullExpData.Buett,
-                       Categories = FullCat.Buett, PrinCurveStruct = ExpDataset.Buett,
-                       TaxonList = TaxonList.Buett),
-                  list(Name = "Kowalczyk et al", Expression = FullExpData.Kowa,
-                       Categories = FullCat.Kowa, PrinCurveStruct = ExpDataset.Kowa,
-                       TaxonList = TaxonList.Kowa),
-                  list(Name = "Sasagawa et al", Expression = FullExpData.Sasa,
-                       Categories = FullCat.Sasa, PrinCurveStruct = ExpDataset.Sasa,
-                       TaxonList = TaxonList.Sasa))
+Data.Sasa <- read_rds("~/Google Drive/Datasets/Sasagawa et al - Murine Stem Cells (EB5 cell line)/rPG_Last.rds")
+Data.Kowa <- read_rds("~/Google Drive/Datasets/Kowalczyk et al - Murine hematopoietic stem cells/rPG_Last.rds")
+Data.Buet <- read_rds("~/Google Drive/Datasets/Buettner et al. - Murie embrionic stem cells/rPG_Last.rds")
 
-rm(FullCat.Buett, FullCat.Kowa, FullCat.Sasa,
-   ExpDataset.Buett, ExpDataset.Kowa, ExpDataset.Sasa,
-   FullExpData.Buett, FullExpData.Kowa, FullExpData.Sasa)
+
+
+TargetStruct <- Data.Kowa$Analysis$PGStructs[[length(Data.Kowa$Analysis$PGStructs)]]
+Proc.Exp.Kowa <- PlotOnStages(Structure = "Circle",
+                         Categories = TargetStruct$Categories,
+                         nGenes = 2,
+                         TaxonList = TargetStruct$TaxonList[[length(TargetStruct$TaxonList)]],
+                         PrinGraph = TargetStruct$PrinGraph,
+                         Net = TargetStruct$Net[[length(TargetStruct$Net)]],
+                         SelThr = .3,
+                         ComputeOverlaps = TRUE,
+                         ExpData = TargetStruct$FiltExp,
+                         RotatioMatrix = TargetStruct$PCAData$rotation[,1:TargetStruct$nDims],
+                         PCACenter = TargetStruct$PCAData$center,
+                         PointProjections = TargetStruct$ProjPoints[[length(TargetStruct$ProjPoints)]],
+                         OrderOnCat = TRUE,
+                         SmoothPoints = 2, MinCellPerNode = 2)
+
+
+TargetStruct <- Data.Buet$Analysis$PGStructs[[length(Data.Buet$Analysis$PGStructs)]]
+Proc.Exp.Buet <- PlotOnStages(Structure = "Circle",
+                              Categories = TargetStruct$Categories,
+                              nGenes = 2,
+                              TaxonList = TargetStruct$TaxonList[[length(TargetStruct$TaxonList)]],
+                              PrinGraph = TargetStruct$PrinGraph,
+                              Net = TargetStruct$Net[[length(TargetStruct$Net)]],
+                              SelThr = .35,
+                              ComputeOverlaps = TRUE,
+                              ExpData = TargetStruct$FiltExp,
+                              RotatioMatrix = TargetStruct$PCAData$rotation[,1:TargetStruct$nDims],
+                              PCACenter = TargetStruct$PCAData$center,
+                              PointProjections = TargetStruct$ProjPoints[[length(TargetStruct$ProjPoints)]],
+                              OrderOnCat = TRUE,
+                              SmoothPoints = 1, MinCellPerNode = 2)
+
+
+TargetStruct <- Data.Sasa$Analysis$PGStructs[[length(Data.Sasa$Analysis$PGStructs)]]
+Proc.Exp.Sasa <- PlotOnStages(Structure = "Circle",
+                              Categories = TargetStruct$Categories,
+                              nGenes = 2,
+                              TaxonList = TargetStruct$TaxonList[[length(TargetStruct$TaxonList)]],
+                              PrinGraph = TargetStruct$PrinGraph,
+                              Net = TargetStruct$Net[[length(TargetStruct$Net)]],
+                              SelThr = .35,
+                              ComputeOverlaps = TRUE,
+                              ExpData = TargetStruct$FiltExp,
+                              RotatioMatrix = TargetStruct$PCAData$rotation[,1:TargetStruct$nDims],
+                              PCACenter = TargetStruct$PCAData$center,
+                              PointProjections = TargetStruct$ProjPoints[[length(TargetStruct$ProjPoints)]],
+                              OrderOnCat = TRUE,
+                              SmoothPoints = 1, MinCellPerNode = 1)
+
+
+
+
+
+InputList <- list(list(Name = "Buettner et al", Expression = Data.Buet$ExpMat,
+                       Categories = Data.Buet$Cats,
+                       OrderedData = Proc.Exp.Buet,
+                       PGStruct = Data.Buet$Analysis$PGStructs[[length(Data.Buet$Analysis$PGStructs)]],
+                       TaxonList = Data.Buet$Analysis$PGStructs[[length(Data.Buet$Analysis$PGStructs)]]$TaxonList
+                       ),
+                  list(Name = "Kowalczyk et al", Expression = Data.Kowa$ExpMat,
+                       Categories = Data.Kowa$Cats,
+                       OrderedData = Proc.Exp.Kowa,
+                       PGStruct = Data.Kowa$Analysis$PGStructs[[length(Data.Kowa$Analysis$PGStructs)]],
+                       TaxonList = Data.Kowa$Analysis$PGStructs[[length(Data.Kowa$Analysis$PGStructs)]]$TaxonList
+                  ),
+                  list(Name = "Sasagawa et al", Expression = Data.Buet$ExpMat,
+                       Categories = Data.Sasa$Cats,
+                       OrderedData = Proc.Exp.Sasa,
+                       PGStruct = Data.Sasa$Analysis$PGStructs[[length(Data.Sasa$Analysis$PGStructs)]],
+                       TaxonList = Data.Sasa$Analysis$PGStructs[[length(Data.Sasa$Analysis$PGStructs)]]$TaxonList
+                  )
+                )
+
+
+
+# InputList <- list(list(Name = "Buettner et al", Expression = FullExpData.Buett,
+#                        Categories = FullCat.Buett, PrinCurveStruct = ExpDataset.Buett,
+#                        TaxonList = TaxonList.Buett),
+#                   list(Name = "Kowalczyk et al", Expression = FullExpData.Kowa,
+#                        Categories = FullCat.Kowa, PrinCurveStruct = ExpDataset.Kowa,
+#                        TaxonList = TaxonList.Kowa),
+#                   list(Name = "Sasagawa et al", Expression = FullExpData.Sasa,
+#                        Categories = FullCat.Sasa, PrinCurveStruct = ExpDataset.Sasa,
+#                        TaxonList = TaxonList.Sasa))
+# 
+# rm(FullCat.Buett, FullCat.Kowa, FullCat.Sasa,
+#    ExpDataset.Buett, ExpDataset.Kowa, ExpDataset.Sasa,
+#    FullExpData.Buett, FullExpData.Kowa, FullExpData.Sasa)
 
 
 
 CompareAcrossData(InputList)
 
 
-i <- 1
-
-InputList[[i]]$TaxonList
-TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
-
-for(j in 1:length(InputList[[i]]$TaxonList)){
-  TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
-}
-
-WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
-SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
-PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
-
-DoStuff <- function(gId) {
-  Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
-  Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
-  
-  MedVect <- sapply(SampleReord, function(x){
-    median(unlist(lapply(split(Exp, f = factor(x)), mad)))
-  })
-  return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
-}
-
-cl <- parallel::makeCluster(4, type = "FORK")
-parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
-
-AllPV.Buett <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
-
-
-AllPV.Buett <- unlist(AllPV.Buett)
-names(AllPV.Buett) <- rownames(InputList[[i]]$Expression)
-
-
-write_rds(AllPV.Buett, path = "AllPV.Buett.rds")
-
-
-
+# i <- 1
+# 
+# InputList[[i]]$TaxonList
+# TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
+# 
+# for(j in 1:length(InputList[[i]]$TaxonList)){
+#   TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
+# }
+# 
+# WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
+# SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
+# PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
+# 
+# DoStuff <- function(gId) {
+#   Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
+#   Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
+# 
+#   MedVect <- sapply(SampleReord, function(x){
+#     median(unlist(lapply(split(Exp, f = factor(x)), mad)))
+#   })
+#   return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
+# }
+# 
+# cl <- parallel::makeCluster(4, type = "FORK")
+# parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
+# 
+# AllPV.Buett <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
+# 
+# 
+# AllPV.Buett <- unlist(AllPV.Buett)
+# names(AllPV.Buett) <- rownames(InputList[[i]]$Expression)
+# 
+# 
+# write_rds(AllPV.Buett, path = "AllPV.Buett.rds")
+# 
 
 
-
-
-
-
-
-
-i <- 2
-
-InputList[[i]]$TaxonList
-TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
-
-for(j in 1:length(InputList[[i]]$TaxonList)){
-  TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
-}
-
-WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
-SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
-PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
-
-DoStuff <- function(gId) {
-  Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
-  Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
-  
-  MedVect <- sapply(SampleReord, function(x){
-    median(unlist(lapply(split(Exp, f = factor(x)), mad)))
-  })
-  return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
-}
-
-cl <- parallel::makeCluster(4, type = "FORK")
-parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
-
-AllPV.Kowa <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
-
-
-AllPV.Kowa <- unlist(AllPV.Kowa)
-names(AllPV.Kowa) <- rownames(InputList[[i]]$Expression)
-
-
-write_rds(AllPV.Kowa, path = "AllPV.Kowa.rds")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-i <- 3
-
-InputList[[i]]$TaxonList
-TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
-
-for(j in 1:length(InputList[[i]]$TaxonList)){
-  TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
-}
-
-WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
-SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
-PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
-
-DoStuff <- function(gId) {
-  Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
-  Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
-  
-  MedVect <- sapply(SampleReord, function(x){
-    median(unlist(lapply(split(Exp, f = factor(x)), mad)))
-  })
-  return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
-}
-
-cl <- parallel::makeCluster(4, type = "FORK")
-parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
-
-AllPV.Sasa <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
-
-
-AllPV.Sasa <- unlist(AllPV.Sasa)
-names(AllPV.Sasa) <- rownames(InputList[[i]]$Expression)
-
-
-write_rds(AllPV.Sasa, path = "AllPV.Sasa.rds")
-
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# i <- 2
+# 
+# InputList[[i]]$TaxonList
+# TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
+# 
+# for(j in 1:length(InputList[[i]]$TaxonList)){
+#   TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
+# }
+# 
+# WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
+# SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
+# PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
+# 
+# DoStuff <- function(gId) {
+#   Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
+#   Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
+#   
+#   MedVect <- sapply(SampleReord, function(x){
+#     median(unlist(lapply(split(Exp, f = factor(x)), mad)))
+#   })
+#   return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
+# }
+# 
+# cl <- parallel::makeCluster(4, type = "FORK")
+# parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
+# 
+# AllPV.Kowa <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
+# 
+# 
+# AllPV.Kowa <- unlist(AllPV.Kowa)
+# names(AllPV.Kowa) <- rownames(InputList[[i]]$Expression)
+# 
+# 
+# write_rds(AllPV.Kowa, path = "AllPV.Kowa.rds")
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# i <- 3
+# 
+# InputList[[i]]$TaxonList
+# TaxVect <- rep(NA, length(InputList[[i]]$TaxonList))
+# 
+# for(j in 1:length(InputList[[i]]$TaxonList)){
+#   TaxVect[InputList[[i]]$TaxonList[[j]]] <- j
+# }
+# 
+# WorkStruct <- InputList[[i]]$PrinCurveStruct$ListProc[[length(InputList[[i]]$PrinCurveStruct$ListProc)]]
+# SampleReord <- lapply(as.list(1:100), function(i){sample(TaxVect)})
+# PvVect <- rep(NA, nrow(InputList[[i]]$Expression))
+# 
+# DoStuff <- function(gId) {
+#   Exp <- unlist(InputList[[i]]$Expression[gId,names(WorkStruct$CellsPT)])
+#   Base <- median(unlist(lapply(split(Exp, f = factor(TaxVect)), mad)))
+#   
+#   MedVect <- sapply(SampleReord, function(x){
+#     median(unlist(lapply(split(Exp, f = factor(x)), mad)))
+#   })
+#   return(wilcox.test(MedVect - Base, alternative = "greater")$p.value)
+# }
+# 
+# cl <- parallel::makeCluster(4, type = "FORK")
+# parallel::clusterExport(cl, varlist = c("InputList", "WorkStruct", "TaxVect", "SampleReord", "i"), envir = environment())
+# 
+# AllPV.Sasa <- parallel::parLapply(cl, as.list(1:nrow(InputList[[i]]$Expression)), DoStuff)
+# 
+# 
+# AllPV.Sasa <- unlist(AllPV.Sasa)
+# names(AllPV.Sasa) <- rownames(InputList[[i]]$Expression)
+# 
+# 
+# write_rds(AllPV.Sasa, path = "AllPV.Sasa.rds")
+# 
 
 
 
@@ -189,12 +271,6 @@ write_rds(AllPV.Sasa, path = "AllPV.Sasa.rds")
 # 
 # 
 
-
-
-boxplot(Sampled, at=1, ylim = range(c(Base, Sampled)))
-points(1, Base, col="red")
-
-InputList[[1]]$PrinCurveStruct
 
 
 
@@ -501,6 +577,8 @@ dim(SumPeack)
 
 GenesPhase.Kowa <- apply(SumPeack[-nrow(SumPeack),], 1, which)
 
+barplot(unlist(lapply(GenesPhase.Kowa, length)), las=2)
+
 
 
 
@@ -535,6 +613,7 @@ dim(SumPeack)
 
 GenesPhase.Sasa <- apply(SumPeack[-nrow(SumPeack),], 1, which)
 
+barplot(unlist(lapply(GenesPhase.Sasa, length)), las=2)
 
 
 
@@ -569,6 +648,14 @@ GenesPhase.Buett <- apply(SumPeack[-nrow(SumPeack),], 1, which)
 
 
 
+barplot(unlist(lapply(GenesPhase.Buett, length)), las=2)
+
+
+
+
+
+
+
 
 intersect(c(names(GenesPhase.Buett$G1), names(GenesPhase.Buett$`G1+S`)),
           c(names(GenesPhase.Sasa$S_G1), names(GenesPhase.Sasa$`S_G1+S_S`)))
@@ -585,15 +672,37 @@ intersect(c(names(GenesPhase.Buett$G2M), names(GenesPhase.Buett$`G2M+G1`), names
 
 
 
-intersect(c(names(GenesPhase.Buett$G1), names(GenesPhase.Buett$`G1+S`)),
-          c(names(GenesPhase.Kowa$`G0+G1(early)`), names(GenesPhase.Kowa$`G1(early)+G1(late)`),
-            names(GenesPhase.Kowa$`G1(late)`), names(GenesPhase.Kowa$`G1(late)+S`)))
+G1Shared <- intersect(c(names(GenesPhase.Buett$G1), names(GenesPhase.Buett$`G1+S`)),
+                      c(names(GenesPhase.Kowa$`G0+G1(early)`), names(GenesPhase.Kowa$`G1(early)+G1(late)`),
+                        names(GenesPhase.Kowa$`G1(late)`), names(GenesPhase.Kowa$`G1(late)+S`)))
 
-intersect(c(names(GenesPhase.Buett$S), names(GenesPhase.Buett$`G1+S`), names(GenesPhase.Buett$`S+G2M`)),
-          c(names(GenesPhase.Kowa$`G1(late)+S`), names(GenesPhase.Kowa$S), names(GenesPhase.Kowa$`S+G2/M`)))
+SShared <- intersect(c(names(GenesPhase.Buett$S), names(GenesPhase.Buett$`G1+S`), names(GenesPhase.Buett$`S+G2M`)),
+                     c(names(GenesPhase.Kowa$`G1(late)+S`), names(GenesPhase.Kowa$S), names(GenesPhase.Kowa$`S+G2/M`)))
 
-intersect(c(names(GenesPhase.Buett$G2M), names(GenesPhase.Buett$`G2M+G1`), names(GenesPhase.Buett$`S+G2M`)),
-          c(names(GenesPhase.Kowa$`S+G2/M`), names(GenesPhase.Kowa$`G2/M`), names(GenesPhase.Kowa$`G2/M+G0`)))
+G2Shared <- intersect(c(names(GenesPhase.Buett$G2M), names(GenesPhase.Buett$`G2M+G1`), names(GenesPhase.Buett$`S+G2M`)),
+                      c(names(GenesPhase.Kowa$`S+G2/M`), names(GenesPhase.Kowa$`G2/M`), names(GenesPhase.Kowa$`G2/M+G0`)))
+
+
+
+
+
+
+G1Any <- union(c(names(GenesPhase.Buett$G1), names(GenesPhase.Buett$`G1+S`)),
+               c(names(GenesPhase.Kowa$`G0+G1(early)`), names(GenesPhase.Kowa$`G1(early)+G1(late)`),
+                 names(GenesPhase.Kowa$`G1(late)`), names(GenesPhase.Kowa$`G1(late)+S`)))
+
+SAny <- union(c(names(GenesPhase.Buett$S), names(GenesPhase.Buett$`G1+S`), names(GenesPhase.Buett$`S+G2M`)),
+              c(names(GenesPhase.Kowa$`G1(late)+S`), names(GenesPhase.Kowa$S), names(GenesPhase.Kowa$`S+G2/M`)))
+
+G2Any <- union(c(names(GenesPhase.Buett$G2M), names(GenesPhase.Buett$`G2M+G1`), names(GenesPhase.Buett$`S+G2M`)),
+               c(names(GenesPhase.Kowa$`S+G2/M`), names(GenesPhase.Kowa$`G2/M`), names(GenesPhase.Kowa$`G2/M+G0`)))
+
+
+
+
+
+
+
 
 
 
@@ -1037,5 +1146,8 @@ grid.newpage()
 
 
 
+
+"Ccnd2"   "Cdkn2c"   
+   "Npat"    "Cdc6"    "Tex14"   "Pkp4"   "Ccne1"   "Fam175a" "Egf"        "Mcm3"   
 
 
