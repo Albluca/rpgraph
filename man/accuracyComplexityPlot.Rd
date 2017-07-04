@@ -8,12 +8,6 @@ accuracyComplexityPlot(PrintGraph, AdjFactor = 1, Main = "",
   Cex.Main = 0.7, Cex.Text = 0.8, Mode = "LocMin", Xlims = NULL)
 }
 \arguments{
-\item{PrintGraph}{}
-
-\item{Main}{}
-
-\item{Cex.Main}{}
-
 \item{Cex.Text}{= .8}
 
 \item{Mode}{= 'LocMin'}

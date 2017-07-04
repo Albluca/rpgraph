@@ -3,9 +3,9 @@
 
 #' Title
 #'
-#' @param PrintGraph 
-#' @param Main 
-#' @param Cex.Main 
+#' @param PrintGraph
+#' @param Main
+#' @param Cex.Main
 #'
 #' @return
 #' @export
@@ -35,9 +35,9 @@ plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 
 #' Title
 #'
-#' @param PrintGraph 
-#' @param Main 
-#' @param Cex.Main 
+#' @param PrintGraph
+#' @param Main
+#' @param Cex.Main
 #' @param Cex.Text = .8
 #' @param Mode = 'LocMin'
 #' @param Xlims = NULL
@@ -48,13 +48,13 @@ plotMSDEnergyPlot <- function(PrintGraph, Main = '', Cex.Main = .7){
 #' @examples
 accuracyComplexityPlot <- function(PrintGraph, AdjFactor=1, Main = '', Cex.Main = .7,
                                    Cex.Text = .8, Mode = 'LocMin', Xlims = NULL){
-  
+
   if(is.null(Xlims)){
     Xlims <- range(PrintGraph$Report$FVEP)
   }
 
   YVal <- PrintGraph$Report$UR*(PrintGraph$Report$NNODES^AdjFactor)
-  
+
   plot(PrintGraph$Report$FVEP, YVal, type = 'b', col='green',
        xlab = "Fraction of Explained Variance",
        ylab = "Geometrical Complexity", lwd = 2,
@@ -112,21 +112,21 @@ accuracyComplexityPlot <- function(PrintGraph, AdjFactor=1, Main = '', Cex.Main 
 #'
 #'
 #' @importFrom plotly %>%
-#' @param Data 
-#' @param PrintGraph 
-#' @param GroupsLab 
-#' @param ScaleFunction 
-#' @param NodeSizeMult 
-#' @param Col 
-#' @param CirCol 
-#' @param ColLabels 
-#' @param LineCol 
-#' @param IdCol 
-#' @param Main 
-#' @param Cex.Main 
-#' @param Xlab 
-#' @param Ylab 
-#' @param Plot.ly 
+#' @param Data
+#' @param PrintGraph
+#' @param GroupsLab
+#' @param ScaleFunction
+#' @param NodeSizeMult
+#' @param Col
+#' @param CirCol
+#' @param ColLabels
+#' @param LineCol
+#' @param IdCol
+#' @param Main
+#' @param Cex.Main
+#' @param Xlab
+#' @param Ylab
+#' @param Plot.ly
 #'
 #' @return
 #' @export
@@ -136,52 +136,52 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, PlotPr
                        NodeSizeMult=1, Col=NULL, CirCol="black", ColLabels = NULL, ProjectionLines = NULL, OnEdgeProjections = NULL,
                        LineCol="black", IdCol="blue", Main = '', Cex.Main = .7,
                        Xlab = "PC1", Ylab = "PC2", Plot.ly = FALSE){
-  
+
   Data <- data.matrix(Data)
-  
+
   if(is.null(Col)){
     Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
   }
-  
+
   if(is.null(ProjectionLines)){
     ProjectionLines <- Col
   }
-  
+
   if(min(PrintGraph$Edges)==0){
     PrintGraph$Edges <- PrintGraph$Edges + 1
   }
-  
+
   if(Plot.ly){
-    
+
     PlotData1 <- Data[,1:2]
-    
+
     if(is.null(rownames(PlotData1))){
       rownames(PlotData1) <- paste("R_", 1:nrow(PlotData1), sep= '')
     }
-    
+
     PlotData2 <- PrintGraph$Nodes[,1:2]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2), sep='')
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
-    
+
     PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3)
-    
+
     colnames(PlotData) <- c("x", "y", "color")
     PlotData <- data.frame(PlotData)
     PlotData$x <- as.numeric(as.character(PlotData$x))
     PlotData$y <- as.numeric(as.character(PlotData$y))
     PlotData$color <- factor(PlotData$color, levels = c(unique(GroupsLab), "Graph"))
-    
-    
+
+
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y,
                  type = "scatter", mode = "markers", text = rownames(PlotData),
                  color = PlotData$color,
                  colors = c(unique(Col), "black"),
                  size = 1, sizes = c(1, 10), hoverinfo = 'text')
-    
+
     p <- p %>% plotly::layout(xaxis = list(title = Xlab), yaxis = list(title = Ylab), title=Main)
 
     for(i in 1:nrow(PrintGraph$Edges)){
-      
+
       p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
                            y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
                            color = PlotData$color[length(PlotData$color)], text = '', size = 0.2, mode="lines",
@@ -189,23 +189,23 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, PlotPr
     }
 
     p
-    
+
   } else {
-    
+
     plot(Data[,1], Data[,2], col = Col, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab)
-    
+
     points(PrintGraph$Nodes[,1:2], col = CirCol, cex = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)))
-    
+
     for(i in 1:nrow(PrintGraph$Edges)){
-      
+
       arrows(x0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],1], y0 = PrintGraph$Nodes[PrintGraph$Edges[i,1],2],
              x1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],1], y1 = PrintGraph$Nodes[PrintGraph$Edges[i,2],2],
              length = 0, col = LineCol)
-      
+
     }
-    
+
     text(PrintGraph$Nodes[,1:2], labels = 1:nrow(PrintGraph$Nodes), col = IdCol, pos = 2)
-    
+
     if(PlotProjections == "onNodes"){
 
       if(is.null(TaxonList)){
@@ -217,37 +217,37 @@ plotData2D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, PlotPr
 
         if(!is.na(TaxonList[[i]][1])){
           for(j in 1:length(TaxonList[[i]])){
-            
+
             arrows(x0 = PrintGraph$Nodes[i,1], y0 = PrintGraph$Nodes[i,2],
                    x1 = Data[TaxonList[[i]][j],1], y1 = Data[TaxonList[[i]][j],2], angle = 0, length = 0, col = ProjectionLines[TaxonList[[i]][j]])
-            
+
           }
         }
 
       }
 
     }
-    
+
     if(PlotProjections == "onEdges"){
-      
+
       if(is.null(OnEdgeProjections)){
         print("Edge Projections will be computed. Consider do that separetedly")
         OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
                                            UseR = TRUE, method = "PCALin")
       }
-      
-      
+
+
       for(i in 1:length(OnEdgeProjections$OnEdge)){
-        
+
         arrows(x0 = OnEdgeProjections$PointsOnEdgesCoords[i,1], y0 = OnEdgeProjections$PointsOnEdgesCoords[i,2],
                x1 = Data[i,1], y1 = Data[i,2], angle = 0, length = 0, col = ProjectionLines[i])
 
       }
-      
+
     }
-    
+
   }
-    
+
 }
 
 
@@ -293,20 +293,20 @@ computeMetroMapLayout <- function(PrintGraph){
 
 #' Title
 #'
-#' @param Results 
-#' @param Data 
-#' @param Categories 
-#' @param Graph 
-#' @param TaxonList 
-#' @param LayOut 
-#' @param Main 
-#' @param ScaleFunction 
-#' @param NodeSizeMult 
-#' @param ColCat 
-#' @param DirectionMat 
-#' @param Thr 
-#' @param Arrow.size 
-#' @param BiggestComponents 
+#' @param Results
+#' @param Data
+#' @param Categories
+#' @param Graph
+#' @param TaxonList
+#' @param LayOut
+#' @param Main
+#' @param ScaleFunction
+#' @param NodeSizeMult
+#' @param ColCat
+#' @param DirectionMat
+#' @param Thr
+#' @param Arrow.size
+#' @param BiggestComponents
 #'
 #' @return
 #' @export
@@ -374,7 +374,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
   }
 
   Indexes <- as.integer(factor(igraph::V(Net)$name, levels = paste("V_", 1:OrgNetSize, sep='')))
-  
+
   PieColList <- list()
 
   for(i in 1: length(TaxonCat)){
@@ -382,19 +382,19 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
   }
 
   if(PlotNet){
-    
+
     LayOutDONE <- FALSE
-    
+
     if(LayOut == 'metro'){
       RestrNodes <- computeMetroMapLayout(Results)
       LayOutDONE <- TRUE
     }
-    
+
     if(LayOut == 'tree'){
       RestrNodes <- igraph::layout_as_tree(graph = igraph::as.undirected(Net, mode = 'collapse'))
       LayOutDONE <- TRUE
     }
-    
+
     if(LayOut == 'circle'){
       IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = TRUE)
       Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
@@ -411,7 +411,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
         LayOutDONE <- TRUE
       }
     }
-    
+
     if(LayOut == 'circle_line'){
       IsoGaph <- igraph::graph.ring(n = igraph::vcount(Net), directed = FALSE, circular = FALSE)
       Iso <- igraph::graph.get.isomorphisms.vf2(igraph::as.undirected(Net, mode = 'collapse'), IsoGaph)
@@ -427,25 +427,25 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
         RestrNodes <- igraph::layout_in_circle(graph = Net, order = VerOrder$name)
         LayOutDONE <- TRUE
       }
-      
+
     }
-    
+
     if(LayOut == 'nicely'){
       RestrNodes <- igraph::layout_nicely(graph = Net)
       LayOutDONE <- TRUE
     }
-    
+
     if(!LayOutDONE){
       print(paste("LayOut =", LayOut, "unrecognised"))
       return(NULL)
     }
-    
+
     igraph::plot.igraph(Net, layout = RestrNodes[,1:2], main = Main,
                         vertex.shape="pie", vertex.pie.color = PieColList[Indexes],
                         vertex.pie=TaxonCat[Indexes], vertex.pie.border = NA,
                         vertex.size=NodeSizeMult*do.call(what = ScaleFunction, list(unlist(lapply(TaxonCatNoNone[Indexes], sum)))),
                         edge.color = "black", edge.arrow.size = Arrow.size, vertex.label.dist = 0.7, vertex.label.color = "black")
-    
+
   }
 
   CatReord <- TaxonCat[Indexes]
@@ -474,7 +474,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 #' @importFrom plotly %>%
 #' @param Data The Data to be plotted. Each column represents a dimension and each row represents a point
 #' @param PrintGraph A princial graph structure obtained by \link{computeElasticPrincipalGraph}
-#' @param GroupsLab A vector of labels to indicate which group each point belongs to 
+#' @param GroupsLab A vector of labels to indicate which group each point belongs to
 #' @param ScaleFunction A scaling function to decide the size of the spheres that represent the nodes of the principal graph
 #' @param NodeSizeMult A scaling vector to decide the size of the spheres that represent the nodes of the principal graph
 #' @param Col A vector of colors for the points. If NULL the cplors will be computed automatically
@@ -502,36 +502,36 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
                        TaxonList = NULL, OnEdgeProjections = NULL,
                        Xlab = "PC1", Ylab = "PC2", Zlab = "PC3",
                        DirectionMat = NULL, Thr = 0.05, Plot.ly = FALSE){
-  
+
   Data <- data.matrix(Data)
-  
+
   if(is.null(Col)){
     Col <- rainbow(length(unique(GroupsLab)))[as.integer(factor(GroupsLab))]
   }
-  
+
   if(is.null(ProjectionLines)){
     ProjectionLines <- Col
   }
-  
+
   if(min(PrintGraph$Edges)==0){
     PrintGraph$Edges = PrintGraph$Edges + 1
   }
-  
+
   if(Plot.ly){
-    
+
     PlotData1 <- Data[,1:3]
-    
+
     if(is.null(rownames(PlotData1))){
       rownames(PlotData1) <- paste("R_", 1:nrow(PlotData1), sep= '')
     }
-    
+
     PlotData2 <- PrintGraph$Nodes[,1:3]
     rownames(PlotData2) <- paste("V_", 1:nrow(PlotData2))
     PlotData3 <- c(GroupsLab, rep("Graph", nrow(PlotData2)))
     PlotData4 <- c(rep(NodeSizeMult, length(GroupsLab)), rep(1, nrow(PlotData2)))
-    
+
     PlotData <- cbind(rbind(PlotData1, PlotData2), PlotData3, PlotData4)
-    
+
     colnames(PlotData) <- c("x", "y", "z", "color", "size")
     PlotData <- data.frame(PlotData)
     PlotData$x <- as.numeric(as.character(PlotData$x))
@@ -539,7 +539,7 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
     PlotData$z <- as.numeric(as.character(PlotData$z))
     PlotData$color <- factor(PlotData$color, levels = c(unique(GroupsLab), "Graph"))
     PlotData$size <- as.numeric(as.character(PlotData$size))
-    
+
     p <- plotly::plot_ly(x = PlotData$x, y = PlotData$y, z = PlotData$z,
                  type = "scatter3d", mode = "markers", text = rownames(PlotData),
                  color = PlotData$color,
@@ -547,38 +547,38 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
                  size = PlotData$size, sizes = c(1, 10), hoverinfo = 'text') %>%
       plotly::layout(title = Main,
              scene = list(
-               xaxis = list(title = Xlab), 
-               yaxis = list(title = Ylab), 
+               xaxis = list(title = Xlab),
+               yaxis = list(title = Ylab),
                zaxis = list(title = Zlab)))
-    
-    
+
+
     for(i in 1:nrow(PrintGraph$Edges)){
-      
+
       p <- p %>% plotly::add_trace(x = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],1],
                            y = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],2],
                            z = PrintGraph$Nodes[PrintGraph$Edges[i,1:2],3],
                            color = PlotData$color[length(PlotData$color)], text = '', size = 1,
                            sizes = c(1, 10), mode="lines",
                            showlegend = FALSE)
-      
+
     }
-    
-    
+
+
     if(PlotProjections == "onNodes"){
-      
+
       if(is.null(TaxonList)){
         print("TaxonList will be computed. Consider do that separetedly")
         TaxonList <- getTaxonMap(Graph = makeGraph(PrintGraph), Data = Data)
       }
-      
+
       for(i in 1:length(TaxonList)){
-        
+
         if(!is.na(TaxonList[[i]][1])){
           for(j in 1:length(TaxonList[[i]])){
-            
+
             PCoords <- rbind(PrintGraph$Nodes[i,1:3],
                              data[TaxonList[[i]][j],1:3])
-            
+
             p <- p %>% plotly::add_trace(x = PCoords[,1],
                                  y = PCoords[,2],
                                  z = PCoords[,3],
@@ -587,104 +587,104 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
                                  showlegend = FALSE, opacity = 0.5)
           }
         }
-        
+
       }
-      
+
     }
-    
+
     if(PlotProjections == "onEdges"){
-      
+
       if(is.null(OnEdgeProjections)){
         print("Edge Projections will be computed. Consider do that separetedly")
         OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
                                            UseR = TRUE, method = "PCALin")
       }
-      
-      
+
+
       for(i in 1:length(OnEdgeProjections$OnEdge)){
-        
+
         PCoords <- rbind(OnEdgeProjections$PointsOnEdgesCoords[i,1:3],
                          Data[i,1:3])
-        
+
         p <- p %>% plotly::add_trace(x = PCoords[,1],
                                      y = PCoords[,2],
                                      z = PCoords[,3],
                                      color = PlotData$color[i], text = '', size = .5,
                                      mode="lines", sizes = c(1, 10),
                                      showlegend = FALSE, opacity = 0.5)
-      
+
       }
-      
+
     }
-    
+
     p
-    
-    
+
+
   } else {
-    
+
     rgl::plot3d(Data[,1], Data[,2], Data[,3], col=Col,
-           size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE) 
-    
+           size=3, main = Main, cex.main = Cex.Main, xlab = Xlab, ylab = Ylab, zlab = Zlab, top = TRUE)
+
     rgl::text3d(PrintGraph$Nodes[,1:3], texts = 1:nrow(Data), col = IdCol)
-    
+
     rgl::plot3d(PrintGraph$Nodes[,1:3], type = 's', radius = NodeSizeMult*do.call(what = ScaleFunction, list(PrintGraph$NodeSize)),
            add = TRUE, alpha=0.3, col=CirCol)
-    
-    
+
+
     if(is.null(DirectionMat)){
       for(i in 1:nrow(PrintGraph$Edges)){
-        
+
         PCoords <- rbind(PrintGraph$Nodes[PrintGraph$Edges[i,1],1:3],
                          PrintGraph$Nodes[PrintGraph$Edges[i,2],1:3])
-        
+
         rgl::plot3d(PCoords, type = 'l', add = TRUE, col=LineCol)
-        
+
       }
     } else {
-      
+
       for(i in 1:nrow(DirectionMat)){
-        
+
         SourceID <- as.integer(strsplit(DirectionMat[i, ]$Source, split = "V_")[[1]][2])
         TargetID <- as.integer(strsplit(DirectionMat[i, ]$Target, split = "V_")[[1]][2])
         Dir <- DirectionMat[i, ]$Direction
         P.val <- as.numeric(DirectionMat[i, ]$P.val)
-        
+
         if(is.na(P.val)){
           next()
         }
-        
+
         if(P.val > Thr | Dir == 0){
           PCoords <- rbind(PrintGraph$Nodes[SourceID,1:3],
                            PrintGraph$Nodes[TargetID,1:3])
           rgl::plot3d(PCoords, type = 'l', add = TRUE, col=LineCol)
           next()
         }
-        
+
         if(Dir == 1){
           rgl::arrow3d(p0 = PrintGraph$Nodes[SourceID,1:3], p1 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5, col=LineCol)
           next()
         }
-        
+
         if(Dir == 2){
           rgl::arrow3d(p1 = PrintGraph$Nodes[SourceID,1:3], p0 = PrintGraph$Nodes[TargetID,1:3], type = "rotation", add=TRUE, s= .5, col=LineCol)
           next()
         }
-        
+
       }
-      
+
     }
-    
-    
-    
+
+
+
     if(PlotProjections == "onNodes"){
-      
+
       if(is.null(TaxonList)){
         print("TaxonList will be computed. Consider do that separetedly")
         TaxonList <- getTaxonMap(Graph = makeGraph(PrintGraph), Data = Data)
       }
-      
+
       for(i in 1:length(TaxonList)){
-        
+
         if(!is.na(TaxonList[[i]][1])){
           for(j in 1:length(TaxonList[[i]])){
             PCoords <- rbind(PrintGraph$Nodes[i,1:3],
@@ -692,34 +692,34 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
             rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[TaxonList[[i]][j]])
           }
         }
-        
+
       }
-      
+
     }
-    
+
     if(PlotProjections == "onEdges"){
-      
+
       if(is.null(OnEdgeProjections)){
         print("Edge Projections will be computed. Consider do that separetedly")
         OnEdgeProjections <- projectPoints(Results = PrintGraph, Data = Data, TaxonList = TaxonList,
                                            UseR = TRUE, method = "PCALin")
       }
 
-      
+
       for(i in 1:length(OnEdgeProjections$OnEdge)){
-        
+
         PCoords <- rbind(OnEdgeProjections$PointsOnEdgesCoords[i,1:3],
                          Data[i,1:3])
-        
+
         rgl::plot3d(PCoords, type = 'l', add = TRUE, col = ProjectionLines[i])
-        
-        
+
+
       }
-      
+
     }
-    
+
   }
-  
+
 }
 
 
@@ -730,49 +730,49 @@ plotData3D <- function(Data, PrintGraph, GroupsLab, ScaleFunction = sqrt, NodeSi
 
 #' Title
 #'
-#' @param PathProjection 
-#' @param GroupsLab 
+#' @param PathProjection
+#' @param GroupsLab
 #'
 #' @return
 #' @export
 #'
 #' @examples
 PlotOnPath <- function(PathProjection, GroupsLab){
-  
+
   NormPos <- PathProjection$PositionOnPath/sum(PathProjection$PathLen)
   DataToPlot <- cbind(NormPos, PathProjection$DistanceFromPath)
-  
+
   df <- data.frame(DataToPlot, stringsAsFactors = FALSE)
   colnames(df) <- c("NormPos", "DistFromPath")
   df$NormPos <- as.numeric(as.character(df$NormPos))
   df$DistFromPath <- as.numeric(as.character(df$DistFromPath))
-  
+
   levels(GroupsLab) <- c(levels(GroupsLab), "Min", "Mean", "Max")
-  
+
   p <- ggplot2::ggplot(df, ggplot2::aes(y = DistFromPath, x = NormPos, color = GroupsLab))
-  
+
   MinY <- min(df$DistFromPath)/2
-  
+
   p <- p + ggplot2::geom_point() +
     ggplot2::scale_y_log10(limits = c(MinY, max(df$DistFromPath))) +
     ggplot2::geom_hline(ggplot2::eas(color = "Max"), yintercept = max(df$DistFromPath), color="red", linetype = "dashed") +
     ggplot2::geom_hline(ggplot2::eas(color = "Min"), yintercept = min(df$DistFromPath), color="green", linetype = "dashed") +
     ggplot2::geom_hline(ggplot2::eas(color = "Mean"), yintercept = mean(df$DistFromPath), color="black", linetype = "dashed") +
     ggplot2::coord_polar() + ggplot2::xlab("") + ggplot2::ylab("")
-  
+
   p <- p + ggplot2::geom_vline(xintercept= cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen), color = "blue", size = .1)
 
   XPos <- cumsum(PathProjection$PathLen)/sum(PathProjection$PathLen)
   XPos <- XPos[-length(XPos)]
-    
+
   # if(!is.null(NodeLabels)){
   #   for(i in 1:length(NodeLabels)){
   #     p <- p + geom_text(x = XPos[i], y = max(df$DistFromPath), label = NodeLabels[i])
   #   }
   # }
-  
+
   print(p)
-  
+
 }
 
 
@@ -799,39 +799,39 @@ PlotOnPath <- function(PathProjection, GroupsLab){
 
 #' Title
 #'
-#' @param Nodes 
-#' @param Edges 
-#' @param Points 
-#' @param UsedPoints 
-#' @param Categories 
-#' @param Title 
+#' @param Nodes
+#' @param Edges
+#' @param Points
+#' @param UsedPoints
+#' @param Categories
+#' @param Title
 #'
 #' @return
 #' @export
 #'
 #' @examples
 ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categories=NULL, Title='',
-                                    PCACenter = TRUE, ShowFitted = TRUE){
-  
+                                    PCACenter = TRUE, ShowFitted = TRUE, ExpValues = NULL){
+
   if(PCACenter){
     ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
     Centers <- attr(ScaledNodes, "scaled:center")
     Nodes <- ScaledNodes
   }
-  
+
   PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
-  VarExp <- PCAPrGraph$sdev[1:2]^2/sum(PCAPrGraph$sdev^2)
-  
+  VarExp <- PCAPrGraph$sdev[1:3]^2/sum(PCAPrGraph$sdev^2)
+
   if(is.null(Categories)){
     Categories <- rep("NoG", nrow(Points))
   }
-  
+
   if(PCACenter){
     Points <- scale(Points, center = Centers, scale = FALSE)
   }
-  
-  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:2]
-  
+
+  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:3]
+
   if(is.null(UsedPoints)){
     RotatedData <- cbind(RotatedPoints, rep(TRUE, nrow(Points)),
                          as.character(Categories))
@@ -839,29 +839,162 @@ ProjectOnPrincipalGraph <- function(Nodes, Edges, Points, UsedPoints=NULL, Categ
     RotatedData <- cbind(RotatedPoints, 1:nrow(Points) %in% UsedPoints,
                          as.character(Categories))
   }
-  
-  colnames(RotatedData) <- c("PC1", "PC2", "NG0", "Cat")
-  
-  RotatedData.DF <- data.frame(RotatedData)
+
+  # colnames(RotatedData) <- c("PC1", "PC2", "PC3", "NG0", "Cat")
+
+  if(!is.null(ExpValues)){
+    RotatedData <- cbind(RotatedData, ExpValues)
+  } else {
+    RotatedData <- cbind(RotatedData, rep(1, nrow(RotatedData)))
+  }
+
+  colnames(RotatedData) <- c("PC1", "PC2", "PC3", "NG0", "Cat", "Exp")
+
+  RotatedData.DF <- data.frame(RotatedData, row.names = NULL)
   RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
   RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+  RotatedData.DF$PC3 <- as.numeric(as.character(RotatedData.DF$PC3))
   RotatedData.DF$NG0 <- factor(RotatedData.DF$NG0, levels = c("TRUE", "FALSE"))
-  
+  RotatedData.DF$Exp <- as.numeric(as.character(RotatedData.DF$Exp))
+
   if(ShowFitted){
-    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) + ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, alpha=NG0, colour=Cat)) +
+      ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
+    p1 <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC3, alpha=NG0, colour=Cat)) +
+      ggplot2::scale_alpha_discrete("Fitted", range = c(1, .1))
   } else {
-    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat))
+    p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC2, colour=Cat, alpha=Exp)) +
+      ggplot2::scale_alpha_continuous()
+    p1 <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x=PC1, y=PC3, colour=Cat, alpha=Exp)) +
+      ggplot2::scale_alpha_continuous()
   }
-  
-  p <- p + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
+
+  p <- p + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]),
+                                                       mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
     ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%"))
-  
+
   for(j in 1:nrow(Edges)){
     p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
                                mapping = ggplot2::aes(x = PC1, y = PC2), inherit.aes = FALSE)
   }
-  
+
+  p1 <- p1 + ggplot2::geom_point() + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,c(1,3)]),
+                                                       mapping = ggplot2::aes(x=PC1, y=PC3), inherit.aes = FALSE) +
+    ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC3 -", signif(100*VarExp[3], 4), "%"))
+
+  for(j in 1:nrow(Edges)){
+    p1 <- p1 + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],c(1,3)]),
+                                mapping = ggplot2::aes(x = PC1, y = PC3), inherit.aes = FALSE)
+  }
+
   print(p)
-  
+  print(p1)
+
 }
 
+
+
+
+
+
+
+#' Title
+#'
+#' @param Points
+#' @param Edges
+#' @param Nodes
+#' @param Categories
+#' @param Title
+#' @param ExpValues
+#' @param PCACenter
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ProjectOnCircle <- function(Points, Edges, Nodes, Categories, Title, ExpValues,
+                            PCACenter = TRUE, PlotPC3 = FALSE, PointAlpha = .3) {
+
+  if(PCACenter){
+    ScaledNodes <- scale(Nodes, center = PCACenter, scale = FALSE)
+    Centers <- attr(ScaledNodes, "scaled:center")
+    Nodes <- ScaledNodes
+  }
+
+  PCAPrGraph <- prcomp(Nodes, retx = TRUE, center = FALSE, scale. = FALSE)
+  VarExp <- PCAPrGraph$sdev[1:3]^2/sum(PCAPrGraph$sdev^2)
+
+  if(is.null(Categories)){
+    Categories <- rep("NoG", nrow(Points))
+  }
+
+  if(!is.factor(Categories)){
+    Categories <- factor(Categories)
+  }
+
+  if(PCACenter){
+    Points <- scale(Points, center = Centers, scale = FALSE)
+  }
+
+  RotatedPoints <- Points %*% PCAPrGraph$rotation[,1:3]
+
+  if(!is.null(ExpValues)){
+    RotatedData <- cbind(RotatedPoints,
+                         as.character(Categories),
+                         ExpValues[match(rownames(RotatedPoints), names(ExpValues))])
+  } else {
+    RotatedData <- cbind(RotatedPoints,
+                         as.character(Categories),
+                         rep(NA, nrow(RotatedPoints)))
+  }
+
+  colnames(RotatedData) <- c("PC1", "PC2", "PC3", "Cat", "Exp")
+
+  RotatedData.DF <- data.frame(RotatedData)
+  RotatedData.DF$PC1 <- as.numeric(as.character(RotatedData.DF$PC1))
+  RotatedData.DF$PC2 <- as.numeric(as.character(RotatedData.DF$PC2))
+  RotatedData.DF$PC3 <- as.numeric(as.character(RotatedData.DF$PC3))
+  RotatedData.DF$Exp <- as.numeric(as.character(RotatedData.DF$Exp))
+  RotatedData.DF$Cat <- factor(as.character(RotatedData.DF$Cat), levels = levels(Categories))
+
+  if(PlotPC3){
+
+    if(!is.null(ExpValues)){
+
+      p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC3, colour = Exp, shape = Cat)) +
+        ggplot2::scale_color_continuous(low = "blue", high = "red")
+    } else {
+      p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC3, color = Cat))
+    }
+
+    p <- p + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:3]), mapping = ggplot2::aes(x=PC1, y=PC3), inherit.aes = FALSE) +
+      ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC3 -", signif(100*VarExp[3], 4), "%"))
+
+    for(j in 1:nrow(Edges)){
+      p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:3]),
+                                  mapping = ggplot2::aes(x = PC1, y = PC3), inherit.aes = FALSE)
+    }
+
+  } else {
+    if(!is.null(ExpValues)){
+
+      p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC2, colour = Exp, shape = Cat)) +
+        ggplot2::scale_color_continuous(low = "blue", high = "red")
+    } else {
+      p <- ggplot2::ggplot(data.frame(RotatedData.DF), ggplot2::aes(x = PC1, y = PC2, color = Cat))
+    }
+
+    p <- p + ggplot2::geom_point(data = data.frame(PCAPrGraph$x[,1:2]), mapping = ggplot2::aes(x=PC1, y=PC2), inherit.aes = FALSE) +
+      ggplot2::labs(title = Title, x = paste("PC1 -", signif(100*VarExp[1], 4), "%"), y = paste("PC2 -", signif(100*VarExp[2], 4), "%"))
+
+    for(j in 1:nrow(Edges)){
+      p <- p + ggplot2::geom_path(data = data.frame(PCAPrGraph$x[Edges[j,],1:2]),
+                                  mapping = ggplot2::aes(x = PC1, y = PC2), inherit.aes = FALSE)
+    }
+  }
+
+  p <- p + ggplot2::geom_point(alpha = PointAlpha)
+
+  return(p)
+
+}

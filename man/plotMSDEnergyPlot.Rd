@@ -7,10 +7,6 @@
 plotMSDEnergyPlot(PrintGraph, Main = "", Cex.Main = 0.7)
 }
 \arguments{
-\item{PrintGraph}{}
-
-\item{Main}{}
-
 \item{Cex.Main}{}
 }
 \description{

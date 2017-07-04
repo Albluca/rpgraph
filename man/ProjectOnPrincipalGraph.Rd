@@ -5,19 +5,10 @@
 \title{Title}
 \usage{
 ProjectOnPrincipalGraph(Nodes, Edges, Points, UsedPoints = NULL,
-  Categories = NULL, Title = "", PCACenter = TRUE, ShowFitted = TRUE)
+  Categories = NULL, Title = "", PCACenter = TRUE, ShowFitted = TRUE,
+  ExpValues = NULL)
 }
 \arguments{
-\item{Nodes}{}
-
-\item{Edges}{}
-
-\item{Points}{}
-
-\item{UsedPoints}{}
-
-\item{Categories}{}
-
 \item{Title}{}
 }
 \description{

@@ -7,8 +7,6 @@
 PlotOnPath(PathProjection, GroupsLab)
 }
 \arguments{
-\item{PathProjection}{}
-
 \item{GroupsLab}{}
 }
 \description{
