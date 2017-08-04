@@ -320,7 +320,7 @@ plotPieNet <- function(Results, Data, Categories, Graph = NULL, TaxonList = NULL
 
   if(is.null(ColCat)){
     ColCat <- c(rainbow(length(unique(Categories))), NA)
-    names(ColCat) <- c(levels(Categories), NA)
+    names(ColCat) <- c(levels(droplevels(Categories)), NA)
   } else {
     if(sum(names(ColCat) %in% levels(Categories)) < length(unique(Categories))){
       print("Reassigning colors to categories")
